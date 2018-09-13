@@ -22,6 +22,7 @@
 #include <string>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <sqlite3.h>
 #include <boost/filesystem.hpp>
 #include "../include/json.hpp"
@@ -41,17 +42,38 @@ class collection_format {
 
 public:
 
+
+    collection_format() {}
+    collection_format(std::string filename) {load_file(filename);}
+
+    bool is_null() {
+        return _j.empty();
+    }
+
+
+
+
     /**
      * Construct a collection format from a JSON file
      * @param filename
      */
-    collection_format(std::string filename) {
-
+    void load_file(std::string filename) {
+        _j.clear();
         namespace fs = boost::filesystem;
         if (!fs::exists(filename))
             throw std::string("ERROR in collection_format::collection_format(): image collection format file does not exist.");
         std::ifstream i(filename);
         i >> _j;
+    }
+
+    /**
+    * Construct a collection format from a JSON string
+    * @param filename
+    */
+    void load_string(std::string jsonstr) {
+        _j.clear();
+        std::istringstream ss(jsonstr);
+        ss >> _j;
     }
 
     /**
@@ -72,14 +94,14 @@ public:
      * @param strict if true, the creation will cancel as soon as one descriptor produces an error. If false such filles will be skipped.
      * @return SQLite handle of the resulting database, this must eventually be closed by the calling function using `sqlite3_close(db)`
      */
-    sqlite3* apply(const std::vector<std::string>& descriptors, const std::string& db_filename = "", bool strict=true);
+    //sqlite3* apply(const std::vector<std::string>& descriptors, const std::string& db_filename = "", bool strict=true);
 
 
     /**
      * Returns the raw json document.
      * @return JSON object from json library (see https://github.com/nlohmann/json)
      */
-    inline nlohmann::json get() {return _j;}
+    inline  nlohmann::json& json() {return _j;}
 
 private:
 

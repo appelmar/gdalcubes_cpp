@@ -17,8 +17,8 @@
 
 #include <iostream>
 #include "collection_format.h"
-
-
+#include "image_collection.h"
+#include <gdal_priv.h>
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -34,19 +34,21 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
 
 int main() {
 
-//    GDALAllRegister();
-//    GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
-//    CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
+    GDALAllRegister();
+    GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
+    CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
 
     srand(time(NULL));
 
 
 
 
-    collection_format f("../../test/collection_format_test.json");
+    collection_format fmt("../../test/collection_format_test.json");
     //std::vector<std::string> temp;
     try {
-        f.apply(string_list_from_text_file("../../test/test_list.txt"), "test.db");
+        image_collection x = image_collection::create(fmt, string_list_from_text_file("../../test/test_list.txt"));
+        x.write("test.db");
+        std::cout << x.to_string();
     }
     catch (std::string e) {
         std::cout << e << std::endl;

@@ -1,0 +1,1 @@
+This directory will collect predefined JSON image collection format descriptions.

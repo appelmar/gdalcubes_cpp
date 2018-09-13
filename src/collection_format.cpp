@@ -1,18 +1,31 @@
-//
-// Created by marius on 12.09.18.
-//
+/*
+   Copyright 2018 Marius Appel <marius.appel@uni-muenster.de>
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 
 #include "collection_format.h"
 
-#include "boost/regex.hpp"
+#include <boost/regex.hpp>
+#include <boost/date_time.hpp>
 
 
 
 
 
 
-
-void collection_format::apply(const std::vector<std::string> &descriptors) {
+sqlite3* collection_format::apply(const std::vector<std::string> &descriptors, const std::string& db_filename, bool strict) {
 
 
     sqlite3 *db;
@@ -35,9 +48,6 @@ void collection_format::apply(const std::vector<std::string> &descriptors) {
     if (_j["bands"].size() == 0) {
         throw std::string("ERROR in collection_format::apply(): image collection format does not contain any bands.");
     }
-    uint16_t nbands = _j["bands"].size();
-    std::cout << "Collection format describes " << nbands << " bands." << std::endl;
-
 
     std::vector<boost::regex> regex_band_pattern;
     std::vector<std::string> band_name;
@@ -71,7 +81,7 @@ void collection_format::apply(const std::vector<std::string> &descriptors) {
         throw std::string("ERROR in collection_format::apply(): cannot create image collection schema (ii).");
     }
 
-    std::string sql_schema_gdalrefs = "CREATE TABLE gdalrefs (descriptor TEXT, image_id INTEGER, band_id INTEGER, band_num INTEGER, FOREIGN KEY (image_id) REFERENCES images(id), PRIMARY KEY (image_id, band_id), FOREIGN KEY (band_id) REFERENCES bands(id));"
+    std::string sql_schema_gdalrefs = "CREATE TABLE gdalrefs (image_id INTEGER, band_id INTEGER, descriptor TEXT, band_num INTEGER, FOREIGN KEY (image_id) REFERENCES images(id), PRIMARY KEY (image_id, band_id), FOREIGN KEY (band_id) REFERENCES bands(id));"
             "CREATE INDEX idx_gdalrefs_bandid ON gdalrefs(band_id);"
             "CREATE INDEX idx_gdalrefs_imageid ON gdalrefs(image_id);";
     std::cout << sql_schema_gdalrefs << std::endl;
@@ -85,12 +95,22 @@ void collection_format::apply(const std::vector<std::string> &descriptors) {
     boost::regex regex_global_pattern(global_pattern);
 
 
-
-
-
     if (!_j["images"].count("pattern"))
         throw std::string("ERROR in collection_format::apply(): image collection format does not contain a composition rule for images.");
     boost::regex regex_images(_j["images"]["pattern"].get<std::string>());
+
+
+
+    // @TODO: Make datetime optional, e.g., for DEMs
+    std::string datetime_format = "%Y%m%d";
+    if(!_j.count("datetime") || !_j["datetime"].count("pattern")) {
+        throw std::string("ERROR in collection_format::apply(): image collection format does not contain a rule to derive date/time.");
+    }
+    boost::regex regex_datetime(_j["datetime"]["pattern"].get<std::string>());
+    if (_j["datetime"].count("format")) {
+        datetime_format = _j["datetime"]["format"].get<std::string>();
+    }
+
 
     uint32_t image_inc_id = 0;
     uint32_t image_id = 0;
@@ -103,27 +123,60 @@ void collection_format::apply(const std::vector<std::string> &descriptors) {
             }
         }
 
-        boost::cmatch res;
-        if (!boost::regex_match(it->c_str(), res, regex_images)) { // not sure to continue or throw an exception here...
-            std::cout << regex_images << std::endl;
-            throw std::string("ERROR in collection_format::apply(): image composition rule failed for " + std::string(*it));
+        boost::cmatch res_image;
+        if (!boost::regex_match(it->c_str(), res_image, regex_images)) {
+            if (strict) throw std::string("ERROR in collection_format::apply(): image composition rule failed for " + std::string(*it));
+            std::cout << "WARNING: skipping  " << *it  << " due to failed image composition rule" << std::endl;
+            continue;
         }
 
 
-        std::string sql_select_image  = "SELECT id FROM images WHERE name='" + res[1] + "'";
+        std::string sql_select_image  = "SELECT id FROM images WHERE name='" + res_image[1] + "'";
         sqlite3_stmt* stmt;
         sqlite3_prepare_v2(db, sql_select_image.c_str(), -1, &stmt, NULL);
         if (!stmt) {
-
+            // @TODO do error check here
         }
         if (sqlite3_step(stmt) == SQLITE_DONE) {
+            // Empty result --> image has not been added before
+
             image_id = image_inc_id;
             ++image_inc_id;
-            // Empty result --> image has not been added before
-            std::string sql_insert_image = "INSERT OR IGNORE INTO images(id, name) VALUES(" + std::to_string(image_id) + ",'" + res[1] + "')";
-            if (sqlite3_exec(db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-                throw std::string("ERROR in collection_format::apply(): cannot add image to images table.");
+
+
+            std::string sql;
+
+
+
+
+            // @TODO: Shall we check that all files óf the same image have the same date / time? Currently we don't do.
+
+            // Extract datetime
+            boost::cmatch res_datetime;
+            if (!boost::regex_match(it->c_str(), res_datetime, regex_datetime)) { // not sure to continue or throw an exception here...
+                if (strict) throw std::string("ERROR in collection_format::apply(): datetime rule failed for " + std::string(*it));
+                std::cout << "WARNING: skipping  " << *it  << " due to failed datetime rule" << std::endl;
+                continue;
             }
+
+            std::istringstream is(res_datetime[1]);
+            is.imbue(std::locale(std::locale::classic(),new boost::posix_time::time_input_facet(datetime_format)));
+            boost::posix_time::ptime pt;
+            is >> pt;
+            if (pt.is_not_a_date_time()) {
+                if (strict) throw std::string("ERROR in collection_format::apply(): cannot derive datetime from " + *it);
+                std::cout << "WARNING: skipping  " << *it  << " due to failed datetime rule" << std::endl;
+                continue;
+            }
+            std::cout << boost::posix_time::to_iso_string(pt) << std::endl;
+
+            std::string sql_insert_image = "INSERT OR IGNORE INTO images(id, name, datetime) VALUES(" + std::to_string(image_id) + ",'" + res_image[1] + "','" + boost::posix_time::to_iso_string(pt) + "')";
+            if (sqlite3_exec(db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                if (strict) throw std::string("ERROR in collection_format::apply(): cannot add image to images table.");
+                std::cout << "WARNING: skipping  " << *it  << " due to failed image table insert" << std::endl;
+                continue;
+            }
+
         }
         else {
             image_id = sqlite3_column_int(stmt, 0);
@@ -136,17 +189,28 @@ void collection_format::apply(const std::vector<std::string> &descriptors) {
             if (boost::regex_match(*it, regex_band_pattern[i] )) {
                 std::string sql_insert_gdalref = "INSERT INTO gdalrefs(descriptor, image_id, band_id, band_num) VALUES('" + *it + "'," + std::to_string(image_id) + "," +  std::to_string(band_ids[i]) + "," +  std::to_string(band_num[i]) + ");";
                 if (sqlite3_exec(db, sql_insert_gdalref.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-                    throw std::string("ERROR in collection_format::apply(): cannot add dataset to gdalrefs table.");
+                    if (strict) throw std::string("ERROR in collection_format::apply(): cannot add dataset to gdalrefs table.");
+                    std::cout << "WARNING: skipping  " << *it  << " due to failed gdalrefs insert" << std::endl;
+                    break; // break only works because there is nothing after the loop.
                 }
             }
         }
+
+
     }
+
+
+    if (db_filename.empty()) {
+        return db;
+    }
+
+
 
     // Store DB
     sqlite3_backup *db_backup;
     sqlite3 *out_db;
 
-    if (sqlite3_open("temp.sqlite",&out_db) != SQLITE_OK) {
+    if (sqlite3_open(db_filename.c_str(),&out_db) != SQLITE_OK) {
         throw std::string("ERROR in collection_format::apply(): cannot create output database file.");
     }
     db_backup = sqlite3_backup_init(out_db, "main", db, "main");
@@ -156,6 +220,7 @@ void collection_format::apply(const std::vector<std::string> &descriptors) {
     sqlite3_backup_step(db_backup, -1);
     sqlite3_backup_finish(db_backup);
     sqlite3_close(db);
-    sqlite3_close(out_db);
+
+    return out_db;
 
 }

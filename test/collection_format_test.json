@@ -4,47 +4,47 @@
     "pattern" : ".*/(.+)\\.SAFE.*"
   },
   "datetime" : {
-    "pattern" : "MSIL1C_(.+)_",
+    "pattern" : ".*MSIL1C_(.+?)_.*",
     "format" : "%Y%m%dT%H%M%S"
   },
   "bands" : {
-    "band1" : {
-      "pattern" : "_B01\\.jp2"
+    "B01" : {
+      "pattern" : ".+_B01\\.jp2"
     },
-    "band2" : {
-      "pattern" : "_B02\\.jp2"
+    "B02" : {
+      "pattern" : ".+_B02\\.jp2"
     },
-    "band3" : {
+    "B03" : {
       "pattern" : ".+_B03\\.jp2"
     },
-    "band4" : {
+    "B04" : {
       "pattern" : ".+_B04\\.jp2"
     },
-    "band5" : {
+    "B05" : {
       "pattern" : ".+_B05\\.jp2"
     },
-    "band6" : {
+    "B06" : {
       "pattern" : ".+_B06\\.jp2"
     },
-    "band7" : {
+    "B07" : {
       "pattern" : ".+_B07\\.jp2"
     },
-    "band8" : {
+    "B08" : {
       "pattern" : ".+_B08\\.jp2"
     },
-    "band8A" : {
+    "B8A" : {
       "pattern" : ".+_B8A\\.jp2"
     },
-    "band9" : {
+    "B09" : {
       "pattern" : ".+_B09\\.jp2"
     },
-    "band10" : {
+    "B10" : {
       "pattern" : ".+_B10\\.jp2"
     },
-    "band11" : {
+    "B11" : {
       "pattern" : ".+_B11\\.jp2"
     },
-    "band12" : {
+    "B12" : {
       "pattern" : ".+_B12\\.jp2"
     }
   }

@@ -31,7 +31,7 @@ endif (NOT proj_LIBRARY)
 
 
 ## find boost
-find_package(Boost COMPONENTS program_options filesystem system regex REQUIRED ) # boost property tree
+find_package(Boost COMPONENTS program_options filesystem system regex date_time REQUIRED ) # boost property tree
 if (Boost_FOUND)
     message(STATUS "Boost headers found at ${Boost_INCLUDE_DIRS}")
 

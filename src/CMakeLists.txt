@@ -84,8 +84,15 @@ file(GLOB_RECURSE SOURCE_FILES
     "*.cpp" "*.h"
 )
 
-add_executable(gdalcubes ${SOURCE_FILES})
+list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/test.cpp)
+list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 
+
+
+add_executable(gdalcubes_test  ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/test.cpp)
+target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
+
+
+add_executable(gdalcubes ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 target_link_libraries (gdalcubes ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
-
 

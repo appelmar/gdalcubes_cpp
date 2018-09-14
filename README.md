@@ -18,7 +18,8 @@ into external tools such as R.
 ## Command line interface
 
 ```
-gdalcubes create_collection 
+gdalcubes create_collection -f collection_format.json list.txt out.db 
+gdalcubes create_collection -R -f collection_format.json /home/user/data/ out.db 
 ``` 
 
 

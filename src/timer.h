@@ -19,24 +19,23 @@
 
 #include <chrono>
 
+class timer {
+   public:
+    timer() { t = std::chrono::high_resolution_clock::now(); }
 
-    class timer {
-       public:
-        timer() { t = std::chrono::high_resolution_clock::now(); }
+    void start() {
+        t = std::chrono::high_resolution_clock::now();
+    }
 
-        void start() {
-            t = std::chrono::high_resolution_clock::now();
-        }
+    double time() {
+        std::chrono::high_resolution_clock::time_point tnow = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(
+            tnow - t);
+        return time_span.count();
+    }
 
-        double time() {
-            std::chrono::high_resolution_clock::time_point tnow = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(
-                tnow - t);
-            return time_span.count();
-        }
-
-       private:
-        std::chrono::high_resolution_clock::time_point t;
-    };
+   private:
+    std::chrono::high_resolution_clock::time_point t;
+};
 
 #endif  //GDAL_CUBES_TIMER_H

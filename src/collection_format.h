@@ -14,19 +14,16 @@
    limitations under the License.
 */
 
-
-
 #ifndef COLLECTION_FORMAT_H
 #define COLLECTION_FORMAT_H
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <sqlite3.h>
 #include <boost/filesystem.hpp>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include "../include/json.hpp"
-
 
 /**
  * The image collection format describes rules how image collections can be build from a simple list of files / URLs.
@@ -39,19 +36,13 @@
  * Sentinel 2, Landsat 8, and  SRTM.
  */
 class collection_format {
-
-public:
-
-
+   public:
     collection_format() {}
-    collection_format(std::string filename) {load_file(filename);}
+    collection_format(std::string filename) { load_file(filename); }
 
     bool is_null() {
         return _j.empty();
     }
-
-
-
 
     /**
      * Construct a collection format from a JSON file
@@ -84,7 +75,6 @@ public:
      */
     bool validate();
 
-
     /**
      * Apply the collection format to a list of filenames or other GDALataset descriptors and build the basic image collection data structure in
      * an SQLite database. This function will not open any files.
@@ -96,18 +86,14 @@ public:
      */
     //sqlite3* apply(const std::vector<std::string>& descriptors, const std::string& db_filename = "", bool strict=true);
 
-
     /**
      * Returns the raw json document.
      * @return JSON object from json library (see https://github.com/nlohmann/json)
      */
-    inline  nlohmann::json& json() {return _j;}
+    inline nlohmann::json& json() { return _j; }
 
-private:
-
+   private:
     nlohmann::json _j;
-
 };
 
-
-#endif //COLLECTION_FORMAT_H
+#endif  //COLLECTION_FORMAT_H

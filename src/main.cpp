@@ -14,11 +14,11 @@
    limitations under the License.
 */
 
-
+#include <gdal_priv.h>
 #include <iostream>
 #include "collection_format.h"
 #include "image_collection.h"
-#include <gdal_priv.h>
+#include "timer.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -30,29 +30,32 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
     return out;
 }
 
-
-
 int main() {
-
     GDALAllRegister();
     GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
     CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
 
     srand(time(NULL));
 
-
-
-
     collection_format fmt("../../test/collection_format_test.json");
     //std::vector<std::string> temp;
     try {
+        timer t0;
         image_collection x = image_collection::create(fmt, string_list_from_text_file("../../test/test_list.txt"));
         x.write("test.db");
+        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
         std::cout << x.to_string();
-    }
-    catch (std::string e) {
+
+        x.temp_copy();
+        timer t1;
+        x.filter_datetime_range("20170101T000000", "20180101T000000");
+        auto b = std::vector<std::string>{"B02", "B03", "B04"};
+        x.filter_bands(b);
+        x.write("test2.db");
+        std::cout << "DONE (" << t1.time() << "s)" << std::endl;
+        std::cout << x.to_string();
+
+    } catch (std::string e) {
         std::cout << e << std::endl;
     }
-
-
 }

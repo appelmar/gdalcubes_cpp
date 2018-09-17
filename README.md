@@ -14,8 +14,16 @@ into external tools such as R.
 
 
 
+# Objectives
 
-## Command line interface
+- Proposing a simple image collection file format to reference many images on local disk, remote servers, or in the cloud. 
+- Extent GDAL to work with multi-temporal, multi-spectral imagery.
+- Read image collection data as on demand data cubes and stream data chunks into analysis tools such as R or Python. 
+- Provide simple possibilities to scale analysis to several machines  (e.g. by using Docker for deployment).
+- Demonstrate how to use gdalcubes for typical use cases. 
+
+
+# Command line interface
 
 ```
 # Creating image collections

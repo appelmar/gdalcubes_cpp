@@ -125,7 +125,7 @@ class cube_view {
     uint32_t _nx;
     uint32_t _ny;
 
-    uint16_t _dt_interval;  // time size as number +  unit of time or date
+    uint16_t _dt_interval;
     datetime_unit _dt_unit;
 };
 

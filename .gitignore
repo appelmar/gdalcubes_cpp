@@ -6,3 +6,4 @@ cmake-build-release/
 build/
 cppcheck.log
 build_info.h
+gdalcubes_src_*.tar.gz

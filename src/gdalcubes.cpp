@@ -15,10 +15,15 @@
    limitations under the License.
 */
 
+/**
+ * This file contains the main entry for the command line client.
+ */
+
 // >  ./gdalcubes create_collection -f "../../test/collection_format_test.json" "../../test/test_list.txt" out.db
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
+#include "build_info.h"
 #include "image_collection.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
@@ -42,7 +47,7 @@ int main(int argc, char *argv[]) {
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
     po::options_description global_args("Global arguments");
-    global_args.add_options()("help,h", "print usage")("verbose,v", "verbose output, not yet implemented")("command", po::value<std::string>(), "Command to execute")("subargs", po::value<std::vector<std::string> >(), "Arguments for command");
+    global_args.add_options()("help,h", "print usage")("version", "print version information")("debug,d", "debug output, not yet implemented")("command", po::value<std::string>(), "Command to execute")("subargs", po::value<std::vector<std::string> >(), "Arguments for command");
 
     po::positional_options_description pos;
     pos.add("command", 1).add("subargs", -1);
@@ -52,6 +57,14 @@ int main(int argc, char *argv[]) {
     try {
         po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).positional(pos).allow_unregistered().run();
         po::store(parsed, vm);
+        if (vm.count("version")) {
+            std::cout << "gdalcubes " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << " built on " << __DATE__ << " " << __TIME__ << std::endl;
+            return 0;
+        }
+        if (vm.count("help") && !vm.count("command")) {
+            std::cout << global_args << std::endl;
+            return 0;
+        }
         std::string cmd = vm["command"].as<std::string>();
         if (cmd == "create_collection") {
             po::options_description cc_desc("create_collection arguments");
@@ -66,7 +79,7 @@ int main(int argc, char *argv[]) {
                 po::store(po::command_line_parser(opts).options(cc_desc).positional(cc_pos).run(), vm);
             } catch (...) {
                 std::cout << "ERROR in gdalcubes create_collection: invalid arguments." << std::endl;
-                std::cout << cc_desc << "\n";
+                std::cout << cc_desc << std::endl;
                 return 1;
             }
 
@@ -114,7 +127,7 @@ int main(int argc, char *argv[]) {
 
         } else {
             std::cout << "ERROR in gdalcubes: unrecognized command." << std::endl;
-            std::cout << global_args << "\n";
+            std::cout << global_args << std::endl;
             return 1;
         }
     } catch (std::string s) {
@@ -122,7 +135,7 @@ int main(int argc, char *argv[]) {
         return 1;
     } catch (...) {
         std::cout << "ERROR in gdalcubes: invalid arguments." << std::endl;
-        std::cout << global_args << "\n";
+        std::cout << global_args << std::endl;
         return 1;
     }
 }

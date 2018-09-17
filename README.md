@@ -18,16 +18,22 @@ into external tools such as R.
 ## Command line interface
 
 ```
+# Creating image collections
 gdalcubes create_collection -f collection_format.json list.txt out.db 
 gdalcubes create_collection -R -f collection_format.json /home/user/data/ out.db 
+
+gdalcubes stream -v view.json -t reduce_time -o result.db > Rscript timeseries_stats.R
+gdalcubes stream -v view.json -t apply_pixel > Rscript timeseries_stats.R
+
+gdalcubes reduce -r average -v view.json --gdal-of="Gtiff" --gdal-co="TILED=YES COMPRESS=JPEG PHOTOMETRIC=YCBCR" in.db out.tif 
 ``` 
 
 
-## Creating image collections: The JSON collection format description
+# Creating image collections: The JSON collection format description
 
 
 
-### Example: Local Sentinel 2 imagery
+## Example: Local Sentinel 2 imagery
 
 Consider the local archive of a few Sentinel images each in on of their directories
 
@@ -108,11 +114,37 @@ This file involves a few regular expressions to extract datetime, bands from ind
 
 
 
+
+# Data Views
+
+Data views define how we look at the EO imagery and how it is transformed to a data cube (or multidimensional array). It includes an area of interest, the projection, and the temporal and spatial resolutions.
+Views are serialized as JSON documents as in the example below:
+```
+{
+  "space" :
+  {
+    "left" : 6.9,
+    "right" : 7.1,
+    "top" : 52.0,
+    "bottom" : 51.8,
+    "proj" : "EPSG:4326",
+    "nx" : 100,
+    "ny" : 100
+  },
+  "time" :
+  {
+    "t0" : "2016-01-01",
+    "t1" : "2018-09-01",
+    "dt" : "P6M"
+  }
+}
+```
+
+
 # Ongoing work (without priority)
 - Test cases with some imagery
 - Examples for cloud storage
-- CLI
-- image collection filters on bands, bounding box, and datetime
+- CLI: gdalcubes --version
 - views
 - processing example
-- 
+- Docker image for distributed processing

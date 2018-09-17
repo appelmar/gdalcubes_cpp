@@ -110,6 +110,10 @@ struct coords_2d {
     T x, y;
 };
 
+/**
+ * @todo: what happens with DB with copy construction? -> Currently copies are forbidden but different objects
+ * may open the same database (if on disk) with different handles.
+ */
 class image_collection {
    public:
     /**
@@ -131,8 +135,17 @@ class image_collection {
         }
     }
 
+    image_collection(const image_collection&) = delete;
+    void operator=(const image_collection&) = delete;
+
+    // move constructor
+    image_collection(image_collection&& A) {
+        _db = A._db;
+        _filename = A._filename;
+        _format = A._format;
+    }
+
     static image_collection create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
-    static image_collection create_from_dir(collection_format format, std::string path, bool recursive = true);
 
     std::string to_string();
 

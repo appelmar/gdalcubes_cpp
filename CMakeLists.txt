@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(gdalcubes LANGUAGES CXX VERSION 0.0.1)
 
-string(TIMESTAMP build_date "%Y%m%d")
-string(TIMESTAMP build_time "%H%M%S")
+
+#string(TIMESTAMP build_date "%Y%m%d")
+#string(TIMESTAMP build_time "%H%M%S")
 
 if (NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type specified, using Debug")

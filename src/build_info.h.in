@@ -1,0 +1,9 @@
+// build_info.h.in will be used by CMake to create build_info.h with correction project version constant definitions
+#ifndef BUILD_INFO_H
+#define BUILD_INFO_H
+
+#define VERSION_MAJOR ${PROJECT_VERSION_MAJOR}
+#define VERSION_MINOR ${PROJECT_VERSION_MINOR}
+#define VERSION_PATCH ${PROJECT_VERSION_PATCH}
+
+#endif // BUILD_INFO_H

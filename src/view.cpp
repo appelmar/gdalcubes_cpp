@@ -26,26 +26,16 @@ cube_view cube_view::read_json(std::string filename) {
     i >> j;
     cube_view v;
 
-    boost::regex rexp("P([0-9]+)([YMWD])");
+    v._dt = duration::from_string(j.at("time").at("dt").get<std::string>());
 
-    boost::cmatch res;
-    if (!boost::regex_match(j.at("time").at("dt").get<std::string>().c_str(), res, rexp)) {
-        throw std::string("ERROR in cube_view::read_json(): cannot derive date interval from JSON");
-    }
-    v._dt_interval = std::stoi(res[1]);
-    if (res[2] == "Y")
-        v._dt_unit = YEAR;
-    else if (res[2] == "M")
-        v._dt_unit = MONTH;
-    else if (res[2] == "W")
-        v._dt_unit = WEEK;
-    else if (res[2] == "D")
-        v._dt_unit = DAY;
 
     std::string st0 = j.at("time").at("t0").get<std::string>();
     std::string st1 = j.at("time").at("t1").get<std::string>();
-    v._t0 = boost::posix_time::ptime(boost::gregorian::from_string(st0)); // Currently no time support
-    v._t1 = boost::posix_time::ptime(boost::gregorian::from_string(st1)); // Currently no time support
+
+    // FIXME !!! This is wring and will always generate unit = DAY. Instead implement datetime::from_string and use this here
+    // to derive the unit based on what is provided in the string.
+    v._t0 = datetime(boost::posix_time::ptime(boost::gregorian::from_string(st0))); // Currently no time support
+    v._t1 = datetime(boost::posix_time::ptime(boost::gregorian::from_string(st1))); // Currently no time support
 
     v._nx = j.at("space").at("nx").get<uint32_t>();
     v._ny = j.at("space").at("ny").get<uint32_t>();
@@ -61,7 +51,7 @@ cube_view cube_view::read_json(std::string filename) {
 void cube_view::write_json(std::string filename) {
     nlohmann::json j = nlohmann::json{
         {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"proj", _proj}}},
-        {"time", {{"dt", dt()}, {"t0", boost::gregorian::to_iso_extended_string(_t0.date())}, {"t1", boost::gregorian::to_iso_extended_string(_t1.date())}}}};
+        {"time", {{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}}};
 
     std::ofstream o(filename, std::ofstream::out);
     if (!o.good()) {

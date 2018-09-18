@@ -152,7 +152,7 @@ Views are serialized as JSON documents as in the example below:
 # Ongoing work (without priority)
 - Test cases with some imagery
 - Examples for cloud storage
-- CLI: gdalcubes --version
+- Unit tests for datetime
 - views
 - processing example
 - Docker image for distributed processing

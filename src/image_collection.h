@@ -21,6 +21,7 @@
 #include <ogr_spatialref.h>
 #include <boost/date_time.hpp>
 #include "collection_format.h"
+#include "datetime.h"
 
 template <typename Ta>
 struct bounds_2d {
@@ -66,11 +67,6 @@ struct bounds_2d {
         srs_in.SetFromUserInput(srs_from.c_str());
         srs_out.SetFromUserInput(srs_to.c_str());
 
-        //        char* proj4_out;
-        //        char* proj4_in;
-        //        srs_out.exportToProj4(&proj4_out);
-        //        srs_in.exportToProj4(&proj4_in);
-
         if (srs_in.IsSame(&srs_out)) {
             return *this;
         }
@@ -109,6 +105,23 @@ template <typename T>
 struct coords_2d {
     T x, y;
 };
+
+//template <typename T> using coords_nd = std::vector<T>;
+template <typename T, uint16_t N> using coords_nd = std::array<T,N>;
+
+
+struct coords_st {
+    coords_2d<double> s;
+    datetime t;
+};
+
+
+struct bounds_st {
+    bounds_2d<double> s;
+    datetime t0;
+    datetime t1;
+};
+
 
 /**
  * @todo: what happens with DB with copy construction? -> Currently copies are forbidden but different objects
@@ -222,6 +235,15 @@ class image_collection {
     uint16_t count_bands();
     uint32_t count_images();
     uint32_t count_gdalrefs();
+
+
+    /**
+     * Derive the size of a pixel for one or all bands in bytes
+     * @param band band identifier, if emtpy the sum of all bands is used
+     * @return the size of a pixel with one or all bands or zero if the specified band does not exist.
+     */
+    uint16_t pixel_size_bytes(std::string band="");
+
 
    protected:
     collection_format _format;

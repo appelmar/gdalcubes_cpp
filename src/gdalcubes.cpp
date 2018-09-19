@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
 
-            // TODO: implement help and verbose flags
+            // TODO: implement help and debug flags
 
             bool recursive = false;
             bool strict = false;
@@ -125,7 +125,40 @@ int main(int argc, char *argv[]) {
             ic.write(output);
             std::cout << ic.to_string() << std::endl;
 
-        } else {
+        }
+        else if ( cmd == "info") {
+            po::options_description info_desc("info arguments");
+            info_desc.add_options()("input", po::value<std::string>(), "Filename of the image collection.");
+
+            po::positional_options_description info_pos;
+            info_pos.add("input", 1);
+
+            try {
+                std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts).options(info_desc).positional(info_pos).run(), vm);
+            } catch (...) {
+                std::cout << "ERROR in gdalcubes info: invalid arguments." << std::endl;
+                std::cout << info_desc << std::endl;
+
+            }
+
+            std::string input = vm["input"].as<std::string>();
+            if (!boost::filesystem::exists(boost::filesystem::path{input})) {
+                std::cout << "ERROR in gdalcubes info: input collection '" << input << "' does not exist." << std::endl;
+                return 1;
+            }
+            image_collection ic = image_collection(input);
+
+            bounds_st e = ic.extent();
+            std::cout << ic.to_string() << std::endl;
+            std::cout << "date range: " << e.t0.to_string() << " to " << e.t1.to_string() << std::endl;
+            std::cout << "x / lat range: " << e.s.left << " to " << e.s.right << std::endl;
+            std::cout << "y / lon range: " << e.s.bottom << " to " << e.s.top << std::endl;
+        }
+
+
+        else {
             std::cout << "ERROR in gdalcubes: unrecognized command." << std::endl;
             std::cout << global_args << std::endl;
             return 1;

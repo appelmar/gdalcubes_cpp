@@ -378,11 +378,12 @@ uint32_t image_collection::count_gdalrefs() {
 }
 
 std::string image_collection::to_string() {
-    std::string out = "IMAGE COLLECTION '" + _filename + "':\n";
-    out += "\t " + std::to_string(count_images()) + " images \n";
-    out += "\t " + std::to_string(count_bands()) + " bands\n";
-    out += "\t " + std::to_string(count_gdalrefs()) + " GDAL dataset references\n";
-    return out;
+    std::stringstream ss;
+    ss << "IMAGE COLLECTION '" << _filename << "' has ";
+    ss << std::to_string(count_images()) << " images with ";
+    ss << std::to_string(count_bands()) << " bands from ";
+    ss << std::to_string(count_gdalrefs()) << " GDAL dataset references";
+    return ss.str();
 }
 
 void image_collection::filter_bands(std::vector<std::string> bands) {
@@ -449,6 +450,31 @@ uint16_t image_collection::pixel_size_bytes(std::string band) {
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         GDALDataType type = (GDALDataType)sqlite3_column_int(stmt, 0);
         out += GDALGetDataTypeSizeBytes(type);
+    }
+    sqlite3_finalize(stmt);
+    return out;
+}
+
+
+
+bounds_st image_collection::extent() {
+    std::string sql = "SELECT min(left), max(right), min(bottom), max(top), min(datetime), max(datetime) FROM images;";
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in image_collection::extent(): cannot prepare query statement");
+    }
+    bounds_st out;
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        out.s.left = sqlite3_column_double(stmt, 0);
+        out.s.right = sqlite3_column_double(stmt, 1);
+        out.s.bottom = sqlite3_column_double(stmt, 2);
+        out.s.top = sqlite3_column_double(stmt, 3);
+        out.t0 = datetime::from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4))));
+        out.t1 = datetime::from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5))));
+    }
+    else {
+        throw std::string("ERROR in image_collection::extent(): cannot fetch query results");
     }
     sqlite3_finalize(stmt);
     return out;

@@ -241,6 +241,16 @@ class image_collection {
      */
     uint16_t pixel_size_bytes(std::string band = "");
 
+
+    /**
+     * Derive the spatial and temporal extent of all images
+     * @return the spatial and temporal extent
+     */
+    bounds_st extent();
+
+
+
+
    protected:
     collection_format _format;
     std::string _filename;

@@ -36,13 +36,12 @@ chunk_data default_chunking::read(chunkid id) {
     // Fill buffers accordingly
 
 
-    // Find intersecting images from collection and iterator over these
-
+    // Find intersecting images from collection and iterate over these
 
     // For each image, call gdal_warp if projection is different than view or GDALTranslate if possible
 
-    // For each band, call RasterIO to read the data
 
+    // For each band, call RasterIO to read the data
     // Copy data to the right position in the buffers
 
 

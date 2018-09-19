@@ -18,6 +18,10 @@
 
 #include <boost/regex.hpp>
 
+#include "utils.h"
+
+
+
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
     if (sqlite3_open("", &_db) != SQLITE_OK) {
         std::string msg = "ERROR in image_collection::create(): cannot create temporary image collection file.";
@@ -275,7 +279,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                 // TODO: if checks, compare band type, offset, scale, unit, etc. with current GDAL dataset
 
                 if (!band_complete[i]) {
-                    std::string sql_band_update = "UPDATE bands SET type='" + std::to_string(bands[band_num[i] - 1].type) + "'," +
+                    std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'," +
                                                   "scale=" + std::to_string(bands[band_num[i] - 1].scale) + "," +
                                                   "offset=" + std::to_string(bands[band_num[i] - 1].offset) + "," +
                                                   "unit='" + bands[band_num[i] - 1].unit + "' WHERE name='" + band_name[i] + "';";
@@ -478,4 +482,73 @@ bounds_st image_collection::extent() {
     }
     sqlite3_finalize(stmt);
     return out;
+}
+
+
+
+std::vector<image_collection::find_result> image_collection::find_with(bounds_2d<double> range, std::string proj,
+                                                                       std::vector<std::string> bands,
+                                                                       std::string start, std::string end) {
+
+
+    std::string sql = "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
+            "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
+            "images.datetime >= '" + start + "' AND images.datetime <= '" + end + "' AND NOT "
+             "(images.right < " + std::to_string(range.left) + " OR images.left > " + std::to_string(range.right) + "OR images.bottom > " + std::to_string(range.top) + "OR images.top < " + std::to_string(range.bottom) + ")";
+
+    if (!bands.empty()) {
+        std::string bandlist = "";
+        for (uint16_t i = 0; i < bands.size() - 1; ++i) {
+            bandlist += "'" + bands[i] + "',";
+        }
+        bandlist += "'" + bands[bands.size() - 1] + "'";
+        sql += " AND bands.name IN (" + bandlist + ")";
+    }
+    sql += " ORDER BY images.name;";
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in image_collection::find_with(): cannot prepare query statement");
+    }
+    std::vector<find_result> out;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        find_result r;
+        r.image_name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+        r.descriptor = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+        r.datetime = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
+        r.band_name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
+        r.band_num = sqlite3_column_int(stmt, 4);
+
+        out.push_back(r);
+    }
+    sqlite3_finalize(stmt);
+    return out;
+
+}
+
+
+
+std::vector<image_collection::band_info> image_collection::get_bands() {
+    std::vector<image_collection::band_info> out;
+
+    std::string sql = "SELECT id, name, type, offset,scale, unit FROM bands ORDER BY id;";
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in image_collection::get_bands(): cannot prepare query statement");
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        image_collection::band_info row;
+        row.id = sqlite3_column_int(stmt, 0);
+        row.name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+        row.type = utils::gdal_type_from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2))));
+        row.offset = sqlite3_column_double(stmt, 3);
+        row.scale = sqlite3_column_double(stmt, 4);
+        row.unit = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
+        out.push_back(row);
+    }
+    sqlite3_finalize(stmt);
+    return out;
+
 }

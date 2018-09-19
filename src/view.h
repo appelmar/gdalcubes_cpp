@@ -17,10 +17,9 @@
 #ifndef VIEW_H
 #define VIEW_H
 
-
 #include "../include/json.hpp"
-#include "image_collection.h"
 #include "datetime.h"
+#include "image_collection.h"
 
 /**
  * This class defines a view how to look at the data including which resolution, which projection,
@@ -33,7 +32,6 @@
 
 class cube_view {
    public:
-
     static cube_view read_json(std::string filename);
     void write_json(std::string filename);
 
@@ -48,38 +46,35 @@ class cube_view {
     inline double& bottom() { return _win.bottom; }
     inline double& top() { return _win.top; }
 
-    inline datetime& t0() {return _t0;}
-    inline datetime& t1() {return _t1;}
+    inline datetime& t0() { return _t0; }
+    inline datetime& t1() { return _t1; }
 
     inline bounds_2d<double>& win() { return _win; }
 
-
-    inline duration& dt() {return _dt;}
-
+    inline duration& dt() { return _dt; }
 
     void set_daily(uint16_t n = 1) {
-        _dt = duration(n,DAY);
+        _dt = duration(n, DAY);
     }
     void set_monthly(uint16_t n = 1) {
-        _dt = duration(n,MONTH);
+        _dt = duration(n, MONTH);
     }
     void set_yearly(uint16_t n = 1) {
-        _dt = duration(n,YEAR);
+        _dt = duration(n, YEAR);
     }
     void set_quarterly(uint16_t n = 1) {
-        _dt = duration(3*n,MONTH);
+        _dt = duration(3 * n, MONTH);
     }
     void set_weekly(uint16_t n = 1) {
-        _dt = duration(n,WEEK);
+        _dt = duration(n, WEEK);
     }
 
     // TODO: add resampling / aggregation methods
 
     uint32_t nt() {
         duration d = (_t1 - _t0) + 1;
-        return (d % _dt == 0)? d / _dt :  (1 + d / _dt);
+        return (d % _dt == 0) ? d / _dt : (1 + d / _dt);
     }
-
 
     // Returns (t,y,x)
     coords_nd<uint32_t, 3> view_coords(coords_st p) {
@@ -87,38 +82,33 @@ class cube_view {
         s[2] = (uint32_t)((p.s.x - _win.left) / dx());
         s[1] = (uint32_t)((p.s.y - _win.bottom) / dy());
 
-//
-//        if (_dt_unit == datetime_unit::DAY) {
-//            boost::gregorian::date_duration dt = p.t.date() - _t0.date();
-//            s[0] = (uint32_t)(dt.days() / (double)_dt_interval);
-//        }
-//        else if (_dt_unit == datetime_unit::WEEK) {
-//            boost::gregorian::date_duration dt = p.t.date() - _t0.date();
-//            s[0] = (uint32_t)(std::ceil(dt.days() / ((double)(7*_dt_interval))));
-//        }
-//        else if (_dt_unit == datetime_unit::MONTH) {
-//            int yd = p.t.date().year() - _t0.date().year();
-//
-//            if (std::abs(yd) >= 1) {
-//                s[0] = (uint32_t)(((yd - 1) * 12 + p.t.date().month() + (p.t.date().month() - _t0.date().month())) /
-//                       (double) _dt_interval); //
-//            } else if (yd == 0) {
-//                s[0] = (uint32_t)((p.t.date().month() - _t0.date().month()) / (double) _dt_interval);
-//            }
-//        }
-//        else if (_dt_unit == datetime_unit::YEAR) {
-//            int yd = p.t.date().year() - _t0.date().year();
-//            s[0] = (uint32_t)((double)yd / (double)_dt_interval);
-//        }
-//        else throw std::string("ERROR in cube_view::nt(): time-based resolution (hours, minutes, seconds) is not supported in gdalcubes");
+        //
+        //        if (_dt_unit == datetime_unit::DAY) {
+        //            boost::gregorian::date_duration dt = p.t.date() - _t0.date();
+        //            s[0] = (uint32_t)(dt.days() / (double)_dt_interval);
+        //        }
+        //        else if (_dt_unit == datetime_unit::WEEK) {
+        //            boost::gregorian::date_duration dt = p.t.date() - _t0.date();
+        //            s[0] = (uint32_t)(std::ceil(dt.days() / ((double)(7*_dt_interval))));
+        //        }
+        //        else if (_dt_unit == datetime_unit::MONTH) {
+        //            int yd = p.t.date().year() - _t0.date().year();
+        //
+        //            if (std::abs(yd) >= 1) {
+        //                s[0] = (uint32_t)(((yd - 1) * 12 + p.t.date().month() + (p.t.date().month() - _t0.date().month())) /
+        //                       (double) _dt_interval); //
+        //            } else if (yd == 0) {
+        //                s[0] = (uint32_t)((p.t.date().month() - _t0.date().month()) / (double) _dt_interval);
+        //            }
+        //        }
+        //        else if (_dt_unit == datetime_unit::YEAR) {
+        //            int yd = p.t.date().year() - _t0.date().year();
+        //            s[0] = (uint32_t)((double)yd / (double)_dt_interval);
+        //        }
+        //        else throw std::string("ERROR in cube_view::nt(): time-based resolution (hours, minutes, seconds) is not supported in gdalcubes");
 
         return s;
     }
-
-
-
-
-
 
    protected:
     std::string _proj;

@@ -28,14 +28,11 @@ cube_view cube_view::read_json(std::string filename) {
 
     v._dt = duration::from_string(j.at("time").at("dt").get<std::string>());
 
-
     std::string st0 = j.at("time").at("t0").get<std::string>();
     std::string st1 = j.at("time").at("t1").get<std::string>();
 
-    // FIXME !!! This is wring and will always generate unit = DAY. Instead implement datetime::from_string and use this here
-    // to derive the unit based on what is provided in the string.
-    v._t0 = datetime(boost::posix_time::ptime(boost::gregorian::from_string(st0))); // Currently no time support
-    v._t1 = datetime(boost::posix_time::ptime(boost::gregorian::from_string(st1))); // Currently no time support
+    v._t0 = datetime::from_string(st0);
+    v._t1 = datetime::from_string(st1);
 
     v._nx = j.at("space").at("nx").get<uint32_t>();
     v._ny = j.at("space").at("ny").get<uint32_t>();

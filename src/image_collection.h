@@ -107,21 +107,19 @@ struct coords_2d {
 };
 
 //template <typename T> using coords_nd = std::vector<T>;
-template <typename T, uint16_t N> using coords_nd = std::array<T,N>;
-
+template <typename T, uint16_t N>
+using coords_nd = std::array<T, N>;
 
 struct coords_st {
     coords_2d<double> s;
     datetime t;
 };
 
-
 struct bounds_st {
     bounds_2d<double> s;
     datetime t0;
     datetime t1;
 };
-
 
 /**
  * @todo: what happens with DB with copy construction? -> Currently copies are forbidden but different objects
@@ -236,14 +234,12 @@ class image_collection {
     uint32_t count_images();
     uint32_t count_gdalrefs();
 
-
     /**
      * Derive the size of a pixel for one or all bands in bytes
      * @param band band identifier, if emtpy the sum of all bands is used
      * @return the size of a pixel with one or all bands or zero if the specified band does not exist.
      */
-    uint16_t pixel_size_bytes(std::string band="");
-
+    uint16_t pixel_size_bytes(std::string band = "");
 
    protected:
     collection_format _format;

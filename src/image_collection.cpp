@@ -435,9 +435,6 @@ void image_collection::filter_spatial_range(bounds_2d<double> range, std::string
     }
 }
 
-
-
-
 uint16_t image_collection::pixel_size_bytes(std::string band) {
     std::string sql = "SELECT type FROM bands";
     if (!band.empty()) sql += " WHERE name='" + band + "'";
@@ -448,9 +445,9 @@ uint16_t image_collection::pixel_size_bytes(std::string band) {
     if (!stmt) {
         throw std::string("ERROR in image_collection::pixel_size_bytes(): cannot prepare query statement");
     }
-    uint16_t out=0;
-    while ( sqlite3_step(stmt) == SQLITE_ROW) {
-        GDALDataType type = (GDALDataType)sqlite3_column_int(stmt,0);
+    uint16_t out = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        GDALDataType type = (GDALDataType)sqlite3_column_int(stmt, 0);
         out += GDALGetDataTypeSizeBytes(type);
     }
     sqlite3_finalize(stmt);

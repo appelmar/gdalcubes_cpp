@@ -32,10 +32,9 @@ endif (NOT proj_LIBRARY)
 
 
 ## find boost
-find_package(Boost COMPONENTS program_options filesystem system regex date_time REQUIRED ) # boost property tree
+find_package(Boost COMPONENTS program_options filesystem system regex date_time REQUIRED)
 if (Boost_FOUND)
     message(STATUS "Boost headers found at ${Boost_INCLUDE_DIRS}")
-
 else (Boost_FOUND)
     message(FATAL_ERROR "Boost headers not found")
 endif (Boost_FOUND)
@@ -59,41 +58,29 @@ endif (NOT sqlite_LIBRARY)
 
 
 
-## find libgpkg
-#find_path(libgpkg_INCLUDEDIR "gpkg.h")
-#if (libgpkg_INCLUDEDIR-NOTFOUND)
-#    message(FATAL_ERROR "libgpkg headers not found")
-#endif (libgpkg_INCLUDEDIR-NOTFOUND)
-#
-#find_library(libgpkg_LIBRARY NAMES gpkg)
-#if (NOT libgpkg_LIBRARY)
-#    message(FATAL_ERROR "libgpkg not found!")
-#else (NOT libgpkg_LIBRARY)
-#    message(STATUS "libgpkg found at ${libgpkg_LIBRARY}")
-#    configure_file( ${CMAKE_CURRENT_LIST_DIR}/libgpkg.inc.in ${CMAKE_CURRENT_LIST_DIR}/libgpkg.inc)
-#endif (NOT libgpkg_LIBRARY)
+include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR})
 
 
 
-
-
-include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${libgpkg_INCLUDEDIR} ../include)
-
-
-
-file(GLOB_RECURSE SOURCE_FILES
+file(GLOB SOURCE_FILES
     "*.cpp" "*.h"
 )
 
-list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/test.cpp)
+list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
 list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 
 
 
-add_executable(gdalcubes_test  ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/test.cpp)
-target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
+add_executable(gdalcubes_example  ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
+target_link_libraries (gdalcubes_example ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
 
 
 add_executable(gdalcubes ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 target_link_libraries (gdalcubes ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
+
+file(GLOB TEST_FILES
+        "test/*.cpp" "*.h")
+
+add_executable(gdalcubes_test ${SOURCE_FILES} ${TEST_FILES})
+target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
 

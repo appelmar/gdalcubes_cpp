@@ -14,7 +14,6 @@
    limitations under the License.
 */
 
-
 /**
  * Simplistic library for datetime objects that works on top of boost::posix_time.
  * The assumption of the library is that durations are only meaningful if given as a single number with a single datetime unit. Whether or not this assumption
@@ -63,7 +62,6 @@ struct duration {
         }
     }
 
-
     static duration from_string(std::string s) {
         boost::regex rexp("P(T?)([0-9]+)([YMWD])");
 
@@ -80,8 +78,7 @@ struct duration {
                 d.dt_unit = MINUTE;
             else if (res[3] == "S")
                 d.dt_unit = SECOND;
-        }
-        else {
+        } else {
             if (res[3] == "Y")
                 d.dt_unit = YEAR;
             else if (res[3] == "M")
@@ -94,33 +91,28 @@ struct duration {
         return d;
     }
 
-
-    friend duration operator*(duration l, const int& r)
-    {
+    friend duration operator*(duration l, const int& r) {
         duration out;
         out.dt_unit = l.dt_unit;
         out.dt_interval = l.dt_interval * r;
         return out;
     }
 
-    friend duration operator+(duration l, const int& r)
-    {
+    friend duration operator+(duration l, const int& r) {
         duration out;
         out.dt_unit = l.dt_unit;
         out.dt_interval = l.dt_interval + r;
         return out;
     }
 
-    friend duration operator/(duration l, const int& r)
-    {
+    friend duration operator/(duration l, const int& r) {
         duration out;
         out.dt_unit = l.dt_unit;
         out.dt_interval = l.dt_interval / r;
         return out;
     }
 
-    friend int operator/(duration l, duration& r)
-    {
+    friend int operator/(duration l, duration& r) {
         if (l.dt_unit != r.dt_unit) {
             throw std::string("ERROR in duration::operator/(): Incompatible datetime duration units");
         }
@@ -131,8 +123,7 @@ struct duration {
         return l.dt_interval / r.dt_interval;
     }
 
-    friend int operator%(duration l, duration& r)
-    {
+    friend int operator%(duration l, duration& r) {
         if (l.dt_unit != r.dt_unit) {
             throw std::string("ERROR in duration::operator/(): Incompatible datetime duration units");
         }
@@ -143,25 +134,19 @@ struct duration {
         return l.dt_interval % r.dt_interval;
     }
 
-
-    friend duration operator-(duration l, const int& r)
-    {
+    friend duration operator-(duration l, const int& r) {
         duration out;
         out.dt_unit = l.dt_unit;
         out.dt_interval = l.dt_interval - r;
         return out;
     }
-
 };
 
-
 class datetime {
-
-public:
-
-    datetime( ) : _p(), _unit(DAY) {}
-    datetime( boost::posix_time::ptime p) : _p(p) , _unit(DAY) {}
-    datetime( boost::posix_time::ptime p, datetime_unit u) : _p(p) , _unit(u) {}
+   public:
+    datetime() : _p(), _unit(DAY) {}
+    datetime(boost::posix_time::ptime p) : _p(p), _unit(DAY) {}
+    datetime(boost::posix_time::ptime p, datetime_unit u) : _p(p), _unit(u) {}
 
     std::string to_string() {
         std::stringstream os;
@@ -172,31 +157,56 @@ public:
         return os.str();
     }
 
-
     static datetime from_string(std::string s) {
         std::istringstream is(s);
-        // TODO: find the lowest unit given in s
 
-
-        // Regex does not support ISO weeks / day of year
-        std::string regex1 = "([0-9]{4})-?([0-9]{2})-?([0-9]{2})[T\s]?([0-9]{2}):?([0-9]{2}):?([0-9]{2})";
-
+        // TODO: Regex does not support ISO weeks / day of year yet
+        boost::regex regex1("([0-9]{4})(?:-?([0-9]{2})(?:-?([0-9]{2})(?:[T\\s]?([0-9]{2})(?::?([0-9]{2})(?::?([0-9]{2}))?)?)?)?)?");
         datetime out;
-        is.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_input_facet(datetime_format_for_unit(SECOND))));
-        is >> out._p;
 
+        boost::cmatch res;
+        if (!boost::regex_match(s.c_str(), res, regex1)) {
+            throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
+        } else {
+            if (!res.size() == 7) throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
+            uint16_t i = 2;
+            while (!res[i].str().empty() && i < 7) ++i;
+            if (i == 2) {
+                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), 1, 1), boost::posix_time::time_duration(0, 0, 0));
+                out._unit = YEAR;
+            } else if (i == 3) {
+                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), 1), boost::posix_time::time_duration(0, 0, 0));
+                out._unit = MONTH;
+            } else if (i == 4) {
+                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(0, 0, 0));
+                out._unit = DAY;
+            } else if (i == 5) {
+                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), 0, 0));
+                out._unit = HOUR;
+            } else if (i == 6) {
+                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), std::stoi(res[5].str()), 0));
+                out._unit = MINUTE;
+            } else if (i == 7) {
+                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), std::stoi(res[5].str()), std::stoi(res[6].str())));
+                out._unit = SECOND;
+            }
+        }
+
+        //        for (uint16_t i = 0; i < res.size(); ++i) {
+        //            std::cout << "Expression " << i << ": " << res[i] << "empty: " << res[i].str().empty() << std::endl;
+        //        };
+        //        std::cout << "--------------------------------" << std::endl;
+
+        return out;
     }
 
-
-    datetime_unit& unit() {return _unit;}
-    datetime_unit unit() const {return _unit;}
-
+    datetime_unit& unit() { return _unit; }
+    datetime_unit unit() const { return _unit; }
 
     friend duration operator-(const datetime& l,
-                       const datetime& r)
-    {
+                              const datetime& r) {
         duration out;
-        out.dt_unit = std::max(l.unit(), r.unit()); // TODO: warning if not the same unit
+        out.dt_unit = std::max(l.unit(), r.unit());  // TODO: warning if not the same unit
         switch (out.dt_unit) {
             case SECOND:
                 out.dt_interval = (r._p - l._p).total_seconds();
@@ -220,21 +230,17 @@ public:
                 } else if (yd == 0) {
                     out.dt_interval = (l._p.date().month() - r._p.date().month());
                 }
-                break; }
+                break;
+            }
             case YEAR:
-                out.dt_interval =  l._p.date().year() - r._p.date().year();
+                out.dt_interval = l._p.date().year() - r._p.date().year();
                 break;
         }
         return out;
     }
 
-
-
-
-
-    friend bool operator==( const datetime &l, const datetime &r )
-    {
-        if (l.unit() != r._unit) return false; // TODO: exception
+    friend bool operator==(const datetime& l, const datetime& r) {
+        if (l.unit() != r._unit) return false;  // TODO: exception
         switch (l.unit()) {
             case SECOND:
                 return (l._p.date() == r._p.date() &&
@@ -243,7 +249,7 @@ public:
                         l._p.time_of_day().seconds() == r._p.time_of_day().seconds());
             case MINUTE:
                 return (l._p.date() == r._p.date() &&
-                        l._p.time_of_day().hours() ==  r._p.time_of_day().hours() &&
+                        l._p.time_of_day().hours() == r._p.time_of_day().hours() &&
                         l._p.time_of_day().minutes() == r._p.time_of_day().minutes());
             case HOUR:
                 return (l._p.date() == r._p.date() &&
@@ -261,11 +267,10 @@ public:
         }
     }
 
-    inline friend bool operator!=(const datetime& l, const datetime& r){ return !(l == r); }
+    inline friend bool operator!=(const datetime& l, const datetime& r) { return !(l == r); }
 
-
-    friend bool operator< (datetime& l, datetime& r){
-        if (l.unit() != r._unit) return false; // TODO: exception
+    friend bool operator<(datetime& l, datetime& r) {
+        if (l.unit() != r._unit) return false;  // TODO: exception
         switch (l.unit()) {
             case SECOND:
                 if (l._p.date() < r._p.date()) return true;
@@ -284,31 +289,25 @@ public:
             case DAY:
                 if (l._p.date().year() < r._p.date().year()) return true;
                 if (l._p.date().year() > r._p.date().year()) return false;
-                return (l._p.date().day_of_year() < r._p.date().day_of_year()) ;
+                return (l._p.date().day_of_year() < r._p.date().day_of_year());
             case WEEK:
                 // TODO: what if the same week overlaps two years?
                 if (l._p.date().year() < r._p.date().year()) return true;
                 if (l._p.date().year() > r._p.date().year()) return false;
-                return (l._p.date().week_number() < r._p.date().week_number()) ;
+                return (l._p.date().week_number() < r._p.date().week_number());
             case MONTH:
                 if (l._p.date().year() < r._p.date().year()) return true;
                 if (l._p.date().year() > r._p.date().year()) return false;
-                return (l._p.date().month() < r._p.date().month()) ;
+                return (l._p.date().month() < r._p.date().month());
             case YEAR:
                 return l._p.date().year() < r._p.date().year();
-
         }
     }
-    inline friend bool operator> (datetime& l, datetime& r){ return r < l; }
-    inline friend bool operator<=(datetime& l, datetime& r){ return !(l > r); }
-    inline friend bool operator>=(datetime& l, datetime& r){ return !(l < r); }
+    inline friend bool operator>(datetime& l, datetime& r) { return r < l; }
+    inline friend bool operator<=(datetime& l, datetime& r) { return !(l > r); }
+    inline friend bool operator>=(datetime& l, datetime& r) { return !(l < r); }
 
-
-
-
-
-    friend datetime operator+(datetime l, const duration& r)
-    {
+    friend datetime operator+(datetime l, const duration& r) {
         datetime out(l._p);
         switch (r.dt_unit) {
             case SECOND:
@@ -321,35 +320,29 @@ public:
                 out._p += boost::posix_time::hours(r.dt_interval);
                 break;
             case DAY:
-                out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval)); // ignore time
+                out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval));  // ignore time
                 break;
             case WEEK:
-                out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval*7)); // ignore time
+                out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval * 7));  // ignore time
                 break;
             case MONTH:
-                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval / 12, out._p.date().month() + r.dt_interval % 12, 1)); // ignore time and day
+                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval / 12, out._p.date().month() + r.dt_interval % 12, 1));  // ignore time and day
                 break;
             case YEAR:
-                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval, 1, 1)); // ignore time, day, and month
+                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval, 1, 1));  // ignore time, day, and month
                 break;
         }
         return out;
     }
 
-
-
-
-protected:
-
+   protected:
     boost::posix_time::ptime _p;
     datetime_unit _unit;
-
-
 
     static std::string datetime_format_for_unit(datetime_unit u) {
         switch (u) {
             case SECOND:
-               return "%Y-%m-%dT%H:%M:%S";
+                return "%Y-%m-%dT%H:%M:%S";
             case MINUTE:
                 return "%Y-%m-%dT%H:%M";
             case HOUR:
@@ -364,8 +357,6 @@ protected:
                 return "%Y";
         }
     }
-
 };
 
-
-#endif //DATETIME_H
+#endif  //DATETIME_H

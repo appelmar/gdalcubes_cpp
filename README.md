@@ -30,6 +30,12 @@ into external tools such as R.
 gdalcubes create_collection -f collection_format.json list.txt out.db 
 gdalcubes create_collection -R -f collection_format.json /home/user/data/ out.db 
 
+
+gdalcubes info in.db
+
+gdalcubes join in1.db in2.db out.db 
+
+
 gdalcubes stream -v view.json -t reduce_time -o result.db > Rscript timeseries_stats.R
 gdalcubes stream -v view.json -t apply_pixel > Rscript timeseries_stats.R
 
@@ -153,6 +159,6 @@ Views are serialized as JSON documents as in the example below:
 - Test cases with some imagery
 - Examples for cloud storage
 - Unit tests for datetime
-- views
+- gdalcubes info CLI
 - processing example
 - Docker image for distributed processing

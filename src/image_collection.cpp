@@ -20,8 +20,6 @@
 
 #include "utils.h"
 
-
-
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
     if (sqlite3_open("", &_db) != SQLITE_OK) {
         std::string msg = "ERROR in image_collection::create(): cannot create temporary image collection file.";
@@ -459,8 +457,6 @@ uint16_t image_collection::pixel_size_bytes(std::string band) {
     return out;
 }
 
-
-
 bounds_st image_collection::extent() {
     std::string sql = "SELECT min(left), max(right), min(bottom), max(top), min(datetime), max(datetime) FROM images;";
     sqlite3_stmt* stmt;
@@ -476,25 +472,24 @@ bounds_st image_collection::extent() {
         out.s.top = sqlite3_column_double(stmt, 3);
         out.t0 = datetime::from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4))));
         out.t1 = datetime::from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5))));
-    }
-    else {
+    } else {
         throw std::string("ERROR in image_collection::extent(): cannot fetch query results");
     }
     sqlite3_finalize(stmt);
     return out;
 }
 
-
-
 std::vector<image_collection::find_result> image_collection::find_with(bounds_2d<double> range, std::string proj,
                                                                        std::vector<std::string> bands,
                                                                        std::string start, std::string end) {
-
-
-    std::string sql = "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
-            "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
-            "images.datetime >= '" + start + "' AND images.datetime <= '" + end + "' AND NOT "
-             "(images.right < " + std::to_string(range.left) + " OR images.left > " + std::to_string(range.right) + "OR images.bottom > " + std::to_string(range.top) + "OR images.top < " + std::to_string(range.bottom) + ")";
+    std::string sql =
+        "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
+        "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
+        "images.datetime >= '" +
+        start + "' AND images.datetime <= '" + end +
+        "' AND NOT "
+        "(images.right < " +
+        std::to_string(range.left) + " OR images.left > " + std::to_string(range.right) + "OR images.bottom > " + std::to_string(range.top) + "OR images.top < " + std::to_string(range.bottom) + ")";
 
     if (!bands.empty()) {
         std::string bandlist = "";
@@ -523,10 +518,7 @@ std::vector<image_collection::find_result> image_collection::find_with(bounds_2d
     }
     sqlite3_finalize(stmt);
     return out;
-
 }
-
-
 
 std::vector<image_collection::band_info> image_collection::get_bands() {
     std::vector<image_collection::band_info> out;
@@ -550,5 +542,4 @@ std::vector<image_collection::band_info> image_collection::get_bands() {
     }
     sqlite3_finalize(stmt);
     return out;
-
 }

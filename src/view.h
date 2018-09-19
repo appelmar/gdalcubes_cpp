@@ -76,7 +76,6 @@ class cube_view {
         return (d % _dt == 0) ? d / _dt : (1 + d / _dt);
     }
 
-
     /**
      * Convert integer view-based coordinates to map coordinates
      * @note view-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
@@ -86,7 +85,7 @@ class cube_view {
      * @param p
      * @return
      */
-    coords_st map_coords(coords_nd<uint32_t, 3> p ) {
+    coords_st map_coords(coords_nd<uint32_t, 3> p) {
         coords_st s;
         s.s.x = _win.left + p[2] * dx();
         s.s.y = _win.bottom + p[1] * dy();

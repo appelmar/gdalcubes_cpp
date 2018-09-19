@@ -25,6 +25,7 @@
 #include <boost/program_options.hpp>
 #include "build_info.h"
 #include "image_collection.h"
+#include "utils.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -125,8 +126,7 @@ int main(int argc, char *argv[]) {
             ic.write(output);
             std::cout << ic.to_string() << std::endl;
 
-        }
-        else if ( cmd == "info") {
+        } else if (cmd == "info") {
             po::options_description info_desc("info arguments");
             info_desc.add_options()("input", po::value<std::string>(), "Filename of the image collection.");
 
@@ -140,7 +140,6 @@ int main(int argc, char *argv[]) {
             } catch (...) {
                 std::cout << "ERROR in gdalcubes info: invalid arguments." << std::endl;
                 std::cout << info_desc << std::endl;
-
             }
 
             std::string input = vm["input"].as<std::string>();
@@ -150,13 +149,27 @@ int main(int argc, char *argv[]) {
             }
             image_collection ic = image_collection(input);
 
+            std::vector<image_collection::band_info> bands = ic.get_bands();
+
             bounds_st e = ic.extent();
             std::cout << ic.to_string() << std::endl;
             std::cout << "date range: " << e.t0.to_string() << " to " << e.t1.to_string() << std::endl;
             std::cout << "x / lat range: " << e.s.left << " to " << e.s.right << std::endl;
             std::cout << "y / lon range: " << e.s.bottom << " to " << e.s.top << std::endl;
+            std::cout << "BAND"
+                      << ":("
+                      << "type"
+                      << ","
+                      << "offset"
+                      << ","
+                      << "scale"
+                      << ","
+                      << "unit"
+                      << ")" << std::endl;
+            for (uint16_t i = 0; i < bands.size(); ++i) {
+                std::cout << bands[i].name << ":(" << utils::string_from_gdal_type(bands[i].type) << "," << bands[i].offset << "," << bands[i].scale << "," << bands[i].unit << ")" << std::endl;
+            }
         }
-
 
         else {
             std::cout << "ERROR in gdalcubes: unrecognized command." << std::endl;

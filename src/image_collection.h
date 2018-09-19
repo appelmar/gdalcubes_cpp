@@ -23,8 +23,6 @@
 #include "collection_format.h"
 #include "datetime.h"
 
-
-
 template <typename Ta>
 struct bounds_2d {
     Ta left, bottom, top, right;
@@ -236,18 +234,14 @@ class image_collection {
     uint32_t count_images();
     uint32_t count_gdalrefs();
 
-
     struct find_result {
         std::string image_name;
         std::string descriptor;
         std::string datetime;
         std::string band_name;
         uint16_t band_num;
-
     };
     std::vector<find_result> find_with(bounds_2d<double> range, std::string proj, std::vector<std::string> bands, std::string start, std::string end);
-
-
 
     struct band_info {
         uint32_t id;
@@ -258,9 +252,7 @@ class image_collection {
         std::string unit;
     };
 
-
     std::vector<image_collection::band_info> get_bands();
-
 
     /**
      * Derive the size of a pixel for one or all bands in bytes
@@ -269,15 +261,11 @@ class image_collection {
      */
     uint16_t pixel_size_bytes(std::string band = "");
 
-
     /**
      * Derive the spatial and temporal extent of all images
      * @return the spatial and temporal extent
      */
     bounds_st extent();
-
-
-
 
    protected:
     collection_format _format;

@@ -18,25 +18,20 @@
 
 #include "view.h"
 
-
-
-class chunking; // forward declaration
+class chunking;  // forward declaration
 
 class cube {
-
-public:
+   public:
     cube(std::shared_ptr<image_collection> ic);
     cube(std::string icfile);
     cube(std::shared_ptr<image_collection> ic, cube_view v);
     cube(std::string icfile, cube_view v);
-    cube(std::shared_ptr<image_collection> ic, std::string vfile) ;
-    cube(std::string icfile,std::string vfile);
+    cube(std::shared_ptr<image_collection> ic, std::string vfile);
+    cube(std::string icfile, std::string vfile);
     ~cube();
 
-
-    inline std::shared_ptr<image_collection> collection() {return _collection;}
-    inline cube_view& view() {return _view;}
-
+    inline std::shared_ptr<image_collection> collection() { return _collection; }
+    inline cube_view& view() { return _view; }
 
     void set_chunking(chunking* c);
     const chunking* get_chunking();
@@ -44,8 +39,7 @@ public:
    protected:
     cube_view _view;
     const std::shared_ptr<image_collection> _collection;
-    chunking* _chunking; // owned by this class
-
+    chunking* _chunking;  // owned by this class
 };
 
 #endif  //CUBE_H

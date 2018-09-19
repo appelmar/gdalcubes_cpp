@@ -57,7 +57,7 @@ int main() {
         std::cout << x.to_string();
 
         cube_view v = cube_view::read_json("../../test/view.json");
-       v.write_json("out_view.json");
+        v.write_json("out_view.json");
 
     } catch (std::string e) {
         std::cout << e << std::endl;

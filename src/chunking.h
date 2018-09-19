@@ -17,13 +17,9 @@
 #ifndef CHUNKING_H
 #define CHUNKING_H
 
-
 #include "cube.h"
 
-
-
 typedef uint32_t chunkid;
-
 
 /**
  * A chunk stores a spatial and temporal contiguous part of an image collection
@@ -31,25 +27,20 @@ typedef uint32_t chunkid;
  * @todo add bitmap for correctly handling nodata values
  */
 class chunk_data {
-
-public:
-
+   public:
     chunk_data() : _v(), _type(), _n(0) {}
 
     ~chunk_data() {
-        for (uint16_t i=0; i<_v.size(); ++i) {
+        for (uint16_t i = 0; i < _v.size(); ++i) {
             if (_v[i]) free(_v[i]);
         }
     }
 
-
     chunk_data(const chunk_data&) = delete;
     void operator=(const chunk_data&) = delete;
 
-
     // move constructor
     chunk_data(chunk_data&& A) {
-
         // Taking over the resources
         A._type = _type;
         A._n = _n;
@@ -57,68 +48,62 @@ public:
 
         // Resetting *this to prevent freeing the data buffers in the destructor.
         _v.clear();
-        _n=0;
+        _n = 0;
         _type.clear();
     }
-
 
     void* read(uint16_t band);
     GDALDataType type(uint16_t bands);
 
-    uint16_t count_bands() {return _type.size();}
-    uint16_t count_values() {return _n;}
+    uint16_t count_bands() { return _type.size(); }
+    uint16_t count_values() { return _n; }
     uint64_t size_bytes(uint16_t band) {
-        return GDALGetDataTypeSizeBytes(_type[band])*_n;
+        return GDALGetDataTypeSizeBytes(_type[band]) * _n;
     }
     uint64_t size_bytes() {
-        uint64_t size=0;
-        for (uint16_t i=0; i<count_bands(); ++i) {
-            size += GDALGetDataTypeSizeBytes(_type[i])*_n;
+        uint64_t size = 0;
+        for (uint16_t i = 0; i < count_bands(); ++i) {
+            size += GDALGetDataTypeSizeBytes(_type[i]) * _n;
         }
         return size;
     }
 
-
     inline bool empty() {
-        return(_v.empty());
+        return (_v.empty());
     }
 
-protected:
+   protected:
     std::vector<void*> _v;
-    uint32_t _n; // number of values per element in _v;
-    std::vector<GDALDataType> _type; // implies the size of values
+    uint32_t _n;                      // number of values per element in _v;
+    std::vector<GDALDataType> _type;  // implies the size of values
 };
 
-
 class chunking {
-public:
-
+   public:
     friend class cube;
 
-    chunking(cube *c) : _c(c) {}
+    chunking(cube* c) : _c(c) {}
 
     class chunk_iterator {
         friend class chunking;
-        chunk_iterator& operator++()
-        {
+        chunk_iterator& operator++() {
             ++_cur_id;
             return *this;
         }
 
-
-        friend bool operator==(const chunk_iterator& lhs, const chunk_iterator& rhs){
+        friend bool operator==(const chunk_iterator& lhs, const chunk_iterator& rhs) {
             return lhs._c == rhs._c && lhs._cur_id == rhs._cur_id;
         }
-        friend bool operator!=(const chunk_iterator& lhs, const chunk_iterator& rhs){ return !(lhs == rhs); }
+        friend bool operator!=(const chunk_iterator& lhs, const chunk_iterator& rhs) { return !(lhs == rhs); }
 
         chunk_data operator*(chunk_iterator l) {
             return _c->read(_cur_id);
         }
 
-    protected:
+       protected:
         chunk_iterator() : _cur_id(0) {}
         chunkid _cur_id;
-        chunking *_c;
+        chunking* _c;
     };
 
     chunk_iterator begin() {
@@ -138,15 +123,11 @@ public:
     virtual chunk_data read(chunkid id) = 0;
     virtual uint32_t count_chunks() = 0;
 
-protected:
+   protected:
     cube* _c;
-
 };
 
-
-class default_chunking : public chunking  {
-
-
+class default_chunking : public chunking {
    public:
     default_chunking(cube* c) : chunking(c), _size_x(256), _size_y(256), _size_t(16) {}
 
@@ -154,10 +135,7 @@ class default_chunking : public chunking  {
     inline uint32_t& size_y() { return _size_y; }
     inline uint32_t& size_t() { return _size_t; }
 
-
-
     chunk_data read(chunkid id);
-
 
     inline uint32_t count_chunks() {
         return std::ceil((double)_c->view().nx() / (double)_size_x) * std::ceil((double)_c->view().ny() / (double)_size_y) * std::ceil((double)_c->view().nt() / (double)_size_t);
@@ -236,7 +214,6 @@ class default_chunking : public chunking  {
         else if (out_vcoords_low[2] > _c->view().nx())
             out_vcoords_low[2] = _c->view().nx();
 
-
         coords_st low = _c->view().map_coords(out_vcoords_low);
         coords_st high = _c->view().map_coords(out_vcoords_high);
 
@@ -251,7 +228,6 @@ class default_chunking : public chunking  {
     }
 
    protected:
-
     uint32_t _size_x;
     uint32_t _size_y;
     uint32_t _size_t;

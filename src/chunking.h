@@ -90,15 +90,65 @@ protected:
 };
 
 
-//class chunking {
-//   public:
-//    class chunk_iterator;
-//};
+class chunking {
+public:
 
-class default_chunking  {
-   public:
-    default_chunking(cube* c) : _c(c), _size_x(256), _size_y(256), _size_t(16) {
+    friend class cube;
+
+    chunking(cube *c) : _c(c) {}
+
+    class chunk_iterator {
+        friend class chunking;
+        chunk_iterator& operator++()
+        {
+            ++_cur_id;
+            return *this;
+        }
+
+
+        friend bool operator==(const chunk_iterator& lhs, const chunk_iterator& rhs){
+            return lhs._c == rhs._c && lhs._cur_id == rhs._cur_id;
+        }
+        friend bool operator!=(const chunk_iterator& lhs, const chunk_iterator& rhs){ return !(lhs == rhs); }
+
+        chunk_data operator*(chunk_iterator l) {
+            return _c->read(_cur_id);
+        }
+
+    protected:
+        chunk_iterator() : _cur_id(0) {}
+        chunkid _cur_id;
+        chunking *_c;
+    };
+
+    chunk_iterator begin() {
+        chunk_iterator it;
+        it._cur_id = 0;
+        it._c = this;
+        return it;
     }
+
+    chunk_iterator end() {
+        chunk_iterator it;
+        it._cur_id = count_chunks();
+        it._c = this;
+        return it;
+    }
+
+    virtual chunk_data read(chunkid id) = 0;
+    virtual uint32_t count_chunks() = 0;
+
+protected:
+    cube* _c;
+
+};
+
+
+class default_chunking : public chunking  {
+
+
+   public:
+    default_chunking(cube* c) : chunking(c), _size_x(256), _size_y(256), _size_t(16) {}
 
     inline uint32_t& size_x() { return _size_x; }
     inline uint32_t& size_y() { return _size_y; }
@@ -201,7 +251,7 @@ class default_chunking  {
     }
 
    protected:
-     cube* const _c;
+
     uint32_t _size_x;
     uint32_t _size_y;
     uint32_t _size_t;

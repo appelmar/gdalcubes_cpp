@@ -30,3 +30,10 @@ cube::~cube() {
     if (_chunking)
         delete _chunking;
 }
+
+
+void cube::set_chunking(chunking* c) {
+    // c will be owned (and destroyed) by this class afterwards!!
+    _chunking = c;
+    _chunking->_c = this;
+}

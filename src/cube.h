@@ -20,7 +20,7 @@
 
 
 
-class default_chunking; // forward declaration
+class chunking; // forward declaration
 
 class cube {
 
@@ -38,10 +38,13 @@ public:
     inline cube_view& view() {return _view;}
 
 
+    void set_chunking(chunking* c);
+    const chunking* get_chunking();
+
    protected:
     cube_view _view;
     const std::shared_ptr<image_collection> _collection;
-    default_chunking* _chunking; // owned by this class
+    chunking* _chunking; // owned by this class
 
 };
 

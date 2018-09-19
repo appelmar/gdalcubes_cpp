@@ -18,10 +18,31 @@
 
 #include "view.h"
 
+
+
+class default_chunking; // forward declaration
+
 class cube {
+
+public:
+    cube(std::shared_ptr<image_collection> ic);
+    cube(std::string icfile);
+    cube(std::shared_ptr<image_collection> ic, cube_view v);
+    cube(std::string icfile, cube_view v);
+    cube(std::shared_ptr<image_collection> ic, std::string vfile) ;
+    cube(std::string icfile,std::string vfile);
+    ~cube();
+
+
+    inline std::shared_ptr<image_collection> collection() {return _collection;}
+    inline cube_view& view() {return _view;}
+
+
    protected:
     cube_view _view;
-    image_collection _collection;
+    const std::shared_ptr<image_collection> _collection;
+    default_chunking* _chunking; // owned by this class
+
 };
 
 #endif  //CUBE_H

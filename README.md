@@ -12,6 +12,14 @@ gdalcubes includes both, a data model for image collections as well as tools to 
 into external tools such as R.  
 
 
+## gdalcubes in a nutshell
+
+What is a _gdalcube_? Image collection + data view
+
+What is an _image collection_? A bunch of GDAL datasets (e.g. image files) and their relation with regard to datetime and raster bands.
+
+What is a _data view_? A spatial and temporal window + resolution + projection how we look at the data. 
+
 
 
 # Objectives
@@ -23,7 +31,7 @@ into external tools such as R.
 - Demonstrate how to use gdalcubes for typical use cases. 
 
 
-# Command line interface
+# Command line utilities
 
 ```
 # Creating image collections

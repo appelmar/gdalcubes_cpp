@@ -122,9 +122,9 @@ struct bounds_st {
 };
 
 /**
- * @todo: what happens with DB with copy construction? -> Currently copies are forbidden but different objects
- * may open the same database (if on disk) with different handles.
- */
+ * @note copy construction and assignment are deleted because the sqlite must not be shared (handle will be closed in destructor). Instrad, use
+ * std::shared_ptr<image_collection> to share the whole image collection resource if needed.
+  */
 class image_collection {
    public:
     /**

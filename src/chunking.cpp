@@ -15,3 +15,39 @@
 */
 
 #include "chunking.h"
+
+
+
+
+chunk_data default_chunking::read(chunkid id) {
+    chunk_data out;
+    if (id < 0 || id >= count_chunks())
+        return out; // chunk is outside of the view, we don't need to read anything.
+
+
+
+
+    // Access image collection and fetch band information
+
+
+    // Derive how many pixels the chunk has (this varies for chunks at the boundary of the view)
+
+
+    // Fill buffers accordingly
+
+
+    // Find intersecting images from collection and iterator over these
+
+
+    // For each image, call gdal_warp if projection is different than view or GDALTranslate if possible
+
+    // For each band, call RasterIO to read the data
+
+    // Copy data to the right position in the buffers
+
+
+
+
+
+
+}

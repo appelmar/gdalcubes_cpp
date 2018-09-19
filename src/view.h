@@ -76,37 +76,37 @@ class cube_view {
         return (d % _dt == 0) ? d / _dt : (1 + d / _dt);
     }
 
-    // Returns (t,y,x)
+
+    /**
+     * Convert integer view-based coordinates to map coordinates
+     * @note view-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
+     * lower left pixel.
+     * @note Output map coordinates will have the same projection as the cube view
+     * @see cube_view::view_coords()
+     * @param p
+     * @return
+     */
+    coords_st map_coords(coords_nd<uint32_t, 3> p ) {
+        coords_st s;
+        s.s.x = _win.left + p[2] * dx();
+        s.s.y = _win.bottom + p[1] * dy();
+        s.t = _t0 + _dt * p[0];
+    }
+
+    /**
+     *  Convert map coordinates to integer view-based coordinates
+     * @note view-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
+     * lower left pixel.
+     * @note the function assumes input map coordinates have the same projection as the cube view
+     * @see cube_view::map_coords()
+     * @param p
+     * @return
+     */
     coords_nd<uint32_t, 3> view_coords(coords_st p) {
         coords_nd<uint32_t, 3> s;
         s[2] = (uint32_t)((p.s.x - _win.left) / dx());
         s[1] = (uint32_t)((p.s.y - _win.bottom) / dy());
-
-        //
-        //        if (_dt_unit == datetime_unit::DAY) {
-        //            boost::gregorian::date_duration dt = p.t.date() - _t0.date();
-        //            s[0] = (uint32_t)(dt.days() / (double)_dt_interval);
-        //        }
-        //        else if (_dt_unit == datetime_unit::WEEK) {
-        //            boost::gregorian::date_duration dt = p.t.date() - _t0.date();
-        //            s[0] = (uint32_t)(std::ceil(dt.days() / ((double)(7*_dt_interval))));
-        //        }
-        //        else if (_dt_unit == datetime_unit::MONTH) {
-        //            int yd = p.t.date().year() - _t0.date().year();
-        //
-        //            if (std::abs(yd) >= 1) {
-        //                s[0] = (uint32_t)(((yd - 1) * 12 + p.t.date().month() + (p.t.date().month() - _t0.date().month())) /
-        //                       (double) _dt_interval); //
-        //            } else if (yd == 0) {
-        //                s[0] = (uint32_t)((p.t.date().month() - _t0.date().month()) / (double) _dt_interval);
-        //            }
-        //        }
-        //        else if (_dt_unit == datetime_unit::YEAR) {
-        //            int yd = p.t.date().year() - _t0.date().year();
-        //            s[0] = (uint32_t)((double)yd / (double)_dt_interval);
-        //        }
-        //        else throw std::string("ERROR in cube_view::nt(): time-based resolution (hours, minutes, seconds) is not supported in gdalcubes");
-
+        s[0] = (uint32_t)((p.t - _t0) / _dt);
         return s;
     }
 

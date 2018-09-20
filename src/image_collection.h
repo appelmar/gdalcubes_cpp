@@ -234,16 +234,20 @@ class image_collection {
     uint32_t count_images();
     uint32_t count_gdalrefs();
 
-    struct find_result {
+    struct find_range_st_row {
         std::string image_name;
         std::string descriptor;
         std::string datetime;
         std::string band_name;
         uint16_t band_num;
     };
-    std::vector<find_result> find_with(bounds_2d<double> range, std::string proj, std::vector<std::string> bands, std::string start, std::string end);
+    std::vector<find_range_st_row> find_range_st(bounds_st range,
+                                                 std::vector<std::string> bands);
+    inline std::vector<find_range_st_row> find_range_st(bounds_st range) {
+        return find_range_st(range, std::vector<std::string>());
+    };
 
-    struct band_info {
+    struct band_info_row {
         uint32_t id;
         std::string name;
         GDALDataType type;
@@ -252,7 +256,7 @@ class image_collection {
         std::string unit;
     };
 
-    std::vector<image_collection::band_info> get_bands();
+    std::vector<image_collection::band_info_row> get_bands();
 
     /**
      * Derive the size of a pixel for one or all bands in bytes

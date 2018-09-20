@@ -157,6 +157,23 @@ class datetime {
         return os.str();
     }
 
+    /**
+     * Produce datetime string up to the given unit.
+     * The string will possibly include e.g. seconds although the unit is actually lower e.g. days.
+     * This function is implemented to interface tools that require full datetime strings and do not work with
+     * e.g. "2001-01".
+     * @param u
+     * @return
+     */
+    std::string to_string(datetime_unit u) {
+        std::stringstream os;
+        std::string format;
+
+        os.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_facet(datetime_format_for_unit(u).c_str())));
+        os << _p;
+        return os.str();
+    }
+
     static datetime from_string(std::string s) {
         std::istringstream is(s);
 

@@ -79,6 +79,9 @@ image_collection::image_collection(collection_format format) : _format(format), 
 }
 
 image_collection::image_collection(std::string filename) : _format(), _filename(filename), _db(nullptr) {
+    if (!boost::filesystem::exists(boost::filesystem::path{filename})) {
+        throw std::string("ERROR inimage_collection::image_collection(): input collection '" + filename + "' does not exist.");
+    }
     if (sqlite3_open(filename.c_str(), &_db) != SQLITE_OK) {
         std::string msg = "ERROR in image_collection::image_collection(): cannot open existing image collection file.";
         throw msg;
@@ -431,7 +434,7 @@ void image_collection::filter_spatial_range(bounds_2d<double> range, std::string
     // This implementation requires a foreign key constraint for the gdalrefs table with cascade delete
 
     range.transform(proj, "EPSG:4326");
-    std::string sql = "DELETE FROM images WHERE images.right < " + std::to_string(range.left) + " OR images.left > " + std::to_string(range.right) + "OR images.bottom > " + std::to_string(range.top) + "OR images.top < " + std::to_string(range.bottom) + ";";
+    std::string sql = "DELETE FROM images WHERE images.right < " + std::to_string(range.left) + " OR images.left > " + std::to_string(range.right) + " OR images.bottom > " + std::to_string(range.top) + " OR images.top < " + std::to_string(range.bottom) + ";";
 
     if (sqlite3_exec(_db, sql.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
         throw std::string("ERROR in image_collection::filter_spatial_range(): cannot remove images from collection.");
@@ -479,17 +482,16 @@ bounds_st image_collection::extent() {
     return out;
 }
 
-std::vector<image_collection::find_result> image_collection::find_with(bounds_2d<double> range, std::string proj,
-                                                                       std::vector<std::string> bands,
-                                                                       std::string start, std::string end) {
+std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range,
+                                                                                 std::vector<std::string> bands) {
     std::string sql =
         "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
         "images.datetime >= '" +
-        start + "' AND images.datetime <= '" + end +
+        range.t0.to_string(datetime_unit::SECOND) + "' AND images.datetime <= '" + range.t1.to_string(datetime_unit::SECOND) +
         "' AND NOT "
         "(images.right < " +
-        std::to_string(range.left) + " OR images.left > " + std::to_string(range.right) + "OR images.bottom > " + std::to_string(range.top) + "OR images.top < " + std::to_string(range.bottom) + ")";
+        std::to_string(range.s.left) + " OR images.left > " + std::to_string(range.s.right) + " OR images.bottom > " + std::to_string(range.s.top) + " OR images.top < " + std::to_string(range.s.bottom) + ")";
 
     if (!bands.empty()) {
         std::string bandlist = "";
@@ -500,14 +502,15 @@ std::vector<image_collection::find_result> image_collection::find_with(bounds_2d
         sql += " AND bands.name IN (" + bandlist + ")";
     }
     sql += " ORDER BY images.name;";
+    std::cout << sql << std::endl;
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {
-        throw std::string("ERROR in image_collection::find_with(): cannot prepare query statement");
+        throw std::string("ERROR in image_collection::find_range_st(): cannot prepare query statement");
     }
-    std::vector<find_result> out;
+    std::vector<find_range_st_row> out;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        find_result r;
+        find_range_st_row r;
         r.image_name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
         r.descriptor = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
         r.datetime = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
@@ -520,8 +523,8 @@ std::vector<image_collection::find_result> image_collection::find_with(bounds_2d
     return out;
 }
 
-std::vector<image_collection::band_info> image_collection::get_bands() {
-    std::vector<image_collection::band_info> out;
+std::vector<image_collection::band_info_row> image_collection::get_bands() {
+    std::vector<image_collection::band_info_row> out;
 
     std::string sql = "SELECT id, name, type, offset,scale, unit FROM bands ORDER BY id;";
     sqlite3_stmt* stmt;
@@ -531,7 +534,7 @@ std::vector<image_collection::band_info> image_collection::get_bands() {
     }
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        image_collection::band_info row;
+        image_collection::band_info_row row;
         row.id = sqlite3_column_int(stmt, 0);
         row.name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
         row.type = utils::gdal_type_from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2))));

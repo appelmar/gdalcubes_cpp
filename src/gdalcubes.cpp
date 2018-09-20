@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
         po::store(parsed, vm);
         if (vm.count("version")) {
             std::cout << "gdalcubes " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << " built on " << __DATE__ << " " << __TIME__ << std::endl;
+            std::cout << "linked against " << GDALVersionInfo("--version");  // TODO add version info for other linked libraries
             return 0;
         }
         if (vm.count("help") && !vm.count("command")) {
@@ -143,13 +144,9 @@ int main(int argc, char *argv[]) {
             }
 
             std::string input = vm["input"].as<std::string>();
-            if (!boost::filesystem::exists(boost::filesystem::path{input})) {
-                std::cout << "ERROR in gdalcubes info: input collection '" << input << "' does not exist." << std::endl;
-                return 1;
-            }
             image_collection ic = image_collection(input);
 
-            std::vector<image_collection::band_info> bands = ic.get_bands();
+            std::vector<image_collection::band_info_row> bands = ic.get_bands();
 
             bounds_st e = ic.extent();
             std::cout << ic.to_string() << std::endl;

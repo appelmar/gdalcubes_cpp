@@ -59,6 +59,21 @@ int main() {
         cube_view v = cube_view::read_json("../../test/view.json");
         v.write_json("out_view.json");
 
+        image_collection x2("test.db");
+
+        bounds_st box;
+        box.t0 = datetime::from_string("20170101");
+        box.t1 = datetime::from_string("20180101");
+        box.s.left = 22;
+        box.s.right = 24;
+        box.s.top = -18;
+        box.s.bottom = -20;
+
+        std::vector<image_collection::find_range_st_row> results = x2.find_range_st(box);
+        for (uint32_t i=0; i<results.size(); ++i) {
+            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
+        }
+
     } catch (std::string e) {
         std::cout << e << std::endl;
     }

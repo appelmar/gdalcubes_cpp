@@ -16,7 +16,9 @@
 
 #include <gdal_priv.h>
 #include <iostream>
+#include "chunking.h"
 #include "collection_format.h"
+#include "cube.h"
 #include "image_collection.h"
 #include "timer.h"
 #include "view.h"
@@ -31,7 +33,7 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
     return out;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     GDALAllRegister();
     GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
     CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
@@ -69,10 +71,16 @@ int main() {
         box.s.top = -18;
         box.s.bottom = -20;
 
-        std::vector<image_collection::find_range_st_row> results = x2.find_range_st(box);
-        for (uint32_t i=0; i<results.size(); ++i) {
-            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
-        }
+        //        std::vector<image_collection::find_range_st_row> results = x2.find_range_st(box);
+        //        for (uint32_t i=0; i<results.size(); ++i) {
+        //            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
+        //        }
+
+        cube c("test.db", "../../test/view.json");
+        std::cout << std::endl
+                  << c.to_string() << std::endl;
+
+        c.get_chunking()->read(0);  // why does assignment not work?
 
     } catch (std::string e) {
         std::cout << e << std::endl;

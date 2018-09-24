@@ -48,15 +48,13 @@ cube_view cube_view::read_json(std::string filename) {
 
     if (j.count("resampling") == 0) {
         v._resampling = resampling::resampling_type::NEAR;
-    }
-    else {
+    } else {
         v._resampling = resampling::from_string(j.at("resampling").get<std::string>());
     }
 
     if (j.count("aggregation") == 0) {
         v._aggregation = aggregation::aggregation_type::NONE;
-    }
-    else {
+    } else {
         v._aggregation = aggregation::from_string(j.at("aggregation").get<std::string>());
     }
 
@@ -67,7 +65,8 @@ void cube_view::write_json(std::string filename) {
     nlohmann::json j = nlohmann::json{
         {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"proj", _proj}}},
         {"time", {{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
-        {"aggregation", aggregation::to_string(_aggregation)}, {"resampling", resampling::to_string(_resampling)}};
+        {"aggregation", aggregation::to_string(_aggregation)},
+        {"resampling", resampling::to_string(_resampling)}};
 
     std::ofstream o(filename, std::ofstream::out);
     if (!o.good()) {

@@ -33,7 +33,8 @@ enum datetime_unit {
     DAY = 3,
     WEEK = 4,
     MONTH = 5,
-    YEAR = 6
+    YEAR = 6,
+    NONE = 255
 };
 
 struct duration {
@@ -125,10 +126,10 @@ struct duration {
 
     friend int operator%(duration l, duration& r) {
         if (l.dt_unit != r.dt_unit) {
-            throw std::string("ERROR in duration::operator/(): Incompatible datetime duration units");
+            throw std::string("ERROR in duration::operator%(): Incompatible datetime duration units");
         }
         if (r.dt_interval == 0) {
-            throw std::string("ERROR in duration::operator/(): Division by zero");
+            throw std::string("ERROR in duration::operator%(): Division by zero");
         }
 
         return l.dt_interval % r.dt_interval;
@@ -226,24 +227,24 @@ class datetime {
         out.dt_unit = std::max(l.unit(), r.unit());  // TODO: warning if not the same unit
         switch (out.dt_unit) {
             case SECOND:
-                out.dt_interval = (r._p - l._p).total_seconds();
+                out.dt_interval = (l._p - r._p).total_seconds();
                 break;
             case MINUTE:
-                out.dt_interval = (r._p - l._p).total_seconds() / 60;
+                out.dt_interval = (l._p - r._p).total_seconds() / 60;
                 break;
             case HOUR:
-                out.dt_interval = (r._p - l._p).total_seconds() / (3600);
+                out.dt_interval = (l._p - r._p).total_seconds() / (3600);
                 break;
             case DAY:
-                out.dt_interval = (r._p.date() - l._p.date()).days();
+                out.dt_interval = (l._p.date() - r._p.date()).days();
                 break;
             case WEEK:
-                out.dt_interval = (r._p.date() - l._p.date()).days() / 7;
+                out.dt_interval = (l._p.date() - r._p.date()).days() / 7;
                 break;
             case MONTH: {
-                int yd = r._p.date().year() - l._p.date().year();
+                int yd = l._p.date().year() - r._p.date().year();
                 if (std::abs(yd) >= 1) {
-                    out.dt_interval = (yd - 1) * 12 + (l._p.date().month() - r._p.date().month());
+                    out.dt_interval = yd * 12 + (l._p.date().month() - r._p.date().month());
                 } else if (yd == 0) {
                     out.dt_interval = (l._p.date().month() - r._p.date().month());
                 }
@@ -343,7 +344,7 @@ class datetime {
                 out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval * 7));  // ignore time
                 break;
             case MONTH:
-                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval / 12, out._p.date().month() + r.dt_interval % 12, 1));  // ignore time and day
+                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + (long)(r.dt_interval / 12), out._p.date().month() + r.dt_interval % 12, 1));  // ignore time and day
                 break;
             case YEAR:
                 out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval, 1, 1));  // ignore time, day, and month

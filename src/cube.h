@@ -30,11 +30,13 @@ class cube {
     cube(std::string icfile, std::string vfile);
     ~cube();
 
-    inline std::shared_ptr<image_collection> collection() { return _collection; }
+    inline const std::shared_ptr<image_collection> collection() { return _collection; }
     inline cube_view& view() { return _view; }
 
     void set_chunking(chunking* c);
-    const chunking* get_chunking();
+    inline const chunking* get_chunking() { return _chunking; }
+
+    std::string to_string();
 
    protected:
     cube_view _view;

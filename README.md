@@ -43,7 +43,6 @@ gdalcubes info in.db
 
 gdalcubes join in1.db in2.db out.db 
 
-
 gdalcubes stream -v view.json -t reduce_time -o result.db > Rscript timeseries_stats.R
 gdalcubes stream -v view.json -t apply_pixel > Rscript timeseries_stats.R
 

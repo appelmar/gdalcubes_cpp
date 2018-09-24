@@ -300,6 +300,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                 }
             }
         }
+        CPLFree(proj4);
     }
 }
 
@@ -483,7 +484,7 @@ bounds_st image_collection::extent() {
 }
 
 std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range,
-                                                                                 std::vector<std::string> bands) {
+                                                                                 std::vector<std::string> bands, std::string order_by) {
     std::string sql =
         "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
@@ -501,8 +502,20 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
         bandlist += "'" + bands[bands.size() - 1] + "'";
         sql += " AND bands.name IN (" + bandlist + ")";
     }
-    sql += " ORDER BY images.name;";
-    std::cout << sql << std::endl;
+    if (!order_by.empty()) {  // explicitly test order by column if given to avoid SQL injection
+        if (order_by == "images.name" ||
+            order_by == "gdalrefs.descriptor" ||
+            order_by == "images.datetime" ||
+            order_by == "bands.name" ||
+            order_by == "gdalrefs.band_num")
+            sql += " ORDER BY " + order_by;
+
+        else {
+            throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
+        }
+    }
+    sql += ";";
+
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {
@@ -526,7 +539,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
 std::vector<image_collection::band_info_row> image_collection::get_bands() {
     std::vector<image_collection::band_info_row> out;
 
-    std::string sql = "SELECT id, name, type, offset,scale, unit FROM bands ORDER BY id;";
+    std::string sql = "SELECT id, name, type, offset,scale, unit FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {

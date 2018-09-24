@@ -97,6 +97,8 @@ struct bounds_2d {
         top = ymax;
         bottom = ymin;
 
+        delete coord_transform;
+
         return *this;
     }
 };
@@ -109,6 +111,12 @@ struct coords_2d {
 //template <typename T> using coords_nd = std::vector<T>;
 template <typename T, uint16_t N>
 using coords_nd = std::array<T, N>;
+
+template <typename T, uint16_t N>
+struct bounds_nd {
+    coords_nd<T, N> low;
+    coords_nd<T, N> high;
+};
 
 struct coords_st {
     coords_2d<double> s;
@@ -242,9 +250,9 @@ class image_collection {
         uint16_t band_num;
     };
     std::vector<find_range_st_row> find_range_st(bounds_st range,
-                                                 std::vector<std::string> bands);
-    inline std::vector<find_range_st_row> find_range_st(bounds_st range) {
-        return find_range_st(range, std::vector<std::string>());
+                                                 std::vector<std::string> bands, std::string order_by = "");
+    inline std::vector<find_range_st_row> find_range_st(bounds_st range, std::string order_by = "") {
+        return find_range_st(range, std::vector<std::string>(), order_by);
     };
 
     struct band_info_row {
@@ -257,6 +265,13 @@ class image_collection {
     };
 
     std::vector<image_collection::band_info_row> get_bands();
+
+    /**
+     * Helper function to create image collections programatically,
+     * e.g. for processing results.
+     * @note NOT YET IMPLEMENTED
+     */
+    static void create_empty(std::vector<band_info_row>);
 
     /**
      * Derive the size of a pixel for one or all bands in bytes

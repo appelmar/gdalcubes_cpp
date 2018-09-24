@@ -17,10 +17,10 @@
 #ifndef VIEW_H
 #define VIEW_H
 
+#include <algorithm>
 #include "../include/json.hpp"
 #include "datetime.h"
 #include "image_collection.h"
-#include <algorithm>
 
 struct aggregation {
     enum aggregation_type {
@@ -35,17 +35,13 @@ struct aggregation {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
         if (s == "none") {
             return NONE;
-        }
-        else if (s == "min") {
+        } else if (s == "min") {
             return MIN;
-        }
-        else if (s == "max") {
+        } else if (s == "max") {
             return MAX;
-        }
-        else if (s == "mean") {
+        } else if (s == "mean") {
             return MEAN;
-        }
-        else if (s == "median") {
+        } else if (s == "median") {
             return MEDIAN;
         }
         return NONE;
@@ -59,14 +55,15 @@ struct aggregation {
                 return "min";
             case MAX:
                 return "max";
-            case MEAN: return "mean";
-            case MEDIAN: return "median";
-            default: return "none";
-            }
+            case MEAN:
+                return "mean";
+            case MEDIAN:
+                return "median";
+            default:
+                return "none";
+        }
     }
 };
-
-
 
 struct resampling {
     enum resampling_type {
@@ -88,38 +85,27 @@ struct resampling {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
         if (s == "near" || s == "nearest") {
             return NEAR;
-        }
-        else if (s == "bilinear") {
+        } else if (s == "bilinear") {
             return BILINEAR;
-        }
-        else if (s == "cubic") {
+        } else if (s == "cubic") {
             return CUBIC;
-        }
-        else if (s == "cubicspline") {
+        } else if (s == "cubicspline") {
             return CUBICSPLINE;
-        }
-        else if (s == "lanczos") {
+        } else if (s == "lanczos") {
             return LANCZOS;
-        }
-        else if (s == "average" || s == "mean") {
+        } else if (s == "average" || s == "mean") {
             return AVERAGE;
-        }
-        else if (s == "mode") {
+        } else if (s == "mode") {
             return MODE;
-        }
-        else if (s == "max") {
+        } else if (s == "max") {
             return MAX;
-        }
-        else if (s == "min") {
+        } else if (s == "min") {
             return MIN;
-        }
-        else if (s == "med" || s == "median") {
+        } else if (s == "med" || s == "median") {
             return MED;
-        }
-        else if (s == "q1") {
+        } else if (s == "q1") {
             return Q1;
-        }
-        else if (s == "q3") {
+        } else if (s == "q3") {
             return Q3;
         }
         return NEAR;
@@ -127,43 +113,61 @@ struct resampling {
 
     static std::string to_string(resampling_type r) {
         switch (r) {
-            case NEAR: return "near";
-            case BILINEAR: return "bilinear";
-            case CUBIC: return "cubic";
-            case CUBICSPLINE: return "cubicspline";
-            case LANCZOS: return "lanczos";
-            case AVERAGE: return "average";
-            case MODE: return "mode";
-            case MAX: return "max";
-            case MIN: return "min";
-            case MED: return "med";
-            case Q1: return "q1";
-            case Q3: return "q3";
-            default: return "near";
+            case NEAR:
+                return "near";
+            case BILINEAR:
+                return "bilinear";
+            case CUBIC:
+                return "cubic";
+            case CUBICSPLINE:
+                return "cubicspline";
+            case LANCZOS:
+                return "lanczos";
+            case AVERAGE:
+                return "average";
+            case MODE:
+                return "mode";
+            case MAX:
+                return "max";
+            case MIN:
+                return "min";
+            case MED:
+                return "med";
+            case Q1:
+                return "q1";
+            case Q3:
+                return "q3";
+            default:
+                return "near";
         }
     }
 
     static GDALRIOResampleAlg to_gdal_rasterio(resampling_type r) {
         switch (r) {
-            case NEAR: return GRIORA_NearestNeighbour;
-            case BILINEAR: return GRIORA_Bilinear;
-            case CUBIC: return GRIORA_Cubic;
-            case CUBICSPLINE: return GRIORA_CubicSpline;
-            case LANCZOS: return GRIORA_Lanczos;
-            case AVERAGE: return GRIORA_Average;
-            case MODE: return GRIORA_Mode;
+            case NEAR:
+                return GRIORA_NearestNeighbour;
+            case BILINEAR:
+                return GRIORA_Bilinear;
+            case CUBIC:
+                return GRIORA_Cubic;
+            case CUBICSPLINE:
+                return GRIORA_CubicSpline;
+            case LANCZOS:
+                return GRIORA_Lanczos;
+            case AVERAGE:
+                return GRIORA_Average;
+            case MODE:
+                return GRIORA_Mode;
             case MAX:
             case MIN:
             case MED:
             case Q1:
             case Q3:
-            default: return GRIORA_NearestNeighbour; // Not yet defined in gdal.h
+            default:
+                return GRIORA_NearestNeighbour;  // Not yet defined in gdal.h
         }
     }
-
-
 };
-
 
 /**
  * This class defines a view how to look at the data including which resolution, which projection,
@@ -190,9 +194,8 @@ class cube_view {
     inline double& bottom() { return _win.bottom; }
     inline double& top() { return _win.top; }
 
-
-    inline aggregation::aggregation_type& aggregation_method() {return _aggregation;}
-    inline resampling::resampling_type& resampling_method() {return _resampling;}
+    inline aggregation::aggregation_type& aggregation_method() { return _aggregation; }
+    inline resampling::resampling_type& resampling_method() { return _resampling; }
 
     inline std::string& proj() { return _proj; }
 
@@ -220,8 +223,6 @@ class cube_view {
     }
 
     // TODO: add resampling / aggregation methods
-
-
 
     uint32_t nt() {
         duration d = (_t1 - _t0) + 1;
@@ -268,7 +269,6 @@ class cube_view {
 
     datetime _t0;
     datetime _t1;
-
     uint32_t _nx;
     uint32_t _ny;
 

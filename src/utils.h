@@ -17,12 +17,53 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-
-
 class utils {
+   public:
+    static std::string generate_unique_filename() {
+        std::stringstream ss;
+        const std::string LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        for (uint8_t i = 0; i < 8; ++i) {
+            ss << LETTERS[rand() % LETTERS.length()];
+        }
+        std::string out = ss.str();
+        return out;
+    }
 
-public:
+    // see http://stackoverflow.com/questions/997946/how-to-get-current-time-and-date-in-c
+    static std::string get_curdatetime() {
+        // Current date/time based on current system
+        time_t now = time(0);
 
+        // Convert now to tm struct for local timezone
+        tm *localtm = localtime(&now);
+
+        std::stringstream out;
+        out << (localtm->tm_year + 1900) << "-" << std::setfill('0') << std::setw(2)
+            << (localtm->tm_mon + 1) << "-" << std::setfill('0') << std::setw(2)
+            << localtm->tm_mday << " " << std::setfill('0') << std::setw(2)
+            << localtm->tm_hour << ":" << std::setfill('0') << std::setw(2)
+            << localtm->tm_min << ":" << std::setfill('0') << std::setw(2)
+            << localtm->tm_sec;
+        return out.str();
+    }
+
+    static std::string get_curdate() {
+        // Current date/time based on current system
+        time_t now = time(0);
+
+        // Convert now to tm struct for local timezone
+        tm *localtm = localtime(&now);
+
+        std::stringstream out;
+        out << (localtm->tm_year + 1900) << "-" << std::setfill('0') << std::setw(2)
+            << (localtm->tm_mon + 1) << "-" << std::setfill('0') << std::setw(2)
+            << localtm->tm_mday;
+        return out.str();
+    }
+
+    static std::string join_path(std::string a, std::string b) {
+        return (boost::filesystem::path{a} / boost::filesystem::path{b}).string();
+    }
 
     static GDALDataType gdal_type_from_string(std::string s) {
         if (s == "int16") return GDALDataType::GDT_Int16;
@@ -32,22 +73,29 @@ public:
         if (s == "uint32") return GDALDataType::GDT_UInt32;
         if (s == "float64") return GDALDataType::GDT_Float64;
         if (s == "float32") return GDALDataType::GDT_Float32;
-       return GDALDataType::GDT_Unknown;
+        return GDALDataType::GDT_Unknown;
     }
 
     static std::string string_from_gdal_type(GDALDataType t) {
         switch (t) {
-            case GDT_Float64: return "float64";
-            case GDT_Float32: return "float32";
-            case GDT_Int16: return "int16";
-            case GDT_Int32: return "int32";
-            case GDT_UInt32: return "uint32";
-            case GDT_UInt16: return "uint16";
-            case GDT_Byte: return "uint8";
-            default: return "null";
+            case GDT_Float64:
+                return "float64";
+            case GDT_Float32:
+                return "float32";
+            case GDT_Int16:
+                return "int16";
+            case GDT_Int32:
+                return "int32";
+            case GDT_UInt32:
+                return "uint32";
+            case GDT_UInt16:
+                return "uint16";
+            case GDT_Byte:
+                return "uint8";
+            default:
+                return "null";
         }
     }
 };
 
-
-#endif //UTILS_H
+#endif  //UTILS_H

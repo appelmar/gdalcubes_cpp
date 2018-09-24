@@ -35,3 +35,9 @@ void cube::set_chunking(chunking* c) {
     _chunking = c;
     _chunking->_c = this;
 }
+
+std::string cube::to_string() {
+    std::stringstream out;
+    out << "GDAL CUBE with (x,y,t)=(" << _view.nx() << "," << _view.ny() << "," << _view.nt() << ") cells in " << _chunking->count_chunks() << " chunks." << std::endl;
+    return out.str();
+}

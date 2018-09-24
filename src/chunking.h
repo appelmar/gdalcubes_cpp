@@ -21,67 +21,84 @@
 
 typedef uint32_t chunkid;
 
+typedef double value_type;  // for now, chunk data is ALWAYS double! This reduces complexity for the first version.
+
 /**
  * A chunk stores a spatial and temporal contiguous part of an image collection
- * as vector of three-dimensional arrays: (band) -> (datetime, y, x).
- * @todo add bitmap for correctly handling nodata values
+ * as four-dimensional arrays: (band, datetime, y, x).
+ * The format might change in case we decide that gdalcubes should work on the original (varying) band data types.
  */
 class chunk_data {
    public:
-    chunk_data() : _v(), _type(), _n(0) {}
+    chunk_data() : _buf(nullptr), _size() {}
 
     ~chunk_data() {
-        for (uint16_t i = 0; i < _v.size(); ++i) {
-            if (_v[i]) free(_v[i]);
-        }
+        if (_buf) free(_buf);
     }
 
-    chunk_data(const chunk_data&) = delete;
-    void operator=(const chunk_data&) = delete;
+    // chunk_data(const chunk_data&) = delete;
+    //  void operator=(const chunk_data&) = delete;
+    //
+    //    // move constructor
+    //    chunk_data(chunk_data&& A) {
+    //        // Taking over the resources
+    //        A._size = _size;
+    //        A._buf = _buf;
+    //
+    //        // Resetting *this to prevent freeing the data buffers in the destructor.
+    //        _buf = nullptr;
+    //        _size[0] = 0;
+    //        _size[1] = 0;
+    //        _size[2] = 0;
+    //        _size[3] = 0;
+    //    }
+    //
+    //    // move assignment
+    //    chunk_data& operator=(chunk_data&& A) {
+    //        _size = A._size;
+    //        _buf = A._buf;
+    //        A._buf = nullptr;
+    //        A._size[0] = 0;
+    //        A._size[1] = 0;
+    //        A._size[2] = 0;
+    //        A._size[3] = 0;
+    //        return *this;
+    //    }
 
-    // move constructor
-    chunk_data(chunk_data&& A) {
-        // Taking over the resources
-        A._type = _type;
-        A._n = _n;
-        A._v = _v;
-
-        // Resetting *this to prevent freeing the data buffers in the destructor.
-        _v.clear();
-        _n = 0;
-        _type.clear();
-    }
-
-    void* read(uint16_t band);
-    GDALDataType type(uint16_t bands);
-
-    uint16_t count_bands() { return _type.size(); }
-    uint16_t count_values() { return _n; }
-    uint64_t size_bytes(uint16_t band) {
-        return GDALGetDataTypeSizeBytes(_type[band]) * _n;
-    }
-    uint64_t size_bytes() {
-        uint64_t size = 0;
-        for (uint16_t i = 0; i < count_bands(); ++i) {
-            size += GDALGetDataTypeSizeBytes(_type[i]) * _n;
-        }
-        return size;
+    inline uint16_t count_bands() { return _size[0]; }
+    inline uint32_t count_values() { return _size[1] * _size[2] * _size[3]; }
+    uint64_t total_size_bytes() {
+        return empty() ? 0 : sizeof(value_type) * _size[0] * _size[1] * _size[2] * _size[3];
     }
 
     inline bool empty() {
-        return (_v.empty());
+        if (_buf) return false;
+        return true;
     }
 
+    /** These methods are dangerous and provide direct access to the data buffers, use with caution and never free any memory /
+     * remove / add vector elements if you don't know exactly what you do.
+     * @return
+     */
+    inline void* buf() { return _buf; }
+
+    inline void buf(void* b) {
+        if (_buf) free(_buf);
+        _buf = b;
+    }
+
+    inline coords_nd<uint32_t, 4> size() { return _size; }
+    inline void size(coords_nd<uint32_t, 4> s) { _size = s; }
+
    protected:
-    std::vector<void*> _v;
-    uint32_t _n;                      // number of values per element in _v;
-    std::vector<GDALDataType> _type;  // implies the size of values
+    void* _buf;
+    coords_nd<uint32_t, 4> _size;
 };
 
 class chunking {
-   public:
     friend class cube;
 
+   public:
     chunking(cube* c) : _c(c) {}
 
     class chunk_iterator {
@@ -97,7 +114,7 @@ class chunking {
         friend bool operator!=(const chunk_iterator& lhs, const chunk_iterator& rhs) { return !(lhs == rhs); }
 
         chunk_data operator*(chunk_iterator l) {
-            return _c->read(_cur_id);
+            //return _c->read(_cur_id);
         }
 
        protected:
@@ -120,8 +137,8 @@ class chunking {
         return it;
     }
 
-    virtual chunk_data read(chunkid id) = 0;
-    virtual uint32_t count_chunks() = 0;
+    virtual std::shared_ptr<chunk_data> read(chunkid id) const = 0;
+    virtual uint32_t count_chunks() const = 0;
 
    protected:
     cube* _c;
@@ -135,13 +152,13 @@ class default_chunking : public chunking {
     inline uint32_t& size_y() { return _size_y; }
     inline uint32_t& size_t() { return _size_t; }
 
-    chunk_data read(chunkid id);
+    std::shared_ptr<chunk_data> read(chunkid id) const override;
 
-    inline uint32_t count_chunks() {
+    uint32_t count_chunks() const override {
         return std::ceil((double)_c->view().nx() / (double)_size_x) * std::ceil((double)_c->view().ny() / (double)_size_y) * std::ceil((double)_c->view().nt() / (double)_size_t);
     }
 
-    chunkid find_chunk_that_contains(coords_st p) {
+    chunkid find_chunk_that_contains(coords_st p) const {
         uint32_t cumprod = 1;
         chunkid id = 0;
 
@@ -159,10 +176,9 @@ class default_chunking : public chunking {
         return id;
     }
 
-    bounds_st bounds_from_chunk(chunkid id) {
+    bounds_nd<uint32_t, 3> chunk_limits(chunkid id) const {
         coords_nd<uint32_t, 3> out_vcoords_low;
         coords_nd<uint32_t, 3> out_vcoords_high;
-        bounds_st out_st;
 
         // Transform to global coordinates based on chunk id
         uint32_t cumprod = 1;
@@ -171,51 +187,79 @@ class default_chunking : public chunking {
         n = (uint32_t)std::ceil(((double)(_c->view().nx())) / ((double)_size_x));
         out_vcoords_low[2] = (id / cumprod) % n;
         out_vcoords_low[2] *= _size_x;
-        out_vcoords_high[2] = out_vcoords_low[2] + _size_x;
+        out_vcoords_high[2] = out_vcoords_low[2] + _size_x - 1;
         cumprod *= n;
 
         n = (uint32_t)std::ceil(((double)(_c->view().ny())) / ((double)_size_y));
         out_vcoords_low[1] = (id / cumprod) % n;
         out_vcoords_low[1] *= _size_y;
-        out_vcoords_high[1] = out_vcoords_low[1] + _size_y;
+        out_vcoords_high[1] = out_vcoords_low[1] + _size_y - 1;
         cumprod *= n;
 
         n = (uint32_t)std::ceil(((double)(_c->view().nt())) / ((double)_size_t));
         out_vcoords_low[0] = (id / cumprod) % n;
         out_vcoords_low[0] *= _size_t;
-        out_vcoords_high[0] = out_vcoords_low[0] + _size_t;
+        out_vcoords_high[0] = out_vcoords_low[0] + _size_t - 1;
         cumprod *= n;
 
         // Shrink to view
         if (out_vcoords_high[0] < 0)
             out_vcoords_high[0] = 0;
-        else if (out_vcoords_high[0] > _c->view().nt())
-            out_vcoords_high[0] = _c->view().nt();
+        else if (out_vcoords_high[0] >= _c->view().nt())
+            out_vcoords_high[0] = _c->view().nt() - 1;
         if (out_vcoords_low[0] < 0)
             out_vcoords_low[0] = 0;
-        else if (out_vcoords_low[0] > _c->view().nt())
-            out_vcoords_low[0] = _c->view().nt();
+        else if (out_vcoords_low[0] >= _c->view().nt())
+            out_vcoords_low[0] = _c->view().nt() - 1;
 
         if (out_vcoords_high[1] < 0)
             out_vcoords_high[1] = 0;
-        else if (out_vcoords_high[1] > _c->view().ny())
-            out_vcoords_high[1] = _c->view().ny();
+        else if (out_vcoords_high[1] >= _c->view().ny())
+            out_vcoords_high[1] = _c->view().ny() - 1;
         if (out_vcoords_low[1] < 0)
             out_vcoords_low[1] = 0;
-        else if (out_vcoords_low[1] > _c->view().ny())
-            out_vcoords_low[1] = _c->view().ny();
+        else if (out_vcoords_low[1] >= _c->view().ny())
+            out_vcoords_low[1] = _c->view().ny() - 1;
 
         if (out_vcoords_high[2] < 0)
             out_vcoords_high[2] = 0;
-        else if (out_vcoords_high[2] > _c->view().nx())
-            out_vcoords_high[2] = _c->view().nx();
+        else if (out_vcoords_high[2] >= _c->view().nx())
+            out_vcoords_high[2] = _c->view().nx() - 1;
         if (out_vcoords_low[2] < 0)
             out_vcoords_low[2] = 0;
-        else if (out_vcoords_low[2] > _c->view().nx())
-            out_vcoords_low[2] = _c->view().nx();
+        else if (out_vcoords_low[2] >= _c->view().nx())
+            out_vcoords_low[2] = _c->view().nx() - 1;
 
-        coords_st low = _c->view().map_coords(out_vcoords_low);
-        coords_st high = _c->view().map_coords(out_vcoords_high);
+        bounds_nd<uint32_t, 3> out;
+        out.low = out_vcoords_low;
+        out.high = out_vcoords_high;
+        return out;
+    };
+
+    /**
+     * Derive the true size of a specific chunk. The size may be different
+     * at the boundary regions of the view.
+     * @return
+     */
+    coords_nd<uint32_t, 3> chunk_size(chunkid id) const {
+        bounds_nd<uint32_t, 3> vb = chunk_limits(id);
+        coords_nd<uint32_t, 3> out;
+        out[0] = vb.high[0] - vb.low[0] + 1;
+        out[1] = vb.high[1] - vb.low[1] + 1;
+        out[2] = vb.high[2] - vb.low[2] + 1;
+        return out;
+    };
+
+    bounds_st bounds_from_chunk(chunkid id) const {
+        bounds_st out_st;
+
+        bounds_nd<uint32_t, 3> vb = chunk_limits(id);
+
+        coords_st low = _c->view().map_coords(vb.low);
+        vb.high[0] += 1;
+        vb.high[1] += 1;
+        vb.high[2] += 1;
+        coords_st high = _c->view().map_coords(vb.high);
 
         out_st.s.left = low.s.x;
         out_st.s.right = high.s.x;

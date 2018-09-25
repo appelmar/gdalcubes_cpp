@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(gdalcubes LANGUAGES CXX VERSION 0.0.1)
 
+set(COLLECTION_FORMAT_VERSION_MAJOR 0)
+set(COLLECTION_FORMAT_VERSION_MINOR 0)
+set(COLLECTION_FORMAT_VERSION_PATCH 0)
 
 #string(TIMESTAMP build_date "%Y%m%d")
 #string(TIMESTAMP build_time "%H%M%S")

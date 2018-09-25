@@ -80,7 +80,9 @@ int main(int argc, char *argv[]) {
         std::cout << std::endl
                   << c.to_string() << std::endl;
 
-        c.get_chunking()->read(0);  // why does assignment not work?
+        t0.start();
+        c.get_chunking()->write_gtiff_directory("test", 0);
+        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
     } catch (std::string e) {
         std::cout << e << std::endl;

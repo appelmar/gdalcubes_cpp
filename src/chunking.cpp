@@ -108,8 +108,7 @@ struct aggregation_state_min : public aggregation_state {
         }
     }
 
-    void finalize(void *buf) override {
-    }
+    void finalize(void *buf) override {}
 };
 
 struct aggregation_state_max : public aggregation_state {
@@ -161,6 +160,13 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     // Access image collection and fetch band information
     std::vector<image_collection::band_info_row> bands = _c->collection()->get_bands();
 
+    // create a map to relate band names to integer band coordinates
+    std::unordered_map<std::string, uint16_t> band_idx;
+    for (uint16_t ib=0; ib<bands.size(); ++ib) {
+        band_idx[bands[ib].name] = ib;
+    }
+
+
     // Derive how many pixels the chunk has (this varies for chunks at the boundary of the view)
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
     coords_nd<uint32_t, 4> size_btyx = {bands.size(), size_tyx[0], size_tyx[1], size_tyx[2]};
@@ -170,7 +176,7 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(value_type)));
 
     // Find intersecting images from collection and iterate over these
-    bounds_st cextent = bounds_from_chunk(id);
+    bounds_st cextent = bounds_from_chunk(id);  // is this->bounds_from_chunk(id) needed?
     std::vector<image_collection::find_range_st_row> datasets = _c->collection()->find_range_st(cextent, "gdalrefs.descriptor");
 
     if (datasets.empty()) {
@@ -271,13 +277,13 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
         }
 
         // find band data type (must be the same for all bands in the same GDALDataset / descriptor
-        GDALDataType cur_type;
-        for (uint16_t b = 0; b < bands.size(); ++b) {
-            if (bands[b].name == std::get<0>(band_rels[0])) {  // take datatype from first match
-                cur_type = bands[b].type;
-                break;
-            }
-        }
+//        GDALDataType cur_type;
+//        for (uint16_t b = 0; b < bands.size(); ++b) {
+//            if (bands[b].name == std::get<0>(band_rels[0])) {  // take datatype from first match
+//                cur_type = bands[b].type;
+//                break;
+//            }
+//        }
 
         GDALDataset *g = (GDALDataset *)GDALOpen(descriptor_name.c_str(), GA_ReadOnly);
         if (!g) {
@@ -336,49 +342,50 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
             std::cout << "ERROR in gdal_translate for " << i << std::endl;
         }
 
-        //GDALDataset* gdal_out = mem_driver->Create("", csize[2], csize[1], band_rels.size(), GDT_Float64, NULL); // mask band?
-        GDALDataset *gdal_out = gtiff_driver->Create((std::to_string(i) + ".tif").c_str(), size_btyx[3], size_btyx[2], band_rels.size(), GDT_Float64, NULL);  // mask band?
-                                                                                                                                                              //        for (uint16_t b=0; b<band_rels.size(); ++b) {
-                                                                                                                                                              //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);
-                                                                                                                                                              //            gdal_out->GetRasterBand(b+1)->Fill(NAN); // TODO: is this needed
-                                                                                                                                                              //        }
+        GDALDataset* gdal_out = mem_driver->Create("", size_btyx[3],size_btyx[2], band_rels.size(), GDT_Float64, NULL); // mask band?
+        //GDALDataset *gdal_out = gtiff_driver->Create((std::to_string(i) + ".tif").c_str(), size_btyx[3], size_btyx[2], band_rels.size(), GDT_Float64, NULL);  // mask band?
+        if (!gdal_out) {
+            // TODO: Error handling
+            std::cout << "ERROR in gdalwarp for " << i << std::endl;
+        }                                                                                                                                                      //        for (uint16_t b=0; b<band_rels.size(); ++b) {
+
 
         //gdal_out->SetProjection(_c->view().proj().c_str());
         gdal_out->SetProjection(out_wkt);
         gdal_out->SetGeoTransform(affine);
 
+        // The following loop with filling the buffer is needed for MEM datasets but not for GTiff
+        for (uint16_t b = 0; b < band_rels.size(); ++b) {                                                                                                                                  //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);
+            gdal_out->GetRasterBand(b + 1)->Fill(NAN);
+            gdal_out->GetRasterBand(b + 1)->SetNoDataValue(NAN); // why is the no data flag not available in the resulting files?
+        }
+
         (GDALDataset *)GDALWarp(NULL, gdal_out, 1, &cropped_vrt, warp_opts, NULL);
 
-        // For GeoTIFF output, the following works
-        // GDALDataset* gdal_out = (GDALDataset*)GDALWarp((std::to_string(i) + ".tif").c_str(), NULL, 1, &inds, warp_opts, NULL);
-        if (!gdal_out) {
-            // TODO: Error handling
-            std::cout << "ERROR in gdalwarp for " << i << std::endl;
-        }
+
         GDALClose(cropped_vrt);
 
         // Find coordinates for date of the image
         datetime dt = datetime::from_string(datasets[i - 1].datetime);  // Assumption here is that the dattime of all bands within a gdal dataset is the same, which should be OK in practice
         dt.unit() = _c->view().dt().dt_unit;                            // explicit datetime unit cast
         int it = (dt - cextent.t0) / _c->view().dt();
-
-        std::cout << "T=" << it << "    " << dt.to_string() << std::endl;
+//
+//        std::cout << "T=" << it << "    " << dt.to_string() << std::endl;
 
         // For each band, call RasterIO to read and copy data to the right position in the buffers
         for (uint16_t b = 0; b < band_rels.size(); ++b) {
-            //gdal_out->GetRasterBand(std::get<1>(band_rels[b]))->SetNoDataValue(NAN); // TODO: is this needed
+
+            uint16_t b_internal = (band_idx[std::get<0>(band_rels[b])]);
+
+            void *cbuf = ((value_type*)out->buf()) +  (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
 
             // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
             if (_c->view().aggregation_method() == aggregation::NONE) {
-                gdal_out->GetRasterBand(std::get<1>(band_rels[b]))->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], (out->buf() + sizeof(value_type) * ((std::get<1>(band_rels[b]) - 1) * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3])), size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                gdal_out->GetRasterBand(b+1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
             } else {
-                gdal_out->GetRasterBand(std::get<1>(band_rels[b]))->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
-                void *cbuf = (out->buf() + sizeof(value_type) * ((std::get<1>(band_rels[b]) - 1) * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]));
-
-                agg->update(cbuf, img_buf, b, it);
+                gdal_out->GetRasterBand(b+1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                agg->update(cbuf, img_buf, b_internal, it);
             }
-
-            //memcpy(cbuf, img_buf, sizeof(value_type)*size_btyx[2]*size_btyx[3]);
         }
 
         GDALClose(gdal_out);
@@ -392,4 +399,55 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     GDALWarpAppOptionsFree(warp_opts);
 
     return out;
+}
+
+void chunking::write_gtiff_directory(std::string dir, chunkid id) const {
+    namespace fs = boost::filesystem;
+    fs::path op(dir);
+
+    if (fs::exists(dir) && fs::is_directory(dir) && !fs::is_empty(dir)) {
+        throw std::string("ERROR in chunking::write_gtiff_directory(): output directory already exists and is not empty.");
+        return;
+    }
+    fs::create_directories(op);
+
+    GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
+    if (gtiff_driver == NULL) {
+        throw std::string("ERROR: cannot find GDAL driver for GTiff.");
+    }
+
+    CPLStringList out_co(NULL);
+    //out_co.AddNameValue("TILED", "YES");
+    //out_co.AddNameValue("BLOCKXSIZE", "256");
+   // out_co.AddNameValue("BLOCKYSIZE", "256");
+
+    bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
+    double affine[6];
+    affine[0] = cextent.s.left;
+    affine[3] = cextent.s.top;
+    affine[1] = _c->view().dx();
+    affine[5] = -_c->view().dy();
+    affine[2] = 0.0;
+    affine[4] = 0.0;
+
+    std::shared_ptr<chunk_data> dat = read(id);
+
+    for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
+        for (uint32_t it = 0; it < dat->size()[1]; ++it) {
+            fs::path out_file = op / (std::to_string(ib) + "_" + std::to_string(it) + ".tif");
+
+            GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
+            gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double*)dat->buf())  + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
+            gdal_out->GetRasterBand(1)->SetNoDataValue(NAN);
+            char *wkt_out;
+            OGRSpatialReference srs_out;
+            srs_out.SetFromUserInput(_c->view().proj().c_str());
+            srs_out.exportToWkt(&wkt_out);
+
+            GDALSetProjection(gdal_out, wkt_out);
+            GDALSetGeoTransform(gdal_out, affine);
+
+            GDALClose(gdal_out);
+        }
+    }
 }

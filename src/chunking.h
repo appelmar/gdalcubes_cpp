@@ -36,35 +36,6 @@ class chunk_data {
         if (_buf) free(_buf);
     }
 
-    // chunk_data(const chunk_data&) = delete;
-    //  void operator=(const chunk_data&) = delete;
-    //
-    //    // move constructor
-    //    chunk_data(chunk_data&& A) {
-    //        // Taking over the resources
-    //        A._size = _size;
-    //        A._buf = _buf;
-    //
-    //        // Resetting *this to prevent freeing the data buffers in the destructor.
-    //        _buf = nullptr;
-    //        _size[0] = 0;
-    //        _size[1] = 0;
-    //        _size[2] = 0;
-    //        _size[3] = 0;
-    //    }
-    //
-    //    // move assignment
-    //    chunk_data& operator=(chunk_data&& A) {
-    //        _size = A._size;
-    //        _buf = A._buf;
-    //        A._buf = nullptr;
-    //        A._size[0] = 0;
-    //        A._size[1] = 0;
-    //        A._size[2] = 0;
-    //        A._size[3] = 0;
-    //        return *this;
-    //    }
-
     inline uint16_t count_bands() { return _size[0]; }
     inline uint32_t count_values() { return _size[1] * _size[2] * _size[3]; }
     uint64_t total_size_bytes() {
@@ -140,6 +111,11 @@ class chunking {
     virtual std::shared_ptr<chunk_data> read(chunkid id) const = 0;
     virtual uint32_t count_chunks() const = 0;
 
+    virtual chunkid find_chunk_that_contains(coords_st p) const = 0;
+    virtual bounds_st bounds_from_chunk(chunkid id) const = 0;
+
+    void write_gtiff_directory(std::string dir, chunkid id) const;
+
    protected:
     cube* _c;
 };
@@ -148,9 +124,9 @@ class default_chunking : public chunking {
    public:
     default_chunking(cube* c) : chunking(c), _size_x(256), _size_y(256), _size_t(16) {}
 
-    inline uint32_t& size_x() { return _size_x; }
-    inline uint32_t& size_y() { return _size_y; }
-    inline uint32_t& size_t() { return _size_t; }
+    inline uint32_t& default_size_x() { return _size_x; }
+    inline uint32_t& default_size_y() { return _size_y; }
+    inline uint32_t& default_size_t() { return _size_t; }
 
     std::shared_ptr<chunk_data> read(chunkid id) const override;
 
@@ -158,7 +134,7 @@ class default_chunking : public chunking {
         return std::ceil((double)_c->view().nx() / (double)_size_x) * std::ceil((double)_c->view().ny() / (double)_size_y) * std::ceil((double)_c->view().nt() / (double)_size_t);
     }
 
-    chunkid find_chunk_that_contains(coords_st p) const {
+    chunkid find_chunk_that_contains(coords_st p) const override {
         uint32_t cumprod = 1;
         chunkid id = 0;
 
@@ -250,7 +226,7 @@ class default_chunking : public chunking {
         return out;
     };
 
-    bounds_st bounds_from_chunk(chunkid id) const {
+    bounds_st bounds_from_chunk(chunkid id) const override {
         bounds_st out_st;
 
         bounds_nd<uint32_t, 3> vb = chunk_limits(id);

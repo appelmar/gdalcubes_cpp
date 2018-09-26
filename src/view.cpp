@@ -20,7 +20,7 @@
 cube_view cube_view::read_json(std::string filename) {
     namespace fs = boost::filesystem;
     if (!fs::exists(filename))
-        throw std::string("ERROR in cube_view::read_json(): cube view file does not exist.");
+        throw std::string("ERROR in cube_view::read_json(): image_collection_cube view file does not exist.");
     std::ifstream i(filename);
     nlohmann::json j;
     i >> j;

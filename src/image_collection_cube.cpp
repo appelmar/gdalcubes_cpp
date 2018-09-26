@@ -14,20 +14,100 @@
    limitations under the License.
 */
 
-#include "chunking.h"
+#include "image_collection_cube.h"
+
+
+
 #include <gdal_utils.h>
 #include <map>
 #include "utils.h"
 
+
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic),  cube(std::make_shared<cube_view>(v)) {}
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v))  {}
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile)))  {}
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)),  cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) {}
+
+
+
+std::string image_collection_cube::to_string() {
+    std::stringstream out;
+    std::shared_ptr<cube_view> x = std::dynamic_pointer_cast<cube_view>(_st_ref);
+    out << "GDAL IMAGE COLLECTION CUBE with (x,y,t)=(" << view()->nx() << "," << view()->ny() << "," << view()->nt() << ") cells in " << count_chunks() << " chunks." << std::endl;
+    return out.str();
+}
+
+
+
+void image_collection_cube::write_gtiff_directory(std::string dir) {
+
+    namespace fs = boost::filesystem;
+    fs::path op(dir);
+
+    if (!fs::exists(dir)) {
+        fs::create_directories(op);
+    }
+
+    if (!fs::is_directory(dir)) {
+        throw std::string("ERROR in chunking::write_gtiff_directory(): output is not a directory.");
+    }
+
+    uint32_t nchunks = count_chunks();
+    for (uint32_t i=0; i<nchunks; ++i) {
+
+        GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
+        if (gtiff_driver == NULL) {
+            throw std::string("ERROR: cannot find GDAL driver for GTiff.");
+        }
+
+        CPLStringList out_co(NULL);
+        //out_co.AddNameValue("TILED", "YES");
+        //out_co.AddNameValue("BLOCKXSIZE", "256");
+        // out_co.AddNameValue("BLOCKYSIZE", "256");
+
+        bounds_st cextent = this->bounds_from_chunk(i);  // implemented in derived classes
+        double affine[6];
+        affine[0] = cextent.s.left;
+        affine[3] = cextent.s.top;
+        affine[1] = _st_ref->dx();
+        affine[5] = -_st_ref->dy();
+        affine[2] = 0.0;
+        affine[4] = 0.0;
+
+        std::shared_ptr<chunk_data> dat = read_chunk(i);
+
+        for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
+            for (uint32_t it = 0; it < dat->size()[1]; ++it) {
+                fs::path out_file = op / (std::to_string(i) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif");
+
+                GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
+                gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double*)dat->buf())  + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
+                gdal_out->GetRasterBand(1)->SetNoDataValue(NAN);
+                char *wkt_out;
+                OGRSpatialReference srs_out;
+                srs_out.SetFromUserInput(_st_ref->proj().c_str());
+                srs_out.exportToWkt(&wkt_out);
+
+                GDALSetProjection(gdal_out, wkt_out);
+                GDALSetGeoTransform(gdal_out, affine);
+
+                GDALClose(gdal_out);
+            }
+        }
+    }
+
+}
+
+
 struct aggregation_state {
-   public:
+public:
     aggregation_state(coords_nd<uint32_t, 4> size_btyx) : _size_btyx(size_btyx) {}
 
     virtual void init() = 0;
     virtual void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) = 0;
     virtual void finalize(void *buf) = 0;
 
-   protected:
+protected:
     coords_nd<uint32_t, 4> _size_btyx;
 };
 
@@ -43,7 +123,7 @@ struct aggregation_state_mean : public aggregation_state {
             _img_count[b] = std::unordered_map<uint32_t, uint16_t>();
         }
         if (_img_count[b].find(t) == _img_count[b].end()) {
-            memcpy(chunk_buf, img_buf, sizeof(value_type) * _size_btyx[2] * _size_btyx[3]);  // TODO: make sure that b is zero-based!!!
+            memcpy(chunk_buf, img_buf, sizeof(double) * _size_btyx[2] * _size_btyx[3]);  // TODO: make sure that b is zero-based!!!
             _img_count[b][t] = 1;
         } else {
             _img_count[b][t]++;
@@ -82,7 +162,7 @@ struct aggregation_state_mean : public aggregation_state {
         _img_count.clear();
     }
 
-   protected:
+protected:
     std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t>> _img_count;
     std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t *>> _val_count;
 };
@@ -136,7 +216,7 @@ struct aggregation_state_none : public aggregation_state {
 
     void init() override {}
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
-        memcpy(chunk_buf, img_buf, sizeof(value_type) * _size_btyx[2] * _size_btyx[3]);
+        memcpy(chunk_buf, img_buf, sizeof(double) * _size_btyx[2] * _size_btyx[3]);
     }
     void finalize(void *buf) {}
 };
@@ -152,13 +232,13 @@ struct aggregation_state_none : public aggregation_state {
  * @return
  */
 
-std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
+std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     // Access image collection and fetch band information
-    std::vector<image_collection::band_info_row> bands = _c->collection()->get_bands();
+    std::vector<image_collection::band_info_row> bands = _collection->get_bands();
 
     // create a map to relate band names to integer band coordinates
     std::unordered_map<std::string, uint16_t> band_idx;
@@ -166,18 +246,17 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
         band_idx[bands[ib].name] = ib;
     }
 
-
     // Derive how many pixels the chunk has (this varies for chunks at the boundary of the view)
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
     coords_nd<uint32_t, 4> size_btyx = {bands.size(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
     // Fill buffers accordingly
-    out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(value_type)));
+    out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
 
     // Find intersecting images from collection and iterate over these
     bounds_st cextent = bounds_from_chunk(id);  // is this->bounds_from_chunk(id) needed?
-    std::vector<image_collection::find_range_st_row> datasets = _c->collection()->find_range_st(cextent, "gdalrefs.descriptor");
+    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, "gdalrefs.descriptor");
 
     if (datasets.empty()) {
         return std::make_shared<chunk_data>();  // empty chunk data
@@ -194,8 +273,8 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     double affine[6];
     affine[0] = cextent.s.left;
     affine[3] = cextent.s.top;
-    affine[1] = _c->view().dx();
-    affine[5] = -_c->view().dy();
+    affine[1] = _st_ref->dx();
+    affine[5] = -_st_ref->dy();
     affine[2] = 0.0;
     affine[4] = 0.0;
 
@@ -204,7 +283,7 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     warp_args.AddString("GTiff");  // TODO: make this configurable depending on the output size, maybe GTiff is faster? Alternatively a temporary directory might be given as configuration option that can be a ramdisk
 
     warp_args.AddString("-t_srs");
-    warp_args.AddString(_c->view().proj().c_str());
+    warp_args.AddString(_st_ref->proj().c_str());
 
     warp_args.AddString("-te");  // xmin ymin xmax ymax
     warp_args.AddString(std::to_string(cextent.s.left).c_str());
@@ -222,14 +301,14 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     warp_args.AddString("Float64");
 
     warp_args.AddString("-te_srs");
-    warp_args.AddString(_c->view().proj().c_str());
+    warp_args.AddString(_st_ref->proj().c_str());
 
     warp_args.AddString("-ts");
     warp_args.AddString(std::to_string(size_btyx[3]).c_str());
     warp_args.AddString(std::to_string(size_btyx[2]).c_str());
 
     warp_args.AddString("-r");
-    warp_args.AddString(resampling::to_string(_c->view().resampling_method()).c_str());
+    warp_args.AddString(resampling::to_string(view()->resampling_method()).c_str());
 
     // TODO: add resampling
 
@@ -242,27 +321,27 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     }
 
     OGRSpatialReference proj_out;
-    proj_out.SetFromUserInput(_c->view().proj().c_str());
+    proj_out.SetFromUserInput(_st_ref->proj().c_str());
     char *out_wkt;
     proj_out.exportToWkt(&out_wkt);
 
     aggregation_state *agg = nullptr;
-    if (_c->view().aggregation_method() == aggregation::MEAN) {
+    if (view()->aggregation_method() == aggregation::MEAN) {
         agg = new aggregation_state_mean(size_btyx);
-    } else if (_c->view().aggregation_method() == aggregation::MIN) {
+    } else if (view()->aggregation_method() == aggregation::MIN) {
         agg = new aggregation_state_min(size_btyx);
-    } else if (_c->view().aggregation_method() == aggregation::MAX) {
+    } else if (view()->aggregation_method() == aggregation::MAX) {
         agg = new aggregation_state_max(size_btyx);
     }
-    //    else if (_c->view().aggregation_method() == aggregation::MEDIAN) {
-    //        agg = new aggregation_state_median(size_btyx);
-    //    }
+        //    else if (->view()->aggregation_method() == aggregation::MEDIAN) {
+        //        agg = new aggregation_state_median(size_btyx);
+        //    }
     else
         agg = new aggregation_state_none(size_btyx);
 
     agg->init();
 
-    void *img_buf = calloc(size_btyx[3] * size_btyx[2], sizeof(value_type));
+    void *img_buf = calloc(size_btyx[3] * size_btyx[2], sizeof(double));
 
     // For each image, call gdal_warp if projection is different than view or gdaltranslate if possible otherwise
     uint32_t i = 0;
@@ -304,21 +383,21 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
             translate_args.AddString(std::to_string(std::get<1>(band_rels[b])).c_str());
         }
 
-        translate_args.AddString(std::to_string(datasets[i].band_num).c_str());
-        translate_args.AddString("-projwin");
 
-        translate_args.AddString(std::to_string(cextent.s.left).c_str());
-        translate_args.AddString(std::to_string(cextent.s.top).c_str());
-        translate_args.AddString(std::to_string(cextent.s.right).c_str());
-        translate_args.AddString(std::to_string(cextent.s.bottom).c_str());
-        translate_args.AddString("-projwin_srs");
-        translate_args.AddString(_c->view().proj().c_str());
+        // translate_args.AddString("-projwin");
+
+        //translate_args.AddString(std::to_string(cextent.s.left).c_str());
+        // translate_args.AddString(std::to_string(cextent.s.top).c_str());
+        //translate_args.AddString(std::to_string(cextent.s.right).c_str());
+        //translate_args.AddString(std::to_string(cextent.s.bottom).c_str());
+        //translate_args.AddString("-projwin_srs");
+        //translate_args.AddString(_c->view().proj().c_str());
         //
-        //        translate_args.AddString("-tr");
-        //        translate_args.AddString(
-        //                std::to_string(_c->view().dx()).c_str());
-        //        translate_args.AddString(
-        //                std::to_string(_c->view().dy()).c_str());
+//                translate_args.AddString("-tr");
+//                translate_args.AddString(
+//                        std::to_string(_c->view().dx()).c_str());
+//                translate_args.AddString(
+//                        std::to_string(_c->view().dy()).c_str());
 
         //        translate_args.AddString("-outsize");
         //        translate_args.AddString(std::to_string(  _c->view().nx()).c_str());
@@ -367,8 +446,8 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
 
         // Find coordinates for date of the image
         datetime dt = datetime::from_string(datasets[i - 1].datetime);  // Assumption here is that the dattime of all bands within a gdal dataset is the same, which should be OK in practice
-        dt.unit() = _c->view().dt().dt_unit;                            // explicit datetime unit cast
-        int it = (dt - cextent.t0) / _c->view().dt();
+        dt.unit() = _st_ref->dt().dt_unit;                            // explicit datetime unit cast
+        int it = (dt - cextent.t0) / _st_ref->dt();
 //
 //        std::cout << "T=" << it << "    " << dt.to_string() << std::endl;
 
@@ -377,10 +456,10 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
 
             uint16_t b_internal = (band_idx[std::get<0>(band_rels[b])]);
 
-            void *cbuf = ((value_type*)out->buf()) +  (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
+            void *cbuf = ((double*)out->buf()) +  (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
 
             // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
-            if (_c->view().aggregation_method() == aggregation::NONE) {
+            if (view()->aggregation_method() == aggregation::NONE) {
                 gdal_out->GetRasterBand(b+1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
             } else {
                 gdal_out->GetRasterBand(b+1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
@@ -401,53 +480,3 @@ std::shared_ptr<chunk_data> default_chunking::read(chunkid id) const {
     return out;
 }
 
-void chunking::write_gtiff_directory(std::string dir, chunkid id) const {
-    namespace fs = boost::filesystem;
-    fs::path op(dir);
-
-    if (fs::exists(dir) && fs::is_directory(dir) && !fs::is_empty(dir)) {
-        throw std::string("ERROR in chunking::write_gtiff_directory(): output directory already exists and is not empty.");
-        return;
-    }
-    fs::create_directories(op);
-
-    GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
-    if (gtiff_driver == NULL) {
-        throw std::string("ERROR: cannot find GDAL driver for GTiff.");
-    }
-
-    CPLStringList out_co(NULL);
-    //out_co.AddNameValue("TILED", "YES");
-    //out_co.AddNameValue("BLOCKXSIZE", "256");
-   // out_co.AddNameValue("BLOCKYSIZE", "256");
-
-    bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
-    double affine[6];
-    affine[0] = cextent.s.left;
-    affine[3] = cextent.s.top;
-    affine[1] = _c->view().dx();
-    affine[5] = -_c->view().dy();
-    affine[2] = 0.0;
-    affine[4] = 0.0;
-
-    std::shared_ptr<chunk_data> dat = read(id);
-
-    for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
-        for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-            fs::path out_file = op / (std::to_string(ib) + "_" + std::to_string(it) + ".tif");
-
-            GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
-            gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double*)dat->buf())  + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
-            gdal_out->GetRasterBand(1)->SetNoDataValue(NAN);
-            char *wkt_out;
-            OGRSpatialReference srs_out;
-            srs_out.SetFromUserInput(_c->view().proj().c_str());
-            srs_out.exportToWkt(&wkt_out);
-
-            GDALSetProjection(gdal_out, wkt_out);
-            GDALSetGeoTransform(gdal_out, affine);
-
-            GDALClose(gdal_out);
-        }
-    }
-}

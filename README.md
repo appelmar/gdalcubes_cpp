@@ -138,7 +138,7 @@ This file involves a few regular expressions to extract datetime, bands from ind
 
 # Data Views
 
-Data views define how we look at the EO imagery and how it is transformed to a data cube (or multidimensional array). It includes an area of interest, the projection, and the temporal and spatial resolutions.
+Data views define how we look at the EO imagery and how it is transformed to a data image_collection_cube (or multidimensional array). It includes an area of interest, the projection, and the temporal and spatial resolutions.
 Views are serialized as JSON documents as in the example below:
 ```
 {

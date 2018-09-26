@@ -16,9 +16,8 @@
 
 #include <gdal_priv.h>
 #include <iostream>
-#include "chunking.h"
 #include "collection_format.h"
-#include "cube.h"
+#include "image_collection_cube.h"
 #include "image_collection.h"
 #include "timer.h"
 #include "view.h"
@@ -76,12 +75,24 @@ int main(int argc, char *argv[]) {
         //            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
         //        }
 
-        cube c("test.db", "../../test/view.json");
+
+//
+//        std::shared_ptr<cube_st_reference> ref = std::make_shared<cube_view>(cube_view::read_json("../../test/view.json"));
+//        std::shared_ptr<cube_view> vvv = std::dynamic_pointer_cast<cube_view>(ref);
+//        std::cout << vvv->proj() << std::endl;
+//
+
+
+
+        image_collection_cube c("test.db", "../../test/view2.json");
+
+
+
         std::cout << std::endl
                   << c.to_string() << std::endl;
 
         t0.start();
-        c.get_chunking()->write_gtiff_directory("test", 0);
+        c.write_gtiff_directory("test");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
     } catch (std::string e) {

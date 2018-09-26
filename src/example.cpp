@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
 
         reduce_cube cr(std::make_shared<image_collection_cube>(c));
         t0.start();
-        cr.write_gtiff_directory("test_reduce");
+        cr.write_gdal_image("test.tif");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
 

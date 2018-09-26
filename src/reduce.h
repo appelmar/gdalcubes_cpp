@@ -141,8 +141,13 @@ public:
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-
-    void write_single_gtiff(std::string filename);
+/**
+ * Combines all chunks and produces a single GDAL image
+ * @param path
+ * @param format GDAL format
+ * @param co GDAL create options
+ */
+    void write_gdal_image(std::string path, std::string format="GTiff", std::string co="");
 
 
 

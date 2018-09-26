@@ -39,7 +39,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
 
 
 
-    reducer* r = new min_reducer(); // = new ..._reducer() // TODO: select reducer based on parameter
+    reducer* r = new mean_reducer(); // = new ..._reducer() // TODO: select reducer based on parameter
 
 
     r->init(out);
@@ -63,4 +63,63 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     delete r;
 
     return out;
+}
+
+
+
+void reduce_cube::write_gdal_image(std::string path, std::string format, std::string co) {
+
+    GDALDriver* drv = (GDALDriver*)GDALGetDriverByName(format.c_str());
+    if (!drv) {
+        throw std::string("ERROR in reduce_cube::write_gdal_image(): Cannot find GDAL driver for given format.");
+    }
+    // TODO: Check whether driver supports Create()
+
+    // TODO: add create options
+    GDALDataset* gdal_out = drv->Create(path.c_str(), _size[3],_size[2], bands().count(), GDT_Float64, NULL);
+    //GDALDataset *gdal_out = gtiff_driver->Create((std::to_string(i) + ".tif").c_str(), size_btyx[3], size_btyx[2], band_rels.size(), GDT_Float64, NULL);  // mask band?
+    if (!gdal_out) {
+        // TODO: Error handling
+        throw std::string("ERROR in reduce_cube::write_gdal_image(): cannot create output image");
+    }                                                                                                                                                      //        for (uint16_t b=0; b<band_rels.size(); ++b) {
+
+    OGRSpatialReference proj_out;
+    proj_out.SetFromUserInput(_st_ref->proj().c_str());
+    char *out_wkt;
+    proj_out.exportToWkt(&out_wkt);
+
+    double affine[6];
+    affine[0] = _st_ref->win().left;
+    affine[3] = _st_ref->win().top;
+    affine[1] = _st_ref->dx();
+    affine[5] = -_st_ref->dy();
+    affine[2] = 0.0;
+    affine[4] = 0.0;
+
+    gdal_out->SetProjection(out_wkt);
+    gdal_out->SetGeoTransform(affine);
+
+    // The following loop seems to be needed for some drivers only
+    for (uint16_t b = 0; b < _bands.count(); ++b) {                                                                                                                                  //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);
+        gdal_out->GetRasterBand(b + 1)->Fill(_bands.get(b).no_data_value);
+        gdal_out->GetRasterBand(b + 1)->SetNoDataValue(_bands.get(b).no_data_value); // why is the no data flag not available in the resulting files?
+        // TODO: set scale and offset
+    }
+
+    for (uint32_t i=0; i<count_chunks(); ++i) {
+        std::shared_ptr<chunk_data> dat = read_chunk(i);
+        bounds_nd<uint32_t, 3> cb = chunk_limits(i);
+        for (uint16_t b=0;  b < _bands.count(); ++b) {
+
+            uint32_t yoff = (count_chunks_y() - 1) * _chunk_size[1] - cb.low[1];
+
+
+            gdal_out->GetRasterBand(b+1)->RasterIO(GF_Write,cb.low[2], yoff, cb.high[2]-cb.low[2]+1,
+                                                   cb.high[1]-cb.low[1]+1, ((double*)dat->buf()) + b * dat->size()[2]*dat->size()[3], cb.high[2]-cb.low[2]+1,  cb.high[1]-cb.low[1]+1,
+            GDT_Float64, 0, 0, NULL);
+        }
+    }
+
+    GDALClose(gdal_out);
+
 }

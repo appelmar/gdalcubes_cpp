@@ -17,7 +17,6 @@
 #include "cube.h"
 
 void cube::write_gtiff_directory(std::string dir) {
-
     namespace fs = boost::filesystem;
     fs::path op(dir);
 
@@ -30,8 +29,7 @@ void cube::write_gtiff_directory(std::string dir) {
     }
 
     uint32_t nchunks = count_chunks();
-    for (uint32_t i=0; i<nchunks; ++i) {
-
+    for (uint32_t i = 0; i < nchunks; ++i) {
         GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
         if (gtiff_driver == NULL) {
             throw std::string("ERROR: cannot find GDAL driver for GTiff.");
@@ -58,7 +56,7 @@ void cube::write_gtiff_directory(std::string dir) {
                 fs::path out_file = op / (std::to_string(i) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif");
 
                 GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
-                gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double*)dat->buf())  + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
+                gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
                 gdal_out->GetRasterBand(1)->SetNoDataValue(_bands.get(ib).no_data_value);
                 char *wkt_out;
                 OGRSpatialReference srs_out;
@@ -72,5 +70,4 @@ void cube::write_gtiff_directory(std::string dir) {
             }
         }
     }
-
 }

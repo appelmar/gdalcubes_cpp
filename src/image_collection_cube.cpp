@@ -16,19 +16,14 @@
 
 #include "image_collection_cube.h"
 
-
-
 #include <gdal_utils.h>
 #include <map>
 #include "utils.h"
 
-
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic),  cube(std::make_shared<cube_view>(v)) {load_bands();}
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v))  {load_bands();}
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile)))  {load_bands();}
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)),  cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) {load_bands();}
-
-
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic), cube(std::make_shared<cube_view>(v)) { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v)) { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) { load_bands(); }
 
 std::string image_collection_cube::to_string() {
     std::stringstream out;
@@ -37,19 +32,15 @@ std::string image_collection_cube::to_string() {
     return out.str();
 }
 
-
-
-
-
 struct aggregation_state {
-public:
+   public:
     aggregation_state(coords_nd<uint32_t, 4> size_btyx) : _size_btyx(size_btyx) {}
 
     virtual void init() = 0;
     virtual void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) = 0;
     virtual void finalize(void *buf) = 0;
 
-protected:
+   protected:
     coords_nd<uint32_t, 4> _size_btyx;
 };
 
@@ -104,7 +95,7 @@ struct aggregation_state_mean : public aggregation_state {
         _img_count.clear();
     }
 
-protected:
+   protected:
     std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t>> _img_count;
     std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t *>> _val_count;
 };
@@ -178,7 +169,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
-
 
     // Derive how many pixels the chunk has (this varies for chunks at the boundary of the view)
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
@@ -267,9 +257,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     } else if (view()->aggregation_method() == aggregation::MAX) {
         agg = new aggregation_state_max(size_btyx);
     }
-        //    else if (->view()->aggregation_method() == aggregation::MEDIAN) {
-        //        agg = new aggregation_state_median(size_btyx);
-        //    }
+    //    else if (->view()->aggregation_method() == aggregation::MEDIAN) {
+    //        agg = new aggregation_state_median(size_btyx);
+    //    }
     else
         agg = new aggregation_state_none(size_btyx);
 
@@ -290,13 +280,13 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         }
 
         // find band data type (must be the same for all bands in the same GDALDataset / descriptor
-//        GDALDataType cur_type;
-//        for (uint16_t b = 0; b < bands.size(); ++b) {
-//            if (bands[b].name == std::get<0>(band_rels[0])) {  // take datatype from first match
-//                cur_type = bands[b].type;
-//                break;
-//            }
-//        }
+        //        GDALDataType cur_type;
+        //        for (uint16_t b = 0; b < bands.size(); ++b) {
+        //            if (bands[b].name == std::get<0>(band_rels[0])) {  // take datatype from first match
+        //                cur_type = bands[b].type;
+        //                break;
+        //            }
+        //        }
 
         GDALDataset *g = (GDALDataset *)GDALOpen(descriptor_name.c_str(), GA_ReadOnly);
         if (!g) {
@@ -317,7 +307,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             translate_args.AddString(std::to_string(std::get<1>(band_rels[b])).c_str());
         }
 
-
         // translate_args.AddString("-projwin");
 
         //translate_args.AddString(std::to_string(cextent.s.left).c_str());
@@ -327,11 +316,11 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         //translate_args.AddString("-projwin_srs");
         //translate_args.AddString(_c->view().proj().c_str());
         //
-//                translate_args.AddString("-tr");
-//                translate_args.AddString(
-//                        std::to_string(_c->view().dx()).c_str());
-//                translate_args.AddString(
-//                        std::to_string(_c->view().dy()).c_str());
+        //                translate_args.AddString("-tr");
+        //                translate_args.AddString(
+        //                        std::to_string(_c->view().dx()).c_str());
+        //                translate_args.AddString(
+        //                        std::to_string(_c->view().dy()).c_str());
 
         //        translate_args.AddString("-outsize");
         //        translate_args.AddString(std::to_string(  _c->view().nx()).c_str());
@@ -355,47 +344,44 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             std::cout << "ERROR in gdal_translate for " << i << std::endl;
         }
 
-        GDALDataset* gdal_out = mem_driver->Create("", size_btyx[3],size_btyx[2], band_rels.size(), GDT_Float64, NULL); // mask band?
+        GDALDataset *gdal_out = mem_driver->Create("", size_btyx[3], size_btyx[2], band_rels.size(), GDT_Float64, NULL);  // mask band?
         //GDALDataset *gdal_out = gtiff_driver->Create((std::to_string(i) + ".tif").c_str(), size_btyx[3], size_btyx[2], band_rels.size(), GDT_Float64, NULL);  // mask band?
         if (!gdal_out) {
             // TODO: Error handling
             std::cout << "ERROR in gdalwarp for " << i << std::endl;
-        }                                                                                                                                                      //        for (uint16_t b=0; b<band_rels.size(); ++b) {
-
+        }  //        for (uint16_t b=0; b<band_rels.size(); ++b) {
 
         //gdal_out->SetProjection(_c->view().proj().c_str());
         gdal_out->SetProjection(out_wkt);
         gdal_out->SetGeoTransform(affine);
 
         // The following loop with filling the buffer is needed for MEM datasets but not for GTiff
-        for (uint16_t b = 0; b < band_rels.size(); ++b) {                                                                                                                                  //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);
+        for (uint16_t b = 0; b < band_rels.size(); ++b) {  //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);
             gdal_out->GetRasterBand(b + 1)->Fill(NAN);
-            gdal_out->GetRasterBand(b + 1)->SetNoDataValue(NAN); // why is the no data flag not available in the resulting files?
+            gdal_out->GetRasterBand(b + 1)->SetNoDataValue(NAN);  // why is the no data flag not available in the resulting files?
         }
 
         (GDALDataset *)GDALWarp(NULL, gdal_out, 1, &cropped_vrt, warp_opts, NULL);
-
 
         GDALClose(cropped_vrt);
 
         // Find coordinates for date of the image
         datetime dt = datetime::from_string(datasets[i - 1].datetime);  // Assumption here is that the dattime of all bands within a gdal dataset is the same, which should be OK in practice
-        dt.unit() = _st_ref->dt().dt_unit;                            // explicit datetime unit cast
+        dt.unit() = _st_ref->dt().dt_unit;                              // explicit datetime unit cast
         int it = (dt - cextent.t0) / _st_ref->dt();
-//
-//        std::cout << "T=" << it << "    " << dt.to_string() << std::endl;
+        //
+        //        std::cout << "T=" << it << "    " << dt.to_string() << std::endl;
 
         // For each band, call RasterIO to read and copy data to the right position in the buffers
         for (uint16_t b = 0; b < band_rels.size(); ++b) {
-
             uint16_t b_internal = _bands.get_index(std::get<0>(band_rels[b]));
-            void *cbuf = ((double*)out->buf()) +  (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
+            void *cbuf = ((double *)out->buf()) + (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
 
             // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
             if (view()->aggregation_method() == aggregation::NONE) {
-                gdal_out->GetRasterBand(b+1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
             } else {
-                gdal_out->GetRasterBand(b+1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                 agg->update(cbuf, img_buf, b_internal, it);
             }
         }
@@ -413,13 +399,11 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
-
-
 void image_collection_cube::load_bands() {
     // Access image collection and fetch band information
     std::vector<image_collection::band_info_row> bands_info = _collection->get_bands();
 
-    for (uint16_t ib=0; ib<bands_info.size(); ++ib) {
+    for (uint16_t ib = 0; ib < bands_info.size(); ++ib) {
         band b(bands_info[ib].name);
         b.unit = bands_info[ib].unit;
         b.type = "float64";

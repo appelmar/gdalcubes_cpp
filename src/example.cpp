@@ -17,11 +17,11 @@
 #include <gdal_priv.h>
 #include <iostream>
 #include "collection_format.h"
-#include "image_collection_cube.h"
 #include "image_collection.h"
+#include "image_collection_cube.h"
+#include "reduce.h"
 #include "timer.h"
 #include "view.h"
-#include "reduce.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -76,33 +76,25 @@ int main(int argc, char *argv[]) {
         //            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
         //        }
 
-
-//
-//        std::shared_ptr<cube_st_reference> ref = std::make_shared<cube_view>(cube_view::read_json("../../test/view.json"));
-//        std::shared_ptr<cube_view> vvv = std::dynamic_pointer_cast<cube_view>(ref);
-//        std::cout << vvv->proj() << std::endl;
-//
-
-
+        //
+        //        std::shared_ptr<cube_st_reference> ref = std::make_shared<cube_view>(cube_view::read_json("../../test/view.json"));
+        //        std::shared_ptr<cube_view> vvv = std::dynamic_pointer_cast<cube_view>(ref);
+        //        std::cout << vvv->proj() << std::endl;
+        //
 
         image_collection_cube c("test.db", "../../test/view2.json");
-
-
 
         std::cout << std::endl
                   << c.to_string() << std::endl;
 
         t0.start();
-        c.write_gtiff_directory("test");
+        // c.write_gtiff_directory("test");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
-
 
         reduce_cube cr(std::make_shared<image_collection_cube>(c));
         t0.start();
         cr.write_gdal_image("test.tif");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
-
-
 
     } catch (std::string e) {
         std::cout << e << std::endl;

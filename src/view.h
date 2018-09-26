@@ -169,17 +169,9 @@ struct resampling {
     }
 };
 
-
-
-
-
-
 class cube_st_reference {
-public:
-
-
+   public:
     virtual ~cube_st_reference() {
-
     }
 
     inline uint32_t& nx() { return _nx; }
@@ -188,21 +180,15 @@ public:
     inline double dx() { return (_win.right - _win.left) / _nx; }
     inline double dy() { return (_win.top - _win.bottom) / _ny; }
 
-
-
     inline double& left() { return _win.left; }
     inline double& right() { return _win.right; }
     inline double& bottom() { return _win.bottom; }
     inline double& top() { return _win.top; }
 
-
     inline std::string& proj() { return _proj; }
 
     inline datetime& t0() { return _t0; }
     inline datetime& t1() { return _t1; }
-
-
-
 
     uint32_t nt() {
         duration d = (_t1 - _t0) + 1;
@@ -263,8 +249,7 @@ public:
         return s;
     }
 
-protected:
-
+   protected:
     std::string _proj;
     bounds_2d<double> _win;
 
@@ -274,14 +259,7 @@ protected:
     uint32_t _ny;
 
     duration _dt;
-
 };
-
-
-
-
-
-
 
 /**
  * This class defines a view how to look at the data including which resolution, which projection,
@@ -300,10 +278,7 @@ class cube_view : public cube_st_reference {
     inline aggregation::aggregation_type& aggregation_method() { return _aggregation; }
     inline resampling::resampling_type& resampling_method() { return _resampling; }
 
-
    protected:
-
-
     resampling::resampling_type _resampling;
     aggregation::aggregation_type _aggregation;
 };

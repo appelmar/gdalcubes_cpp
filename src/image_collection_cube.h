@@ -18,10 +18,8 @@
 
 #include "cube.h"
 
-
 class image_collection_cube : public cube {
    public:
-
     image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v);
     image_collection_cube(std::string icfile, cube_view v);
     image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile);
@@ -29,20 +27,16 @@ class image_collection_cube : public cube {
     ~image_collection_cube() {}
 
     inline const std::shared_ptr<image_collection> collection() { return _collection; }
-    inline std::shared_ptr<cube_view>  view() {return std::dynamic_pointer_cast<cube_view>(_st_ref); }
+    inline std::shared_ptr<cube_view> view() { return std::dynamic_pointer_cast<cube_view>(_st_ref); }
 
     std::string to_string() override;
 
-
-
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
-
 
    protected:
     const std::shared_ptr<image_collection> _collection;
 
     void load_bands();
-
 };
 
 #endif  //IMAGE_COLLECTION_CUBE_H

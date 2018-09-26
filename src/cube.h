@@ -33,6 +33,56 @@ typedef uint32_t chunkid_t;
 
 
 
+
+struct band {
+
+    band(std::string name) : name(name), no_data_value(NAN), offset(0), scale(1), unit(""), type("float64") {}
+    std::string name;
+    double no_data_value;
+    double offset;
+    double scale;
+    std::string unit;
+    std::string type;
+};
+
+class band_collection {
+public:
+    void add(band b) {
+        if (!has(b.name)) {
+            _bands.push_back(b);
+            _band_idx[b.name] = _bands.size()-1;
+        }
+    }
+
+    inline bool has(std::string name) {
+        return _band_idx.find(name) != _band_idx.end();
+    }
+
+    inline band get(std::string name) {
+        return _bands[_band_idx[name]];
+    }
+
+    inline uint32_t get_index(std::string name) {
+        return _band_idx[name];
+    }
+
+    inline band get(uint32_t i) {
+        return _bands[i];
+    }
+
+    inline uint32_t count() {
+        return _bands.size();
+    }
+
+
+protected:
+
+    std::map<std::string, uint32_t> _band_idx;
+    std::vector<band> _bands;
+
+};
+
+
 class chunk_data {
 public:
     chunk_data() : _buf(nullptr), _size() {}
@@ -80,17 +130,6 @@ class cube {
 
 public:
 
-    cube(std::shared_ptr<cube_st_reference> st_ref, std::vector<std::string> bands) :_st_ref(st_ref),  _chunk_size(), _size() {
-        _size[0] = bands.size();
-        _size[1] = st_ref->nt();
-        _size[2] = st_ref->ny();
-        _size[3] = st_ref->nx();
-
-        _chunk_size = {16,256,256};
-
-
-        // TODO: add bands
-    }
 
 
     cube(std::shared_ptr<cube_st_reference> st_ref) :_st_ref(st_ref),  _chunk_size(), _size() {
@@ -236,16 +275,55 @@ public:
 
 
 
-    virtual std::string to_string() = 0; // TODO: implement default to_string method here
+    virtual std::string to_string() {
+        // TODO: implement default to_string method here
 
-
-
-    //virtual std::map <uint32_t, std::vector<chunkid_t>> get_chunk_groups_by_coordinate(uint16_t dimension) const;
-
-
-    uint32_t count_chunks() const {
-        return std::ceil((double)_st_ref->nx() / (double)_chunk_size[2]) * std::ceil((double)_st_ref->ny() / (double)_chunk_size[1]) * std::ceil((double)_st_ref->nt() / (double)_chunk_size[0]);
+        return std::string("cube::to_string() has no default method yet.");
     }
+
+
+
+    inline uint32_t count_chunks() const {
+        return count_chunks_x() * count_chunks_y() * count_chunks_t();
+    }
+
+    inline uint32_t count_chunks_x() const {
+        return std::ceil((double)_st_ref->nx() / (double)_chunk_size[2]);
+    }
+    inline uint32_t count_chunks_y() const {
+        return std::ceil((double)_st_ref->ny() / (double)_chunk_size[1]);
+    }
+    inline uint32_t count_chunks_t() const {
+        return std::ceil((double)_st_ref->nt() / (double)_chunk_size[0]);
+    }
+
+
+
+    chunk_coordinate_tyx chunk_coords_from_id(chunkid_t id) {
+        chunk_coordinate_tyx out;
+
+        uint32_t cumprod = 1;
+        int32_t n;
+
+        n = count_chunks_x();
+        out[2] = (id / cumprod) % n;
+        cumprod *= n;
+        n = count_chunks_y();
+        out[1] = (id / cumprod) % n;
+        cumprod *= n;
+        n = count_chunks_t();
+        out[0] = (id / cumprod) % n;
+        cumprod *= n;
+
+        return out;
+    }
+
+
+    chunkid_t chunk_id_from_coords(chunk_coordinate_tyx c) {
+       return c[0]* count_chunks_y()* count_chunks_x() + c[1]* count_chunks_x() + c[2];
+    }
+
+
 
     cube_coordinate_btyx low() const {
         return {0,0,0,0};
@@ -313,11 +391,20 @@ public:
 
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) = 0;
 
+    void write_gtiff_directory(std::string dir);
+
+
+    inline band_collection bands() {
+        return _bands;
+    }
+
 protected:
 
     std::shared_ptr<cube_st_reference> _st_ref;
     cube_size_btyx _size;
     cube_size_tyx _chunk_size;
+
+    band_collection _bands;
 
 };
 

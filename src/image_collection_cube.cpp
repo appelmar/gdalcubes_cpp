@@ -23,10 +23,10 @@
 #include "utils.h"
 
 
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic),  cube(std::make_shared<cube_view>(v)) {}
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v))  {}
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile)))  {}
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)),  cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) {}
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic),  cube(std::make_shared<cube_view>(v)) {load_bands();}
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v))  {load_bands();}
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile)))  {load_bands();}
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)),  cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) {load_bands();}
 
 
 
@@ -39,64 +39,6 @@ std::string image_collection_cube::to_string() {
 
 
 
-void image_collection_cube::write_gtiff_directory(std::string dir) {
-
-    namespace fs = boost::filesystem;
-    fs::path op(dir);
-
-    if (!fs::exists(dir)) {
-        fs::create_directories(op);
-    }
-
-    if (!fs::is_directory(dir)) {
-        throw std::string("ERROR in chunking::write_gtiff_directory(): output is not a directory.");
-    }
-
-    uint32_t nchunks = count_chunks();
-    for (uint32_t i=0; i<nchunks; ++i) {
-
-        GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
-        if (gtiff_driver == NULL) {
-            throw std::string("ERROR: cannot find GDAL driver for GTiff.");
-        }
-
-        CPLStringList out_co(NULL);
-        //out_co.AddNameValue("TILED", "YES");
-        //out_co.AddNameValue("BLOCKXSIZE", "256");
-        // out_co.AddNameValue("BLOCKYSIZE", "256");
-
-        bounds_st cextent = this->bounds_from_chunk(i);  // implemented in derived classes
-        double affine[6];
-        affine[0] = cextent.s.left;
-        affine[3] = cextent.s.top;
-        affine[1] = _st_ref->dx();
-        affine[5] = -_st_ref->dy();
-        affine[2] = 0.0;
-        affine[4] = 0.0;
-
-        std::shared_ptr<chunk_data> dat = read_chunk(i);
-
-        for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
-            for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-                fs::path out_file = op / (std::to_string(i) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif");
-
-                GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
-                gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double*)dat->buf())  + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
-                gdal_out->GetRasterBand(1)->SetNoDataValue(NAN);
-                char *wkt_out;
-                OGRSpatialReference srs_out;
-                srs_out.SetFromUserInput(_st_ref->proj().c_str());
-                srs_out.exportToWkt(&wkt_out);
-
-                GDALSetProjection(gdal_out, wkt_out);
-                GDALSetGeoTransform(gdal_out, affine);
-
-                GDALClose(gdal_out);
-            }
-        }
-    }
-
-}
 
 
 struct aggregation_state {
@@ -237,18 +179,10 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
-    // Access image collection and fetch band information
-    std::vector<image_collection::band_info_row> bands = _collection->get_bands();
-
-    // create a map to relate band names to integer band coordinates
-    std::unordered_map<std::string, uint16_t> band_idx;
-    for (uint16_t ib=0; ib<bands.size(); ++ib) {
-        band_idx[bands[ib].name] = ib;
-    }
 
     // Derive how many pixels the chunk has (this varies for chunks at the boundary of the view)
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
-    coords_nd<uint32_t, 4> size_btyx = {bands.size(), size_tyx[0], size_tyx[1], size_tyx[2]};
+    coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
     // Fill buffers accordingly
@@ -454,8 +388,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         // For each band, call RasterIO to read and copy data to the right position in the buffers
         for (uint16_t b = 0; b < band_rels.size(); ++b) {
 
-            uint16_t b_internal = (band_idx[std::get<0>(band_rels[b])]);
-
+            uint16_t b_internal = _bands.get_index(std::get<0>(band_rels[b]));
             void *cbuf = ((double*)out->buf()) +  (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
 
             // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
@@ -480,3 +413,20 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
+
+
+void image_collection_cube::load_bands() {
+    // Access image collection and fetch band information
+    std::vector<image_collection::band_info_row> bands_info = _collection->get_bands();
+
+    for (uint16_t ib=0; ib<bands_info.size(); ++ib) {
+        band b(bands_info[ib].name);
+        b.unit = bands_info[ib].unit;
+        b.type = "float64";
+        b.scale = bands_info[ib].scale;
+        b.offset = bands_info[ib].offset;
+        // TODO: Add na value if available!!!!
+        _bands.add(b);
+    }
+    _size[0] = _bands.count();
+}

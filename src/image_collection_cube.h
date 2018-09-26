@@ -33,13 +33,15 @@ class image_collection_cube : public cube {
 
     std::string to_string() override;
 
-    void write_gtiff_directory(std::string dir);
+
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
 
    protected:
     const std::shared_ptr<image_collection> _collection;
+
+    void load_bands();
 
 };
 

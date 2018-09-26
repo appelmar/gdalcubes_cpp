@@ -21,6 +21,7 @@
 #include "image_collection.h"
 #include "timer.h"
 #include "view.h"
+#include "reduce.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -94,6 +95,14 @@ int main(int argc, char *argv[]) {
         t0.start();
         c.write_gtiff_directory("test");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+
+
+        reduce_cube cr(std::make_shared<image_collection_cube>(c));
+        t0.start();
+        cr.write_gtiff_directory("test_reduce");
+        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+
+
 
     } catch (std::string e) {
         std::cout << e << std::endl;

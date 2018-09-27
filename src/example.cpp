@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
         // c.write_gtiff_directory("test");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
-        reduce_cube cr(std::make_shared<image_collection_cube>(c));
+        reduce_cube cr(std::make_shared<image_collection_cube>(c), "median");
         t0.start();
         cr.write_gdal_image("test.tif");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;

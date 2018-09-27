@@ -67,7 +67,7 @@ void print_usage(std::string command = "") {
         std::cout << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "  -v, --view               Filename of the JSON data view description, this option is required" << std::endl;
-        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'min', or 'max', defaults to 'mean'" << std::endl;
+        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', defaults to 'mean'" << std::endl;
         std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
         std::cout << std::endl;
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
         } else if (cmd == "reduce") {
             po::options_description reduce_desc("reduce arguments");
             reduce_desc.add_options()("view,v", po::value<std::string>(), "Path to the JSON data view description");
-            reduce_desc.add_options()("reducer,r", po::value<std::string>()->default_value("mean"), "Reduction method, currently mean, min, and max are implemented.");
+            reduce_desc.add_options()("reducer,r", po::value<std::string>()->default_value("mean"), "Reduction method, currently mean, median, min, and max are implemented.");
             reduce_desc.add_options()("gdal-of", po::value<std::string>()->default_value("GTiff"), "GDAL output format, defaults to GTiff");
             reduce_desc.add_options()("gdal-co", po::value<std::vector<std::string>>(), "GDAL create options");
             reduce_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");

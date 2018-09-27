@@ -115,6 +115,44 @@ struct max_reducer : public reducer {
     void finalize(std::shared_ptr<chunk_data> a) override {}
 };
 
+struct median_reducer : public reducer {
+    void init(std::shared_ptr<chunk_data> a) override {
+        _m_buckets = (std::vector<double> *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(std::vector<double>));
+    }
+
+    void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b) override {
+        for (uint16_t ib = 0; ib < a->size()[0]; ++ib) {
+            for (uint32_t it = 0; it < b->size()[1]; ++it) {
+                for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
+                    double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
+                    if (!isnan(v)) {
+                        _m_buckets[ib * a->size()[2] * a->size()[3] + ixy].push_back(v);
+                    }
+                }
+            }
+        }
+    }
+
+    void finalize(std::shared_ptr<chunk_data> a) override {
+        // divide by count;
+        for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
+            std::vector<double> &list = _m_buckets[ibxy];
+            std::sort(list.begin(), list.end());
+            if (list.size() == 0) {
+                ((double *)a->buf())[ibxy] = NAN;
+            } else if (list.size() % 2 == 1) {
+                ((double *)a->buf())[ibxy] = list[list.size() / 2];
+            } else {
+                ((double *)a->buf())[ibxy] = (list[list.size() / 2] + list[list.size() / 2 - 1]) / ((double)2);
+            }
+        }
+        free(_m_buckets);
+    }
+
+   protected:
+    std::vector<double> *_m_buckets;
+};
+
 class reduce_cube : public cube {
    public:
     reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _r(nullptr), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
@@ -138,6 +176,8 @@ class reduce_cube : public cube {
             _r = new max_reducer();
         } else if (reducer == "mean") {
             _r = new mean_reducer();
+        } else if (reducer == "median") {
+            _r = new median_reducer();
         } else
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }

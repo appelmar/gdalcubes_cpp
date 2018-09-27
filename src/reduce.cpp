@@ -43,20 +43,22 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
-void reduce_cube::write_gdal_image(std::string path, std::string format, std::string co) {
+void reduce_cube::write_gdal_image(std::string path, std::string format, std::vector<std::string> co) {
     GDALDriver* drv = (GDALDriver*)GDALGetDriverByName(format.c_str());
     if (!drv) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): Cannot find GDAL driver for given format.");
     }
     // TODO: Check whether driver supports Create()
 
-    // TODO: add create options
-    GDALDataset* gdal_out = drv->Create(path.c_str(), _size[3], _size[2], bands().count(), GDT_Float64, NULL);
-    //GDALDataset *gdal_out = gtiff_driver->Create((std::to_string(i) + ".tif").c_str(), size_btyx[3], size_btyx[2], band_rels.size(), GDT_Float64, NULL);  // mask band?
+    CPLStringList out_co(NULL);
+    for (uint16_t i = 0; i < co.size(); ++i) {
+        out_co.AddString(co[i].c_str());
+    }
+
+    GDALDataset* gdal_out = drv->Create(path.c_str(), _size[3], _size[2], bands().count(), GDT_Float64, out_co.List());
     if (!gdal_out) {
-        // TODO: Error handling
         throw std::string("ERROR in reduce_cube::write_gdal_image(): cannot create output image");
-    }  //        for (uint16_t b=0; b<band_rels.size(); ++b) {
+    }
 
     OGRSpatialReference proj_out;
     proj_out.SetFromUserInput(_st_ref->proj().c_str());

@@ -19,12 +19,12 @@
  * This file contains the main entry for the command line client.
  */
 
-// >  ./gdalcubes create_collection -f "../../test/collection_format_test.json" "../../test/test_list.txt" out.db
-
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include "build_info.h"
 #include "image_collection.h"
+#include "image_collection_cube.h"
+#include "reduce.h"
 #include "utils.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
@@ -35,6 +35,25 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
     while (std::getline(infile, line))
         out.push_back(line);
     return out;
+}
+
+void print_usage(std::string command = "") {
+    if (command == "create_collection") {
+    } else if (command == "info") {
+    } else if (command == "reduce") {
+    } else if (command == "stream") {
+    } else {
+        std::cout << "Usage: gdalcubes command [arguments]" << std::endl;
+        std::cout << "   or: gdalcubes [--help | --version]" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Commands:" << std::endl;
+        std::cout << "  info                     Print metadata of a GDAL image collection file " << std::endl;
+        std::cout << "  create_collection        Create a new image collection from GDAL datasets" << std::endl;
+        std::cout << "  reduce                   Reduce a GDAL cube over time to a single GDAL image" << std::endl;
+        std::cout << "  stream                   Stream chunks of a GDAL cube to stdin of other programs" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Please use 'gdalcubes command --help' for further information about command-specific arguments." << std::endl;
+    }
 }
 
 int main(int argc, char *argv[]) {
@@ -48,7 +67,7 @@ int main(int argc, char *argv[]) {
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
     po::options_description global_args("Global arguments");
-    global_args.add_options()("help,h", "print usage")("version", "print version information")("debug,d", "debug output, not yet implemented")("command", po::value<std::string>(), "Command to execute")("subargs", po::value<std::vector<std::string> >(), "Arguments for command");
+    global_args.add_options()("help,h", "print usage")("version", "print version information")("debug,d", "debug output, not yet implemented")("command", po::value<std::string>(), "Command to execute")("subargs", po::value<std::vector<std::string>>(), "Arguments for command");
 
     po::positional_options_description pos;
     pos.add("command", 1).add("subargs", -1);
@@ -64,9 +83,16 @@ int main(int argc, char *argv[]) {
             return 0;
         }
         if (vm.count("help") && !vm.count("command")) {
-            std::cout << global_args << std::endl;
+            print_usage();
             return 0;
         }
+
+        // if command and --help is given, print command-specific usage
+        if (vm.count("help") && vm.count("command")) {
+            print_usage(vm["command"].as<std::string>());
+            return 0;
+        }
+
         std::string cmd = vm["command"].as<std::string>();
         if (cmd == "create_collection") {
             po::options_description cc_desc("create_collection arguments");
@@ -85,7 +111,7 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
 
-            // TODO: implement help and debug flags
+            // TODO: implement debug flags
 
             bool recursive = false;
             bool strict = false;
@@ -144,6 +170,7 @@ int main(int argc, char *argv[]) {
             }
 
             std::string input = vm["input"].as<std::string>();
+
             image_collection ic = image_collection(input);
 
             std::vector<image_collection::band_info_row> bands = ic.get_bands();
@@ -166,11 +193,46 @@ int main(int argc, char *argv[]) {
             for (uint16_t i = 0; i < bands.size(); ++i) {
                 std::cout << bands[i].name << ":(" << utils::string_from_gdal_type(bands[i].type) << "," << bands[i].offset << "," << bands[i].scale << "," << bands[i].unit << ")" << std::endl;
             }
+        } else if (cmd == "reduce") {
+            po::options_description reduce_desc("reduce arguments");
+            reduce_desc.add_options()("view,v", po::value<std::string>(), "Path to the JSON data view description");
+            reduce_desc.add_options()("reducer,r", po::value<std::string>()->default_value("mean"), "Reduction method, currently mean, min, and max are implemented.");
+            reduce_desc.add_options()("gdal-of", po::value<std::string>()->default_value("GTiff"), "GDAL output format, defaults to GTiff");
+            reduce_desc.add_options()("gdal-co", po::value<std::vector<std::string>>(), "GDAL create options");
+            reduce_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");
+            reduce_desc.add_options()("output", po::value<std::string>(), "Filename of the output image.");
+
+            po::positional_options_description reduce_pos;
+            reduce_pos.add("input", 1);
+            reduce_pos.add("output", 1);
+
+            try {
+                std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts).options(reduce_desc).positional(reduce_pos).run(), vm);
+            } catch (...) {
+                std::cout << "ERROR in gdalcubes reduce: invalid arguments." << std::endl;
+                std::cout << reduce_desc << std::endl;
+            }
+
+            std::string input = vm["input"].as<std::string>();
+            std::string output = vm["output"].as<std::string>();
+            std::vector<std::string> create_options = vm["gdal-co"].as<std::vector<std::string>>();
+            std::string reducer = vm["reducer"].as<std::string>();
+            std::string outformat = vm["gdal-of"].as<std::string>();
+            std::string json_view_path = vm["view"].as<std::string>();
+
+            std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
+            std::shared_ptr<cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
+            std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_in, reducer);
+
+            c_reduce->write_gdal_image(output, outformat, create_options);
+
         }
 
         else {
             std::cout << "ERROR in gdalcubes: unrecognized command." << std::endl;
-            std::cout << global_args << std::endl;
+            print_usage();
             return 1;
         }
     } catch (std::string s) {
@@ -178,7 +240,7 @@ int main(int argc, char *argv[]) {
         return 1;
     } catch (...) {
         std::cout << "ERROR in gdalcubes: invalid arguments." << std::endl;
-        std::cout << global_args << std::endl;
+        print_usage();
         return 1;
     }
 }

@@ -117,7 +117,7 @@ struct max_reducer : public reducer {
 
 class reduce_cube : public cube {
    public:
-    reduce_cube(std::shared_ptr<cube> in, std::string reducer="mean") : _in_cube(in), _r(nullptr), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
+    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _r(nullptr), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         _size[1] = 1;
@@ -133,21 +133,16 @@ class reduce_cube : public cube {
         }
 
         if (reducer == "min") {
+            _r = new min_reducer();
+        } else if (reducer == "max") {
+            _r = new max_reducer();
+        } else if (reducer == "mean") {
             _r = new mean_reducer();
-        }
-        else if (reducer == "max") {
-            _r = new max_reducer();
-        }
-        else if (reducer == "mean") {
-            _r = new max_reducer();
-        }
-        else
+        } else
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
-
     }
 
-    ~reduce_cube()
-    {
+    ~reduce_cube() {
         if (_r) delete _r;
     }
 
@@ -155,15 +150,15 @@ class reduce_cube : public cube {
 
     /**
  * Combines all chunks and produces a single GDAL image
- * @param path
- * @param format GDAL format
+ * @param path path to output image file
+ * @param format GDAL format (see https://www.gdal.org/formats_list.html)
  * @param co GDAL create options
  */
-    void write_gdal_image(std::string path, std::string format = "GTiff", std::string co = "");
+    void write_gdal_image(std::string path, std::string format = "GTiff", std::vector<std::string> co = std::vector<std::string>());
 
    protected:
     std::shared_ptr<cube> _in_cube;
-    reducer* _r;
+    reducer *_r;
 };
 
 #endif  //REDUCE_H

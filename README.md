@@ -46,7 +46,7 @@ gdalcubes join in1.db in2.db out.db
 gdalcubes stream -v view.json -t reduce_time -o result.db > Rscript timeseries_stats.R
 gdalcubes stream -v view.json -t apply_pixel > Rscript timeseries_stats.R
 
-gdalcubes reduce -r average -v view.json --gdal-of="Gtiff" --gdal-co="TILED=YES COMPRESS=JPEG PHOTOMETRIC=YCBCR" in.db out.tif 
+gdalcubes reduce -r average -v view.json --gdal-of="Gtiff" --gdal-co="TILED=YES" --gdal-co="COMPRESS=JPEG" --gdal-co="PHOTOMETRIC=YCBCR" in.db out.tif 
 ``` 
 
 

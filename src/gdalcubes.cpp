@@ -39,8 +39,39 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
 
 void print_usage(std::string command = "") {
     if (command == "create_collection") {
+        std::cout << "Usage: gdalcubes create_collection [options] IN DEST" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Create a new GDAL image collection (an SQLite database) from a list of GDAL Datasets (files, URLs, or other descriptors for GDALOpen()) and "
+                     "a collection format definition. IN can be either a directory or a simple text file where each line is interpreted as a potential GDALDataset reference. If IN "
+                     "is a directory, all containing files will be considered as potential GDALDatasets first and checked if they match the collection format afterwards. "
+                  << std::endl;
+        std::cout << std::endl;
+        std::cout << "Options:" << std::endl;
+        std::cout << "  -f, --format                  Path of the collection format description JSON file, this option is required" << std::endl;
+        std::cout << "  -R, --recursive               If IN is a directory, do a recursive file listing" << std::endl;
+        std::cout << "  -s, --strict                  Cancel if a single GDALDataset cannot be added to the collection. If not given, ignore failing datasets in the output collection" << std::endl;
+        std::cout << std::endl;
     } else if (command == "info") {
+        std::cout << "Usage: gdalcubes info SOURCE" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Print information about a specified GDAL image collection (SOURCE)." << std::endl;
+        std::cout << std::endl;
     } else if (command == "reduce") {
+        std::cout << "Usage: gdalcubes reduce [options] SOURCE DEST" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Reduce a given image collection (SOURCE) over time with the specified method and produce a single output image (DEST). The specified reducer "
+                     "will be applied over all bands of the input collection. To convert the image collection to a cube, a data view "
+                     "JSON file must be specified as -v or --view option. Depending on the collection's size and the location of their data "
+                     "the reduction might be time-consuming."
+                  << std::endl;
+        std::cout << std::endl;
+        std::cout << "Options:" << std::endl;
+        std::cout << "  -v, --view               Filename of the JSON data view description, this option is required" << std::endl;
+        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'min', or 'max', defaults to 'mean'" << std::endl;
+        std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
+        std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Please use 'gdalcubes command --help' for further information about command-specific arguments." << std::endl;
     } else if (command == "stream") {
     } else {
         std::cout << "Usage: gdalcubes command [arguments]" << std::endl;
@@ -217,7 +248,11 @@ int main(int argc, char *argv[]) {
 
             std::string input = vm["input"].as<std::string>();
             std::string output = vm["output"].as<std::string>();
-            std::vector<std::string> create_options = vm["gdal-co"].as<std::vector<std::string>>();
+
+            std::vector<std::string> create_options;
+            if (vm.count("gdal-co") > 0) {
+                create_options = vm["gdal-co"].as<std::vector<std::string>>();
+            }
             std::string reducer = vm["reducer"].as<std::string>();
             std::string outformat = vm["gdal-of"].as<std::string>();
             std::string json_view_path = vm["view"].as<std::string>();

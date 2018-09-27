@@ -8,5 +8,8 @@
 
 ./gdalcubes info s2test.db
 
-
 ./gdalcubes reduce -r mean -v "../../test/view.json" --gdal-of="GTiff" --gdal-co="TILED=YES" --gdal-co="BLOCKXSIZE=256"  --gdal-co="BLOCKXSIZE=256"  s2test.db summary.tif
+
+./gdalcubes reduce -r median -v "../../test/view.json" s2test.db summary_median.tif
+
+

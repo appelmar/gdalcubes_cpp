@@ -109,8 +109,8 @@ int main(int argc, char *argv[]) {
         po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).positional(pos).allow_unregistered().run();
         po::store(parsed, vm);
         if (vm.count("version")) {
-            std::cout << "gdalcubes " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << " built on " << __DATE__ << " " << __TIME__ << std::endl;
-            std::cout << "linked against " << GDALVersionInfo("--version");  // TODO add version info for other linked libraries
+            std::cout << "gdalcubes " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << " built on " << __DATE__ << " " << __TIME__;
+            std::cout << " linked against " << GDALVersionInfo("--version") << std::endl;  // TODO add version info for other linked libraries
             return 0;
         }
         if (vm.count("help") && !vm.count("command")) {

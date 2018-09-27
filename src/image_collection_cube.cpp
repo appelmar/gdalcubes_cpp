@@ -177,6 +177,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     // Fill buffers accordingly
     out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+    double *begin = (double *)out->buf();
+    double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
+    std::fill(begin, end, NAN);
 
     // Find intersecting images from collection and iterate over these
     bounds_st cextent = bounds_from_chunk(id);  // is this->bounds_from_chunk(id) needed?

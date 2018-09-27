@@ -33,6 +33,12 @@ class image_collection_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
+    // image_collection_cube is the only class that supports changing chunk sizes from outside!
+    // This is important for e.g. streaming.
+    void set_chunk_size(uint32_t t, uint32_t y, uint32_t x) {
+        _chunk_size = {t, y, x};
+    }
+
    protected:
     const std::shared_ptr<image_collection> _collection;
 

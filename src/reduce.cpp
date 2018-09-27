@@ -27,6 +27,9 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
 
     // Fill buffers accordingly
     out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+    double *begin = (double *)out->buf();
+    double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
+    std::fill(begin, end, NAN);
 
     _r->init(out);
 
@@ -44,7 +47,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
 }
 
 void reduce_cube::write_gdal_image(std::string path, std::string format, std::vector<std::string> co) {
-    GDALDriver* drv = (GDALDriver*)GDALGetDriverByName(format.c_str());
+    GDALDriver *drv = (GDALDriver *)GDALGetDriverByName(format.c_str());
     if (!drv) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): Cannot find GDAL driver for given format.");
     }
@@ -55,14 +58,14 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
         out_co.AddString(co[i].c_str());
     }
 
-    GDALDataset* gdal_out = drv->Create(path.c_str(), _size[3], _size[2], bands().count(), GDT_Float64, out_co.List());
+    GDALDataset *gdal_out = drv->Create(path.c_str(), _size[3], _size[2], bands().count(), GDT_Float64, out_co.List());
     if (!gdal_out) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): cannot create output image");
     }
 
     OGRSpatialReference proj_out;
     proj_out.SetFromUserInput(_st_ref->proj().c_str());
-    char* out_wkt;
+    char *out_wkt;
     proj_out.exportToWkt(&out_wkt);
 
     double affine[6];
@@ -90,7 +93,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
             uint32_t yoff = (count_chunks_y() - 1) * _chunk_size[1] - cb.low[1];
 
             gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Write, cb.low[2], yoff, cb.high[2] - cb.low[2] + 1,
-                                                     cb.high[1] - cb.low[1] + 1, ((double*)dat->buf()) + b * dat->size()[2] * dat->size()[3], cb.high[2] - cb.low[2] + 1, cb.high[1] - cb.low[1] + 1,
+                                                     cb.high[1] - cb.low[1] + 1, ((double *)dat->buf()) + b * dat->size()[2] * dat->size()[3], cb.high[2] - cb.low[2] + 1, cb.high[1] - cb.low[1] + 1,
                                                      GDT_Float64, 0, 0, NULL);
         }
     }

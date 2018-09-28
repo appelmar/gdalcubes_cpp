@@ -195,6 +195,12 @@ class cube_st_reference {
         return (d % _dt == 0) ? d / _dt : (1 + (d / _dt));
     }
 
+    uint32_t nt(uint32_t n) {
+        duration d = (_t1 - _t0) + 1;
+        dt().dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
+        assert(nt() == n);
+    }
+
     inline bounds_2d<double>& win() { return _win; }
 
     inline duration& dt() { return _dt; }

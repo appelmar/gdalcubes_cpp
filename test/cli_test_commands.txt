@@ -12,4 +12,3 @@
 
 ./gdalcubes reduce -r median -v "../../test/view.json" s2test.db summary_median.tif
 
-

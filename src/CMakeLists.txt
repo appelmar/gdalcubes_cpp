@@ -55,7 +55,7 @@ else (NOT sqlite_LIBRARY)
 endif (NOT sqlite_LIBRARY)
 
 
-
+find_package(Threads)
 
 
 include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR})
@@ -72,15 +72,15 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 
 
 add_executable(gdalcubes_example  ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
-target_link_libraries (gdalcubes_example ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
+target_link_libraries (gdalcubes_example ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY}  ${CMAKE_THREAD_LIBS_INIT})
 
 
 add_executable(gdalcubes ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
-target_link_libraries (gdalcubes ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
+target_link_libraries (gdalcubes ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 file(GLOB TEST_FILES
         "test/*.cpp" "*.h")
 
 add_executable(gdalcubes_test ${SOURCE_FILES} ${TEST_FILES})
-target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${libgpkg_LIBRARY})
+target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 

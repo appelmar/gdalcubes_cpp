@@ -22,6 +22,7 @@
 #include "reduce.h"
 #include "timer.h"
 #include "view.h"
+#include "stream.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -87,14 +88,23 @@ int main(int argc, char *argv[]) {
         std::cout << std::endl
                   << c.to_string() << std::endl;
 
-        t0.start();
-        // c.write_gtiff_directory("test");
-        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+//        t0.start();
+//         c.write_gtiff_directory("test");
+//        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
-        reduce_cube cr(std::make_shared<image_collection_cube>(c), "median");
-        t0.start();
-        cr.write_gdal_image("test.tif");
-        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+//        reduce_cube cr(std::make_shared<image_collection_cube>(c), "median");
+//        t0.start();
+//        cr.write_gdal_image("test.tif");
+//        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+
+
+
+        //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
+
+        stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla ../../test/stream_example.R");
+        reduce_cube cstream(std::make_shared<stream_cube>(s), "min");
+        cstream.write_gdal_image("test_stream.tif");
+
 
     } catch (std::string e) {
         std::cout << e << std::endl;

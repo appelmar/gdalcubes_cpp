@@ -185,7 +185,7 @@ class cube_st_reference {
     inline double& bottom() { return _win.bottom; }
     inline double& top() { return _win.top; }
 
-    inline std::string& proj() { return _proj; }
+    inline std::string proj() { return _proj; }
 
     inline datetime& t0() { return _t0; }
     inline datetime& t1() { return _t1; }

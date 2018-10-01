@@ -9,6 +9,10 @@ x = read_stream_as_array()
 
 out = (x[8,,,,drop=FALSE] - x[4,,,,drop=FALSE]) / (x[8,,,,drop=FALSE] + x[4,,,,drop=FALSE])
 
+
+
+
+
 write_stream_from_array(out)
 
 

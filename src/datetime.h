@@ -149,6 +149,36 @@ class datetime {
     datetime(boost::posix_time::ptime p) : _p(p), _unit(DAY) {}
     datetime(boost::posix_time::ptime p, datetime_unit u) : _p(p), _unit(u) {}
 
+    /**
+     * Convert to a numeric datetime format as in 20180401123059.
+     * This function does **not** convert the datetime to a timestamp or similar
+     * @return
+     */
+    double to_double() {
+        double out = _p.date().year();
+        if (_unit <= MONTH) {
+            out *= 100;
+            out += _p.date().month();
+        }
+        if (_unit <= DAY) {
+            out *= 100;
+            out += _p.date().day();
+        }
+        if (_unit <= HOUR) {
+            out *= 100;
+            out += _p.time_of_day().hours();
+        }
+        if (_unit <= MINUTE) {
+            out *= 100;
+            out += _p.time_of_day().minutes();
+        }
+        if (_unit <= SECOND) {
+            out *= 100;
+            out += _p.time_of_day().seconds();
+        }
+        return out;
+    }
+
     std::string to_string() {
         std::stringstream os;
         std::string format;

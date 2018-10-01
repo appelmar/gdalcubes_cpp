@@ -25,6 +25,7 @@
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "reduce.h"
+#include "stream.h"
 #include "utils.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
@@ -71,8 +72,21 @@ void print_usage(std::string command = "") {
         std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
         std::cout << std::endl;
-        std::cout << "Please use 'gdalcubes command --help' for further information about command-specific arguments." << std::endl;
     } else if (command == "stream") {
+        std::cout << "Usage: gdalcubes stream [options] SOURCE DEST" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Streams chunks of a cube (SOURCE) to stdin of an external program call such as R and stores output as DEST. THIS IS HIGHLY EXPERIMENTAL AND UNDER DEVELOPMENT."
+                  << std::endl;
+        std::cout << std::endl;
+        std::cout << "Options:" << std::endl;
+        std::cout << "      --exec               External program call, this option is required" << std::endl;
+        std::cout << "  -v, --view               Filename of the JSON data view description, this option is required" << std::endl;
+        std::cout << "  -c, --chunking           Chunk sizes in t,y,x dimensions as integer numbers, e.g. -c 16 256 256" << std::endl;
+        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', if not given, no reduction is performed on the result chunks." << std::endl;
+        std::cout << "      --gdal-of            GDAL output format for optional reduction, defaults to GTiff, only relevant if -r is given" << std::endl;
+        std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings for optional redutction, can be passed multiple times, only relevant if -r is given" << std::endl;
+        std::cout << std::endl;
+
     } else {
         std::cout << "Usage: gdalcubes command [arguments]" << std::endl;
         std::cout << "   or: gdalcubes [--help | --version]" << std::endl;
@@ -243,7 +257,8 @@ int main(int argc, char *argv[]) {
                 po::store(po::command_line_parser(opts).options(reduce_desc).positional(reduce_pos).run(), vm);
             } catch (...) {
                 std::cout << "ERROR in gdalcubes reduce: invalid arguments." << std::endl;
-                std::cout << reduce_desc << std::endl;
+                print_usage("reduce");
+                return 1;
             }
 
             std::string input = vm["input"].as<std::string>();
@@ -263,9 +278,93 @@ int main(int argc, char *argv[]) {
 
             c_reduce->write_gdal_image(output, outformat, create_options);
 
-        }
+        } else if (cmd == "stream") {
+            po::options_description stream_desc("stream arguments");
+            stream_desc.add_options()("exec", po::value<std::string>(), "External program call for each chunk");
+            stream_desc.add_options()("view,v", po::value<std::string>(), "Path to the JSON data view description");
+            stream_desc.add_options()("chunking,c", po::value<std::string>(), "Chunk sizes in order t,y,x");
+            stream_desc.add_options()("reducer,r", po::value<std::string>(), "Reduction method, currently mean, median, min, and max are implemented.");
+            stream_desc.add_options()("gdal-of", po::value<std::string>(), "GDAL output format");
+            stream_desc.add_options()("gdal-co", po::value<std::vector<std::string>>(), "GDAL create options");
+            stream_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");
+            stream_desc.add_options()("output", po::value<std::string>(), "Output file / directory.");
 
-        else {
+            po::positional_options_description stream_pos;
+            stream_pos.add("input", 1);
+            stream_pos.add("output", 1);
+
+            try {
+                std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts).options(stream_desc).positional(stream_pos).run(), vm);
+            } catch (...) {
+                print_usage("stream");
+                return 1;
+            }
+
+            std::string input = vm["input"].as<std::string>();
+            std::string output = vm["output"].as<std::string>();
+            std::string exec = vm["exec"].as<std::string>();
+            std::string json_view_path = vm["view"].as<std::string>();
+
+            std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
+            std::shared_ptr<image_collection_cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
+
+            std::vector<uint32_t> chunk_sizes;
+            std::string chunkstr = vm["chunking"].as<std::string>();
+            std::vector<std::string> chunkstr_tokens;
+            // split chunkstr
+            boost::split(chunkstr_tokens, chunkstr, boost::is_any_of(" ,;"));
+            if (chunkstr_tokens.size() == 3) {
+                chunk_sizes.push_back(std::stoi(chunkstr_tokens[0]));
+                chunk_sizes.push_back(std::stoi(chunkstr_tokens[1]));
+                chunk_sizes.push_back(std::stoi(chunkstr_tokens[2]));
+            } else if (chunkstr_tokens.size() == 1) {
+                if (chunkstr == "auto_temporal") {
+                    chunk_sizes.push_back(c_in->size()[1]);
+                    uint32_t csspatial = (uint32_t)std::ceil(std::sqrt((double)(1024 * 1024 * 8) / (double)(sizeof(double) * chunk_sizes[0] * c_in->bands().count())));  // default 8 MB
+                    chunk_sizes.push_back(csspatial);
+                    chunk_sizes.push_back(csspatial);
+                    std::cout << "Using chunk size (t,y,x)=(" << chunk_sizes[0] << "," << chunk_sizes[1] << "," << chunk_sizes[2] << ")" << std::endl;
+                } else if (chunkstr == "auto_spatial") {
+                    chunk_sizes.push_back(1);
+                    chunk_sizes.push_back(c_in->size()[2]);
+                    chunk_sizes.push_back(c_in->size()[3]);
+
+                    uint32_t cstemporal = (uint32_t)std::ceil((double)(1024 * 1024 * 8) / (double)(sizeof(double) * chunk_sizes[1] * chunk_sizes[2] * c_in->bands().count()));  // default 8 MB
+                    chunk_sizes[0] = cstemporal;
+                    std::cout << "Using chunk size (t,y,x)=(" << chunk_sizes[0] << "," << chunk_sizes[1] << "," << chunk_sizes[2] << ")" << std::endl;
+                } else {
+                    throw std::string("ERROR in gdalcubes stream: expected exactly three numbers, 'auto_temporal', or 'auto_spatial' as chunk size.");
+                }
+            } else {
+                throw std::string("ERROR in gdalcubes stream: expected exactly three numbers, 'auto_temporal', or 'auto_spatial' as chunk size.");
+            }
+
+            c_in->set_chunk_size(chunk_sizes[0], chunk_sizes[1], chunk_sizes[2]);
+
+            std::shared_ptr<cube> c_stream = std::make_shared<stream_cube>(c_in, exec);
+
+            // TODO: do something even if no reducer is given
+
+            if (vm.count("reducer")) {
+                std::string reducer = vm["reducer"].as<std::string>();
+                std::vector<std::string> create_options;
+                if (vm.count("gdal-co") > 0) {
+                    create_options = vm["gdal-co"].as<std::vector<std::string>>();
+                }
+                std::string outformat = "GTiff";
+                if (vm.count("gdal-of") > 0) {
+                    outformat = vm["gdal-of"].as<std::string>();
+                }
+
+                std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_stream, reducer);
+                c_reduce->write_gdal_image(output, outformat, create_options);
+            } else {
+                std::cout << "no reducer";
+            }
+
+        } else {
             std::cout << "ERROR in gdalcubes: unrecognized command." << std::endl;
             print_usage();
             return 1;

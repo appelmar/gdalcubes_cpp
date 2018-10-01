@@ -12,55 +12,76 @@
 .onAttach = function(libname,pkgname)
 {
   # if the package is used inside streaming, redirect stdout to stderr
-  # in order to not disturb the communiction with gdalcubes
+  # in order to not disturb the (binary) communication with gdalcubes
   if(Sys.getenv("GDALCUBES_STREAMING") == "1") {
     sink(stderr())
   }
 }
 
-
+#' Test
+#' @export
 sample_array <- function() {
   d <- c(2,10,128,128)
   array(rnorm(d),dim=d)
 }
 
-read_stream_as_array <-function() {
+
+
+#' Test
+#' @export
+read_stream_as_array <-function(with.dimnames=TRUE) {
   f <-file('stdin', 'rb');
   s <- readBin(f, integer(), n=4)
+  bandnames <- character(s[1])
+  for (i in 1:s[1]) {
+    nchars= readBin(f, integer(), n=1)
+    bandnames[i] = readChar(f, nchars = nchars)
+  }
+  dims <- readBin(f, double(), n=sum(s[2:4]))
+  proj.length = readBin(f, integer(), n=1)
+  proj = readChar(f, nchars = proj.length)
   buf <- readBin(f, double(), n = prod(s))
-  #return(array(buf, dim=s, dimnames=list("band", "datetime", "y", "x")))
+
   # row major -> column major
   x <- array(buf, dim=s)
   dim(x) <- rev(dim(x))
-  return(aperm(x,c(4,3,2,1)))
+  if (with.dimnames) {
+    dnames <- list(band=bandnames,
+                   datetime=dims[1:s[2]],
+                   y = dims[(s[2]+1):(s[2]+s[3])],
+                   x = dims[(s[2]+s[3]+1):(s[2]+s[3]+s[4])])
+    dimnames(x) <- rev(dnames)
+  }
+  return(aperm(x,4:1))
 }
-read_stream_as_vector <- function() {
+# read_stream_as_vector <- function() {
+#
+#   f <-file('stdin', 'rb');
+#   s <- readBin(f, integer(), n=4)
+#   buf <- readBin(f, double(), n = prod(s))
+#   close(f)
+#   return(buf)
+# }
 
-  f <-file('stdin', 'rb');
-  s <- readBin(f, integer(), n=4)
-  buf <- readBin(f, double(), n = prod(s))
-  close(f)
-  return(buf)
-}
-
-read_stream_as_df <- function() {
-  # TODO
-}
-
-
-write_stream_from_vector <- function(v=NULL) {
-  #f <-file('stdout', 'w+b')
-  f <- pipe("cat", "wb")
-  s <- c(13,1,256,256) # test
-  print(s)
-  buf <- rnorm(prod(s))
-  writeBin(as.integer(s), f)
-  writeBin(as.double(buf), f)
-  flush(f)
-  close(f)
-}
+# read_stream_as_df <- function() {
+#   # TODO
+# }
 
 
+# write_stream_from_vector <- function(v=NULL) {
+#   #f <-file('stdout', 'w+b')
+#   f <- pipe("cat", "wb")
+#   s <- c(13,1,256,256) # test
+#   print(s)
+#   buf <- rnorm(prod(s))
+#   writeBin(as.integer(s), f)
+#   writeBin(as.double(buf), f)
+#   flush(f)
+#   close(f)
+# }
+
+#' Test
+#' @export
 write_stream_from_array <- function(v) {
   v = aperm(v,c(4,3,2,1))
   dim(v) <- rev(dim(v))

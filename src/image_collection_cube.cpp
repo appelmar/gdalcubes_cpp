@@ -291,7 +291,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         //            }
         //        }
 
-        GDALDataset *g = (GDALDataset *)GDALOpen(descriptor_name.c_str(), GA_ReadOnly);
+        GDALDataset *g = (GDALDataset *)GDALOpenShared(descriptor_name.c_str(), GA_ReadOnly);
         if (!g) {
             throw std::string(" default_chunking::read(): cannot open'" + datasets[i].descriptor + "'");
         }

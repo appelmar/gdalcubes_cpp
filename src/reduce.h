@@ -155,7 +155,7 @@ struct median_reducer : public reducer {
 
 class reduce_cube : public cube {
    public:
-    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _r(nullptr), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
+    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _reducer(reducer), _nthreads(1), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         _size[1] = 1;
@@ -170,21 +170,16 @@ class reduce_cube : public cube {
             _bands.add(b);
         }
 
-        if (reducer == "min") {
-            _r = new min_reducer();
-        } else if (reducer == "max") {
-            _r = new max_reducer();
-        } else if (reducer == "mean") {
-            _r = new mean_reducer();
-        } else if (reducer == "median") {
-            _r = new median_reducer();
-        } else
+        if (!(reducer == "min" ||
+              reducer == "max" ||
+              reducer == "mean" ||
+              reducer == "median"))
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }
 
-    ~reduce_cube() {
-        if (_r) delete _r;
-    }
+    inline void set_threads(uint16_t n) { _nthreads = n; }
+
+    ~reduce_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
@@ -198,7 +193,8 @@ class reduce_cube : public cube {
 
    protected:
     std::shared_ptr<cube> _in_cube;
-    reducer *_r;
+    std::string _reducer;
+    uint16_t _nthreads;
 };
 
 #endif  //REDUCE_H

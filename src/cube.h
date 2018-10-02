@@ -17,6 +17,7 @@
 #ifndef CUBE_H
 #define CUBE_H
 
+#include <mutex>
 #include "view.h"
 
 typedef std::array<uint32_t, 4> cube_coordinate_btyx;
@@ -359,6 +360,8 @@ class cube {
     inline band_collection bands() {
         return _bands;
     }
+
+    void apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f, uint16_t nthreads = 1);
 
    protected:
     std::shared_ptr<cube_st_reference> _st_ref;

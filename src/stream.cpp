@@ -65,6 +65,10 @@ std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
         return out;  // chunk is outside of the cube, we don't need to read anything.
 
     std::shared_ptr<chunk_data> data = _in_cube->read_chunk(id);
+    int size[] = {data->size()[0], data->size()[1], data->size()[2], data->size()[3]};
+    if (size[0] * size[1] * size[2] * size[3] == 0) {
+        return out;
+    }
 
     boost::process::opstream in;
 
@@ -73,7 +77,6 @@ std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
 
     boost::process::child c(_cmd, boost::process::std_out > outdata, ios, boost::process::std_in < in, boost::process::env["GDALCUBES_STREAMING"] = "1");
 
-    int size[] = {data->size()[0], data->size()[1], data->size()[2], data->size()[3]};
     std::string proj = _in_cube->st_reference().proj();
 
     in.write((char*)(size), sizeof(int) * 4);
@@ -105,13 +108,11 @@ std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     boost::system::error_code result;
     ios.run(result);
     if (result.value() != 0)
-        throw std::string ("ERROR in stream_cube::read_chunk(): external program returned status (" + std::to_string(result.value()) + ") --> " + result.message());
-
-
+        throw std::string("ERROR in stream_cube::read_chunk(): external program returned status (" + std::to_string(result.value()) + ") --> " + result.message());
 
     std::vector<char> odat = outdata.get();
-//    std::cout << "size :" << odat.size() << " bytes received" << std::endl;
-//    std::cout << ((int*)odat.data())[0] << "x" << ((int*)odat.data())[1] << "x" << ((int*)odat.data())[2] << "x" << ((int*)odat.data())[3] << std::endl;
+    //    std::cout << "size :" << odat.size() << " bytes received" << std::endl;
+    //    std::cout << ((int*)odat.data())[0] << "x" << ((int*)odat.data())[1] << "x" << ((int*)odat.data())[2] << "x" << ((int*)odat.data())[3] << std::endl;
 
     chunk_size_btyx out_size = {(uint32_t)(((int*)odat.data())[0]), (uint32_t)(((int*)odat.data())[1]), (uint32_t)(((int*)odat.data())[2]), (uint32_t)(((int*)odat.data())[3])};
     out->size(out_size);

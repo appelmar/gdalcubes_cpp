@@ -15,6 +15,7 @@
 */
 
 #include "cube.h"
+#include <thread>
 
 void cube::write_gtiff_directory(std::string dir) {
     namespace fs = boost::filesystem;
@@ -68,6 +69,31 @@ void cube::write_gtiff_directory(std::string dir) {
 
                 GDALClose(gdal_out);
             }
+        }
+    }
+}
+
+void cube::apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f, uint16_t nthreads) {
+    if (nthreads == 1) {
+        std::mutex mutex;
+        uint32_t nchunks = count_chunks();
+        for (uint32_t i = 0; i < nchunks; ++i) {
+            std::shared_ptr<chunk_data> dat = read_chunk(i);
+            f(i, dat, mutex);
+        }
+    } else {
+        std::mutex mutex;
+        std::vector<std::thread> workers;
+        for (uint16_t it = 0; it < nthreads; ++it) {
+            workers.push_back(std::thread([this, &f, it, nthreads, &mutex](void) {
+                for (uint32_t i = it; i < count_chunks(); i += nthreads) {
+                    std::shared_ptr<chunk_data> dat = read_chunk(i);
+                    f(i, dat, mutex);
+                }
+            }));
+        }
+        for (uint16_t it = 0; it < nthreads; ++it) {
+            workers[it].join();
         }
     }
 }

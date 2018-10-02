@@ -32,6 +32,10 @@ sample_array <- function() {
 read_stream_as_array <-function(with.dimnames=TRUE) {
   f <-file('stdin', 'rb');
   s <- readBin(f, integer(), n=4)
+  if (prod(s) == 0) {
+    warning("gdalcubes::read_stream_as_array(): received empty chunk.")
+    return(NULL)
+  }
   bandnames <- character(s[1])
   for (i in 1:s[1]) {
     nchars= readBin(f, integer(), n=1)

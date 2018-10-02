@@ -15,4 +15,4 @@
 
 
 
-./gdalcubes stream --exec="Rscript --vanilla ../../test/stream_example.R" -r mean -v "../../test/view2.json" -c "16 256 256" s2test.db stream_result.tif
+./gdalcubes stream --exec="Rscript --vanilla ../../test/stream_example.R" -r mean -v "../../test/view2.json" -t 8 -c "16 256 256" s2test.db stream_result_8.tif

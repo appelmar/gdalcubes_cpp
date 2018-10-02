@@ -101,7 +101,9 @@ int main(int argc, char *argv[]) {
 
         stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla ../../test/stream_example.R");
         reduce_cube cstream(std::make_shared<stream_cube>(s), "min");
+        t0.start();
         cstream.write_gdal_image("test_stream.tif");
+        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
     } catch (std::string e) {
         std::cout << e << std::endl;

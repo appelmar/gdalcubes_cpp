@@ -71,6 +71,7 @@ void print_usage(std::string command = "") {
         std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', defaults to 'mean'" << std::endl;
         std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
+        std::cout << "  -t  --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
         std::cout << std::endl;
     } else if (command == "stream") {
         std::cout << "Usage: gdalcubes stream [options] SOURCE DEST" << std::endl;
@@ -85,6 +86,7 @@ void print_usage(std::string command = "") {
         std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', if not given, no reduction is performed on the result chunks." << std::endl;
         std::cout << "      --gdal-of            GDAL output format for optional reduction, defaults to GTiff, only relevant if -r is given" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings for optional redutction, can be passed multiple times, only relevant if -r is given" << std::endl;
+        std::cout << "  -t  --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
         std::cout << std::endl;
 
     } else {
@@ -246,6 +248,7 @@ int main(int argc, char *argv[]) {
             reduce_desc.add_options()("gdal-co", po::value<std::vector<std::string>>(), "GDAL create options");
             reduce_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");
             reduce_desc.add_options()("output", po::value<std::string>(), "Filename of the output image.");
+            reduce_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), " Number of threads used for parallel chunk processing, defaults to 1");
 
             po::positional_options_description reduce_pos;
             reduce_pos.add("input", 1);
@@ -271,10 +274,12 @@ int main(int argc, char *argv[]) {
             std::string reducer = vm["reducer"].as<std::string>();
             std::string outformat = vm["gdal-of"].as<std::string>();
             std::string json_view_path = vm["view"].as<std::string>();
+            uint16_t nthreads = vm["threads"].as<uint16_t>();
 
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
             std::shared_ptr<cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
             std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_in, reducer);
+            c_reduce->set_threads(nthreads);
 
             c_reduce->write_gdal_image(output, outformat, create_options);
 
@@ -288,6 +293,7 @@ int main(int argc, char *argv[]) {
             stream_desc.add_options()("gdal-co", po::value<std::vector<std::string>>(), "GDAL create options");
             stream_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");
             stream_desc.add_options()("output", po::value<std::string>(), "Output file / directory.");
+            stream_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), " Number of threads used for parallel chunk processing, defaults to 1");
 
             po::positional_options_description stream_pos;
             stream_pos.add("input", 1);
@@ -306,6 +312,7 @@ int main(int argc, char *argv[]) {
             std::string output = vm["output"].as<std::string>();
             std::string exec = vm["exec"].as<std::string>();
             std::string json_view_path = vm["view"].as<std::string>();
+            uint16_t nthreads = vm["threads"].as<uint16_t>();
 
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
             std::shared_ptr<image_collection_cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
@@ -359,9 +366,8 @@ int main(int argc, char *argv[]) {
                 }
 
                 std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_stream, reducer);
+                c_reduce->set_threads(nthreads);
                 c_reduce->write_gdal_image(output, outformat, create_options);
-            } else {
-                std::cout << "no reducer";
             }
 
         } else {

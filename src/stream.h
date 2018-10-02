@@ -46,7 +46,7 @@
 
 class stream_cube : public cube {
    public:
-    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd) : _in_cube(in_cube), _cmd(cmd), cube(std::make_shared<cube_st_reference>(in_cube->st_reference())) {
+    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd) : _in_cube(in_cube), _cmd(cmd), _nthreads(1), cube(std::make_shared<cube_st_reference>(in_cube->st_reference())) {
         // Test CMD and find out what size comes out.
         cube_size_tyx tmp = _in_cube->chunk_size(0);
         cube_size_btyx csize_in = {_in_cube->bands().count(), tmp[0], tmp[1], tmp[2]};
@@ -85,17 +85,10 @@ class stream_cube : public cube {
         in.write(((char*)test_buf), sizeof(double) * csize_in[0] * csize_in[1] * csize_in[2] * csize_in[3]);
         in.flush();
 
-
         boost::system::error_code result;
         ios.run(result);
         if (result.value() != 0)
-            throw std::string ("ERROR in stream_cube::read_chunk(): external program returned status (" + std::to_string(result.value()) + ") --> " + result.message());
-
-
-
-
-
-
+            throw std::string("ERROR in stream_cube::read_chunk(): external program returned status (" + std::to_string(result.value()) + ") --> " + result.message());
 
         auto out = outdata.get();
 
@@ -143,9 +136,12 @@ class stream_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
+    inline void set_threads(uint16_t n) { _nthreads = n; }
+
    protected:
     std::shared_ptr<image_collection_cube> _in_cube;
     std::string _cmd;
+    uint16_t _nthreads;
 };
 
 #endif  //STREAM_H

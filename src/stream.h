@@ -69,17 +69,17 @@ class stream_cube : public cube {
         }
         double* dims = (double*)calloc(csize_in[1] + csize_in[2] + csize_in[3], sizeof(double));
         for (uint32_t i = 0; i < csize_in[1]; ++i) {
-            dims[i] = (_st_ref->t0() + _st_ref->dt() * i).to_double();
+            dims[i] = (in_cube->st_reference().t0() + in_cube->st_reference().dt() * i).to_double();
         }
         for (uint32_t i = csize_in[1]; i < csize_in[1] + csize_in[2]; ++i) {
-            dims[i] = _st_ref->win().bottom + i * _st_ref->dy();
+            dims[i] = in_cube->st_reference().win().bottom + i * in_cube->st_reference().dy();
         }
         for (uint32_t i = csize_in[1] + csize_in[2]; i < csize_in[1] + csize_in[2] + csize_in[3]; ++i) {
-            dims[i] = _st_ref->win().left + i * _st_ref->dx();
+            dims[i] = in_cube->st_reference().win().left + i * in_cube->st_reference().dx();
         }
         in.write((char*)(dims), sizeof(double) * (csize_in[1] + csize_in[2] + csize_in[3]));
         free(dims);
-        int str_size = _st_ref->proj().size();
+        int str_size = in_cube->st_reference().proj().size();
         in.write((char*)(&str_size), sizeof(int));
         in.write(_st_ref->proj().c_str(), sizeof(char) * str_size);
         in.write(((char*)test_buf), sizeof(double) * csize_in[0] * csize_in[1] * csize_in[2] * csize_in[3]);

@@ -58,7 +58,23 @@ endif (NOT sqlite_LIBRARY)
 find_package(Threads)
 
 
-include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR})
+
+## find NETCDF_CXX4 library
+find_path(NETCDF_CXX_INCLUDEDIR "netcdf")
+if (NETCDF_CXX_INCLUDEDIR-NOTFOUND)
+message(FATAL_ERROR "netcdf-cxx4 headers not found")
+endif (NETCDF_CXX_INCLUDEDIR-NOTFOUND)
+
+find_library(NETCDF_CXX_LIBRARY netcdf_c++4)
+if (NOT NETCDF_CXX_LIBRARY)
+message(FATAL_ERROR "netcdf-cxx4 library not found!")
+else (NOT NETCDF_CXX_LIBRARY)
+message(STATUS "netcdf-cxx4 library found at ${gdal_LIBRARY}")
+endif (NOT NETCDF_CXX_LIBRARY)
+
+
+
+include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_CXX_INCLUDEDIR})
 
 
 
@@ -72,15 +88,15 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 
 
 add_executable(gdalcubes_example  ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
-target_link_libraries (gdalcubes_example ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY}  ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (gdalcubes_example ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY}  ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
 
 
 add_executable(gdalcubes ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
-target_link_libraries (gdalcubes ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (gdalcubes ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
 
 file(GLOB TEST_FILES
         "test/*.cpp" "*.h")
 
 add_executable(gdalcubes_test ${SOURCE_FILES} ${TEST_FILES})
-target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
 

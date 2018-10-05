@@ -21,6 +21,11 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
+    // If input cube is already "reduced", simply return corresponding input chunk
+    if (_in_cube->size_t() == 1) {
+        return _in_cube->read_chunk(id);
+    }
+
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
     coords_nd<uint32_t, 4> size_btyx = {_bands.count(), 1, size_tyx[1], size_tyx[2]};
     out->size(size_btyx);

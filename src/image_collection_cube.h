@@ -39,6 +39,16 @@ class image_collection_cube : public cube {
         _chunk_size = {t, y, x};
     }
 
+    nlohmann::json make_constructible_json() override {
+        nlohmann::json out;
+        out["cube_type"] = "image_collection";
+        out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
+        // TODO: what to do with filename?!
+        return out;
+    }
+
+
+
    protected:
     const std::shared_ptr<image_collection> _collection;
 

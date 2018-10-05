@@ -57,6 +57,7 @@ class stream_cube : public cube {
         boost::asio::io_service ios;
         std::future<std::vector<char>> outdata;
         boost::process::child c(cmd, boost::process::std_out > outdata, ios, boost::process::std_in < in, boost::process::env["GDALCUBES_STREAMING"] = "1");
+        // TODO: Error handling, check whether command can be executed
 
         int size[] = {csize_in[0], csize_in[1], csize_in[2], csize_in[3]};
         in.write((char*)(size), sizeof(int) * 4);
@@ -137,6 +138,15 @@ class stream_cube : public cube {
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     inline void set_threads(uint16_t n) { _nthreads = n; }
+
+    nlohmann::json make_constructible_json() override {
+        nlohmann::json out;
+        out["cube_type"] = "stream";
+        out["command"] = _cmd;
+        out["nthreads"] = _nthreads;
+        out["in_cube"] = _in_cube->make_constructible_json();
+        return out;
+    }
 
    protected:
     std::shared_ptr<image_collection_cube> _in_cube;

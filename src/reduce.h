@@ -164,9 +164,11 @@ class reduce_cube : public cube {
         _chunk_size[2] = _in_cube->chunk_size()[2];
         _size[0] = _in_cube->bands().count();  // TODO: add with band information
 
-        for (uint16_t ib = 0; ib < _in_cube->bands().count(); ++ib) {
-            band b = _in_cube->bands().get(ib);
-            b.name = b.name + "_reduce";  // TODO: replace with mean / min / max / ...
+        for (uint16_t ib = 0; ib < in->bands().count(); ++ib) {
+            band b = in->bands().get(ib);
+            if (in->size_t() > 1) {
+                b.name = b.name + "_" + reducer; // Change name only if input is not yet reduced
+            }
             _bands.add(b);
         }
 
@@ -190,6 +192,16 @@ class reduce_cube : public cube {
  * @param co GDAL create options
  */
     void write_gdal_image(std::string path, std::string format = "GTiff", std::vector<std::string> co = std::vector<std::string>());
+
+    nlohmann::json make_constructible_json() override {
+        nlohmann::json out;
+        out["cube_type"] = "reduce";
+        out["reducer"] = _reducer;
+        out["nthreads"] = _nthreads;
+        out["in_cube"] = _in_cube->make_constructible_json();
+        return out;
+    }
+
 
    protected:
     std::shared_ptr<cube> _in_cube;

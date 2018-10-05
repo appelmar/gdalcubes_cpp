@@ -356,6 +356,7 @@ class cube {
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) = 0;
 
     void write_gtiff_directory(std::string dir);
+    void write_netcdf_directory(std::string dir);
 
     inline band_collection bands() {
         return _bands;
@@ -363,7 +364,10 @@ class cube {
 
     void apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f, uint16_t nthreads = 1);
 
-   protected:
+
+    virtual nlohmann::json make_constructible_json() = 0;
+
+protected:
     std::shared_ptr<cube_st_reference> _st_ref;
     cube_size_btyx _size;
     cube_size_tyx _chunk_size;

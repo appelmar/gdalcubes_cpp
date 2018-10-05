@@ -186,6 +186,11 @@ class cube_st_reference {
     inline double& top() { return _win.top; }
 
     inline std::string proj() { return _proj; }
+    inline OGRSpatialReference proj_ogr() {
+        OGRSpatialReference s;
+        s.SetFromUserInput(proj().c_str());
+        return s;
+    }
 
     inline datetime& t0() { return _t0; }
     inline datetime& t1() { return _t1; }
@@ -279,7 +284,10 @@ class cube_st_reference {
 class cube_view : public cube_st_reference {
    public:
     static cube_view read_json(std::string filename);
+    static cube_view read_json_string(std::string str);
     void write_json(std::string filename);
+    std::string write_json_string();
+
 
     inline aggregation::aggregation_type& aggregation_method() { return _aggregation; }
     inline resampling::resampling_type& resampling_method() { return _resampling; }

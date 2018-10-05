@@ -100,10 +100,15 @@ int main(int argc, char *argv[]) {
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
 
         stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla ../../test/stream_example.R");
+
+
+
         reduce_cube cstream(std::make_shared<stream_cube>(s), "min");
         cstream.set_threads(8);
         t0.start();
-        cstream.write_gdal_image("test_stream.tif");
+//        cstream.write_gdal_image("test_stream.tif");
+        cstream.write_netcdf_directory("testnetcdf");
+        //cstream.write_gtiff_directory("testgtif");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
     } catch (std::string e) {

@@ -115,7 +115,7 @@ class chunk_data {
 
 class cube {
    public:
-    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _size() {
+    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _nthreads(1), _size() {
         _size[0] = 0;
         _size[1] = st_ref->nt();
         _size[2] = st_ref->ny();
@@ -365,6 +365,9 @@ class cube {
     void apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f, uint16_t nthreads = 1);
 
 
+    inline void set_threads(uint16_t n) { _nthreads = n; }
+
+
     virtual nlohmann::json make_constructible_json() = 0;
 
 protected:
@@ -373,6 +376,7 @@ protected:
     cube_size_tyx _chunk_size;
 
     band_collection _bands;
+    uint16_t _nthreads;
 };
 
 #endif  //CUBE_H

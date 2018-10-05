@@ -93,16 +93,14 @@ void cube::write_netcdf_directory(std::string dir) {
         throw std::string("ERROR in chunking::write_netcdf_directory(): output is not a directory.");
     }
 
-    uint32_t nchunks = count_chunks();
-    for (uint32_t id = 0; id < nchunks; ++id) {
 
 
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         fs::path out_file = op / (std::to_string(id) + ".nc");
 
 
 
-
-        std::shared_ptr<chunk_data> dat = read_chunk(id);
         chunk_size_btyx csize = dat->size();
         bounds_nd<uint32_t, 3> climits = chunk_limits(id);
 
@@ -197,8 +195,8 @@ void cube::write_netcdf_directory(std::string dir) {
             v_crs.putAtt("crs_wkt", wkt);
         }
         else {
-           // char* unit;
-           // double scale = srs.GetAngularUnits(&unit);
+            // char* unit;
+            // double scale = srs.GetAngularUnits(&unit);
             v_y.putAtt("units","degrees_north");
             v_y.putAtt("long_name","latitude");
             v_y.putAtt("standard_name","latitude");
@@ -226,23 +224,22 @@ void cube::write_netcdf_directory(std::string dir) {
             netCDF::NcVar v = ncout.addVar(bands().get(i).name, netCDF::ncDouble, d_all);
             if (!bands().get(i).unit.empty())
                 v.putAtt("units", bands().get(i).unit.c_str());
-            v.putAtt("scale_factor", std::to_string(bands().get(i).scale).c_str());
-            v.putAtt("add_offset", std::to_string(bands().get(i).offset).c_str());
-            v.putAtt("nodata", std::to_string(bands().get(i).no_data_value).c_str());
+            v.putAtt("scale_factor", netCDF::ncDouble,bands().get(i).scale);
+            v.putAtt("add_offset", netCDF::ncDouble, bands().get(i).offset);
+            //v.putAtt("nodata", std::to_string(bands().get(i).no_data_value).c_str());
             v.putAtt("type", bands().get(i).type.c_str());
             v.putAtt("grid_mapping", "crs");
             v.putAtt("_FillValue", netCDF::ncDouble, NAN);
             v_bands.push_back(v);
         }
 
-        
-
         for (uint16_t i=0; i<bands().count(); ++i) {
-           v_bands[i].putVar(((double*)dat->buf()) + (int)i*(int)size_t()*(int)size_y()*(int)size_x());
+            v_bands[i].putVar(((double*)dat->buf()) + (int)i*(int)size_t()*(int)size_y()*(int)size_x());
         }
+    };
 
+    apply(f, _nthreads);
 
-    }
 }
 
 void cube::apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f, uint16_t nthreads) {

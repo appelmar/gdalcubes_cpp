@@ -45,19 +45,6 @@ void stream_chunk(std::shared_ptr<image_collection_cube> in_cube, std::string cm
     }
 }
 
-void stream_cube::test() {
-    std::vector<boost::process::child> children;
-
-    uint16_t nparallel = 4;
-    std::vector<std::thread> thrds;
-    for (uint32_t it = 0; it < nparallel; ++it) {
-        thrds.push_back(std::thread(stream_chunk, _in_cube, _cmd, it, nparallel));
-    }
-
-    for (uint32_t it = 0; it < nparallel; ++it) {
-        thrds[it].join();
-    }
-}
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();

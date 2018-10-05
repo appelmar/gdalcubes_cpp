@@ -155,7 +155,7 @@ struct median_reducer : public reducer {
 
 class reduce_cube : public cube {
    public:
-    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _reducer(reducer), _nthreads(1), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
+    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _reducer(reducer), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         _size[1] = 1;
@@ -179,7 +179,6 @@ class reduce_cube : public cube {
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }
 
-    inline void set_threads(uint16_t n) { _nthreads = n; }
 
     ~reduce_cube() {}
 
@@ -206,7 +205,7 @@ class reduce_cube : public cube {
    protected:
     std::shared_ptr<cube> _in_cube;
     std::string _reducer;
-    uint16_t _nthreads;
+
 };
 
 #endif  //REDUCE_H

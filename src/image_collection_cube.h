@@ -40,14 +40,17 @@ class image_collection_cube : public cube {
     }
 
     nlohmann::json make_constructible_json() override {
+        if (_collection->is_temporary()) {
+            throw std::string("ERROR in image_collection_cube::make_constructible_json(): image collection is temporary, please export as file using write() first.");
+        }
         nlohmann::json out;
         out["cube_type"] = "image_collection";
+        out["chunk_size"] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]} ;
         out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
+        out["file"] = _collection->get_filename();
         // TODO: what to do with filename?!
         return out;
     }
-
-
 
    protected:
     const std::shared_ptr<image_collection> _collection;

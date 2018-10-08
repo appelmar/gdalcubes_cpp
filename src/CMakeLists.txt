@@ -69,7 +69,7 @@ find_library(NETCDF_CXX_LIBRARY netcdf_c++4)
 if (NOT NETCDF_CXX_LIBRARY)
 message(FATAL_ERROR "netcdf-cxx4 library not found!")
 else (NOT NETCDF_CXX_LIBRARY)
-message(STATUS "netcdf-cxx4 library found at ${gdal_LIBRARY}")
+message(STATUS "netcdf-cxx4 library found at ${NETCDF_CXX_LIBRARY}")
 endif (NOT NETCDF_CXX_LIBRARY)
 
 
@@ -84,19 +84,41 @@ file(GLOB SOURCE_FILES
 
 list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
 list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
+list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 
 
 
-add_executable(gdalcubes_example  ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
-target_link_libraries (gdalcubes_example ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY}  ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
+add_library(libgdalcubes  ${SOURCE_FILES})
+set_target_properties(libgdalcubes PROPERTIES PREFIX "")
+target_link_libraries(libgdalcubes ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
 
+add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
+target_link_libraries (gdalcubes libgdalcubes)
 
-add_executable(gdalcubes ${SOURCE_FILES} ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
-target_link_libraries (gdalcubes ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
 
 file(GLOB TEST_FILES
         "test/*.cpp" "*.h")
 
-add_executable(gdalcubes_test ${SOURCE_FILES} ${TEST_FILES})
-target_link_libraries (gdalcubes_test ${proj_LIBRARY} ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
+add_executable(gdalcubes_test ${TEST_FILES})
+target_link_libraries (gdalcubes_test libgdalcubes)
 
+
+find_library(CPPRESTSDK_LIB cpprest)
+find_library(OPENSSL_LIB ssl)
+find_library(CRYPTO_LIB crypto)
+if (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
+    message(WARNING "Skipping build of gdalcubes_worker due to missing libraries.")
+else (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
+    message(STATUS "cpprestsdk library found at ${CPPRESTSDK_LIB}")
+    message(STATUS "openssl library found at ${OPENSSL_LIB}")
+    message(STATUS "crypto library found at ${CRYPTO_LIB}")
+    add_executable(gdalcubes_server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
+    target_link_libraries (gdalcubes_server libgdalcubes ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB})
+endif (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
+
+
+
+
+
+add_executable(gdalcubes_example ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
+target_link_libraries (gdalcubes_example libgdalcubes)

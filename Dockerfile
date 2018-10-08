@@ -11,6 +11,7 @@ RUN add-apt-repository -y ppa:ubuntugis/ppa && apt-key adv --keyserver keyserver
 
 RUN apt-get install libnetcdf-c++4-dev
 
+RUN apt-get install libcpprest-dev
 
 COPY . /opt/gdalcubes
 WORKDIR /opt/gdalcubes

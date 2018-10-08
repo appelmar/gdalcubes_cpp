@@ -288,7 +288,6 @@ class cube_view : public cube_st_reference {
     void write_json(std::string filename);
     std::string write_json_string();
 
-
     inline aggregation::aggregation_type& aggregation_method() { return _aggregation; }
     inline resampling::resampling_type& resampling_method() { return _resampling; }
 

@@ -133,9 +133,7 @@ class stream_cube : public cube {
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
     }
 
-
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
-
 
     nlohmann::json make_constructible_json() override {
         nlohmann::json out;

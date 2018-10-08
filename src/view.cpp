@@ -61,8 +61,6 @@ cube_view cube_view::read_json(std::string filename) {
     return v;
 }
 
-
-
 cube_view cube_view::read_json_string(std::string str) {
     std::istringstream i(str);
     nlohmann::json j;
@@ -122,10 +120,10 @@ void cube_view::write_json(std::string filename) {
 
 std::string cube_view::write_json_string() {
     nlohmann::json j = nlohmann::json{
-            {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"proj", _proj}}},
-            {"time", {{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
-            {"aggregation", aggregation::to_string(_aggregation)},
-            {"resampling", resampling::to_string(_resampling)}};
+        {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"proj", _proj}}},
+        {"time", {{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
+        {"aggregation", aggregation::to_string(_aggregation)},
+        {"resampling", resampling::to_string(_resampling)}};
     std::ostringstream o;
     o << j;
     return o.str();

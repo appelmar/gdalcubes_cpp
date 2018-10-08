@@ -167,7 +167,7 @@ class reduce_cube : public cube {
         for (uint16_t ib = 0; ib < in->bands().count(); ++ib) {
             band b = in->bands().get(ib);
             if (in->size_t() > 1) {
-                b.name = b.name + "_" + reducer; // Change name only if input is not yet reduced
+                b.name = b.name + "_" + reducer;  // Change name only if input is not yet reduced
             }
             _bands.add(b);
         }
@@ -178,7 +178,6 @@ class reduce_cube : public cube {
               reducer == "median"))
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }
-
 
     ~reduce_cube() {}
 
@@ -201,11 +200,9 @@ class reduce_cube : public cube {
         return out;
     }
 
-
    protected:
     std::shared_ptr<cube> _in_cube;
     std::string _reducer;
-
 };
 
 #endif  //REDUCE_H

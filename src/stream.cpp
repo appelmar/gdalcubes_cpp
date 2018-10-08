@@ -45,7 +45,6 @@ void stream_chunk(std::shared_ptr<image_collection_cube> in_cube, std::string cm
     }
 }
 
-
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())

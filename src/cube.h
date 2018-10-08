@@ -364,13 +364,12 @@ class cube {
 
     void apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f, uint16_t nthreads = 1);
 
-
     inline void set_threads(uint16_t n) { _nthreads = n; }
-
 
     virtual nlohmann::json make_constructible_json() = 0;
 
-protected:
+
+   protected:
     std::shared_ptr<cube_st_reference> _st_ref;
     cube_size_btyx _size;
     cube_size_tyx _chunk_size;

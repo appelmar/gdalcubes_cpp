@@ -200,6 +200,9 @@ class image_collection {
      */
     bool is_complete();
 
+
+    inline bool is_temporary() {return _filename.empty();}
+
     /**
      * Removes images and corresponding gdal dataset references captured before start or after end from the database.
      * @param start Posix time representing the start datetime of the range
@@ -285,6 +288,11 @@ class image_collection {
      * @return the spatial and temporal extent
      */
     bounds_st extent();
+
+
+
+
+    inline std::string get_filename() {return _filename;}
 
    protected:
     collection_format _format;

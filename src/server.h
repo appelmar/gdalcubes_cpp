@@ -21,12 +21,13 @@
 #include <cpprest/uri_builder.h>
 #include <boost/filesystem.hpp>
 #include <mutex>
+#include "cube.h"
 
 class gdalcubes_server {
    public:
-    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false) : _host(host), _port(port), _ssl(ssl), _basepath(basepath), _workdir(boost::filesystem::temp_directory_path() / "gdalcubes_server"), _listener() {
+    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false) : _host(host), _cur_id(0),_mutex_id(), _mutex_cubestore(), _port(port), _ssl(ssl), _basepath(basepath), _cubestore(), _workdir(boost::filesystem::temp_directory_path() / "gdalcubes_server"), _listener() {
         if (boost::filesystem::exists(_workdir) && boost::filesystem::is_directory(_workdir)) {
-            boost::filesystem::remove_all(_workdir);
+           // boost::filesystem::remove_all(_workdir); // TODO: uncomment after testing
         } else if (boost::filesystem::exists(_workdir) && !boost::filesystem::is_directory(_workdir)) {
             throw std::string("ERROR in gdalcubes_server::gdalcubes_server(): working directory for gdalcubes_server is an existing file.");
         }
@@ -56,11 +57,27 @@ class gdalcubes_server {
 
     web::http::experimental::listener::http_listener _listener;
 
+
+    inline uint32_t get_unique_id() {
+        _mutex_id.lock();
+        uint32_t  id = _cur_id++;
+        _mutex_id.unlock();
+        return id;
+    }
+
     const uint16_t _port;
     const std::string _host;
     const std::string _basepath;
     const bool _ssl;
     const boost::filesystem::path _workdir;
+
+    std::map<uint32_t, std::shared_ptr<cube>> _cubestore;
+
+
+    uint16_t _cur_id;
+    std::mutex _mutex_id;
+    std::mutex _mutex_cubestore;
+
 };
 
 #endif  //SERVER_H

@@ -20,12 +20,13 @@
 #include "image_collection.h"
 #include "utils.h"
 #include "cube_factory.h"
-
+#include <pplx/threadpool.h>
+#include <cpprest/rawptrstream.h>
 /**
-GET /version
+GET  /version
 POST /file (name query, body file)
 POST /cube (json process descr), return cube_id
-GET /read_chunk (cube_id, chunk_id)
+GET  /read (cube_id, chunk_id)
 **/
 
 void gdalcubes_server::handle_get(web::http::http_request req) {
@@ -37,7 +38,32 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
         if (path[0] == "version") {
             std::string version = "gdalcubes_server " + std::to_string(VERSION_MAJOR) + "." + std::to_string(VERSION_MINOR) + "." + std::to_string(VERSION_PATCH);
             req.reply(web::http::status_codes::OK, version.c_str(), "text/plain");
-        } else {
+        }
+        else if (path[0] == "read") {
+            if (query_pars.find("cube_id") == query_pars.end() || query_pars.find("chunk_id") == query_pars.end()) {
+                req.reply(web::http::status_codes::BadRequest, "GET /read expects cube_id and chunk_id query parameters.", "text/plain");
+            }
+            else {
+                if (_cubestore.find(std::stoi(query_pars["cube_id"])) == _cubestore.end()) {
+                    req.reply(web::http::status_codes::BadRequest, "GET /read cannot find cube with given id.", "text/plain");
+                }
+                else {
+                    std::shared_ptr<chunk_data> dat = _cubestore[std::stoi(query_pars["cube_id"])]->read_chunk(std::stoi(query_pars["chunk_id"]));
+                    std::vector<unsigned char> rawdata;
+                    rawdata.resize(4*sizeof(uint32_t) + dat->total_size_bytes());
+                    std::copy(dat->size().begin(), dat->size().end(), rawdata.begin());
+                    std::copy((unsigned char*)(dat->buf()), (unsigned char*)(dat->buf() + dat->total_size_bytes()), rawdata.begin() + (sizeof(uint32_t)*4));
+
+                    web::http::http_response res;
+                    res.set_body(rawdata);
+                    res.set_status_code(web::http::status_codes::OK);
+
+                    req.reply(res);
+                }
+            }
+
+        }
+        else {
             req.reply(web::http::status_codes::NotFound);
         }
     } else {
@@ -69,7 +95,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
             } else {
                 auto fstream = std::make_shared<concurrency::streams::ostream>();
                 pplx::task<void> t = concurrency::streams::fstream::open_ostream(fname).then(
-                    [=](concurrency::streams::ostream outFile) {
+                    [fstream, &req](concurrency::streams::ostream outFile) {
                         *fstream = outFile;
                         concurrency::streams::istream indata = req.body();
                         uint32_t maxbytes = 1024 * 1024 * 8;  // Read up to 8MiB
@@ -84,10 +110,15 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
         }
         else if (path[0] == "cube") {
             // we do not use cpprest JSON library here
-            req.extract_string(true).then([=](std::string s) {
+            uint32_t id;
+            req.extract_string(true).then([&id, this](std::string s) {
                 std::shared_ptr<cube> c = cube_factory::create_from_json(nlohmann::json::parse(s));
+                id = get_unique_id();
+                _mutex_cubestore.lock();
+                _cubestore.insert(std::make_pair(id, c));
+                _mutex_cubestore.unlock();
             }).wait();
-            req.reply(web::http::status_codes::OK, "TEST", "text/plain");
+            req.reply(web::http::status_codes::OK, std::to_string(id), "text/plain");
         }
         else {
             req.reply(web::http::status_codes::NotFound);
@@ -106,6 +137,15 @@ void gdalcubes_server::handle_put(web::http::http_request req) {
 
 std::unique_ptr<gdalcubes_server> server;
 int main(int argc, char* argv[]) {
+
+
+    GDALAllRegister();
+    GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
+    CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
+
+    srand(time(NULL));
+
+
     std::unique_ptr<gdalcubes_server> srv = std::unique_ptr<gdalcubes_server>(new gdalcubes_server("localhost"));
     srv->open().wait();
 

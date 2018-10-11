@@ -200,8 +200,7 @@ class image_collection {
      */
     bool is_complete();
 
-
-    inline bool is_temporary() {return _filename.empty();}
+    inline bool is_temporary() { return _filename.empty(); }
 
     /**
      * Removes images and corresponding gdal dataset references captured before start or after end from the database.
@@ -289,10 +288,7 @@ class image_collection {
      */
     bounds_st extent();
 
-
-
-
-    inline std::string get_filename() {return _filename;}
+    inline std::string get_filename() { return _filename; }
 
    protected:
     collection_format _format;

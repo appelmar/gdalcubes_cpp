@@ -73,6 +73,15 @@ message(STATUS "netcdf-cxx4 library found at ${NETCDF_CXX_LIBRARY}")
 endif (NOT NETCDF_CXX_LIBRARY)
 
 
+find_library(CURL_LIBRARY curl)
+if (NOT CURL_LIBRARY)
+    message(FATAL_ERROR "libcurl not found!")
+else (NOT CURL_LIBRARY)
+    message(STATUS "libcurl found at ${CURL_LIBRARY}")
+endif (NOT CURL_LIBRARY)
+
+
+
 
 include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_CXX_INCLUDEDIR})
 
@@ -90,7 +99,7 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 
 add_library(libgdalcubes  ${SOURCE_FILES})
 set_target_properties(libgdalcubes PROPERTIES PREFIX "")
-target_link_libraries(libgdalcubes ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY})
+target_link_libraries(libgdalcubes ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
 
 add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 target_link_libraries (gdalcubes libgdalcubes)

@@ -17,14 +17,12 @@
 #ifndef CUBE_FACTORY_H
 #define CUBE_FACTORY_H
 
-#include "cube.h"
 #include <map>
 #include <memory>
+#include "cube.h"
 
 struct cube_factory {
     static std::shared_ptr<cube> create_from_json(nlohmann::json j);
-
 };
 
-
-#endif //CUBE_FACTORY_H
+#endif  //CUBE_FACTORY_H

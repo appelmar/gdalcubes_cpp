@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.8)
 project(gdalcubes LANGUAGES CXX VERSION 0.0.1)
 
-set(COLLECTION_FORMAT_VERSION_MAJOR 0)
-set(COLLECTION_FORMAT_VERSION_MINOR 0)
-set(COLLECTION_FORMAT_VERSION_PATCH 0)
+#set(COLLECTION_FORMAT_VERSION_MAJOR 0)
+#set(COLLECTION_FORMAT_VERSION_MINOR 0)
+#set(COLLECTION_FORMAT_VERSION_PATCH 0)
 
 #string(TIMESTAMP build_date "%Y%m%d")
 #string(TIMESTAMP build_time "%H%M%S")
@@ -40,9 +40,9 @@ add_subdirectory(src)
 
 # code formatting
 find_program (CLANG_FORMAT NAMES clang-format)
-if(${CLANG_FORMAT-NOTFOUND})
+if(NOT CLANG_FORMAT)
     message(WARNING "could not find clang-format, skipping automated source code formatting.")
-else (${CLANG_FORMAT-NOTFOUND})
+else (NOT CLANG_FORMAT)
     file(GLOB_RECURSE ALL_SOURCE_FILES  src/*.cpp src/*.h)
     # clang-format -i -style=file $
     add_custom_target(clangformat ALL

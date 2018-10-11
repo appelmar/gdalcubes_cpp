@@ -26,6 +26,7 @@
 #include "image_collection_cube.h"
 #include "reduce.h"
 #include "stream.h"
+#include "swarm.h"
 #include "utils.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
@@ -71,7 +72,9 @@ void print_usage(std::string command = "") {
         std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', defaults to 'mean'" << std::endl;
         std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
-        std::cout << "  -t  --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
+        std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
+        std::cout << "  -w, --worker             TODO                                                               " << std::endl;
+        std::cout << "      --context            TODO                                                               " << std::endl;
         std::cout << std::endl;
     } else if (command == "stream") {
         std::cout << "Usage: gdalcubes stream [options] SOURCE DEST" << std::endl;
@@ -87,6 +90,8 @@ void print_usage(std::string command = "") {
         std::cout << "      --gdal-of            GDAL output format for optional reduction, defaults to GTiff, only relevant if -r is given" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings for optional redutction, can be passed multiple times, only relevant if -r is given" << std::endl;
         std::cout << "  -t  --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
+        std::cout << "  -w, --worker             TODO                                                               " << std::endl;
+        std::cout << "      --context            TODO                                                               " << std::endl;
         std::cout << std::endl;
 
     } else {
@@ -107,6 +112,7 @@ int main(int argc, char *argv[]) {
     GDALAllRegister();
     GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
     CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
+    gdalcubes_swarm::init();
 
     srand(time(NULL));
 
@@ -377,10 +383,13 @@ int main(int argc, char *argv[]) {
         }
     } catch (std::string s) {
         std::cout << s << std::endl;
+        gdalcubes_swarm::cleanup();
         return 1;
     } catch (...) {
         std::cout << "ERROR in gdalcubes: invalid arguments." << std::endl;
         print_usage();
+        gdalcubes_swarm::cleanup();
         return 1;
     }
+    gdalcubes_swarm::cleanup();
 }

@@ -21,6 +21,7 @@
 #include "image_collection_cube.h"
 #include "reduce.h"
 #include "stream.h"
+#include "swarm.h"
 #include "timer.h"
 #include "view.h"
 
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]) {
     GDALAllRegister();
     GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
     CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
+    gdalcubes_swarm::init();
 
     srand(time(NULL));
 
@@ -99,7 +101,7 @@ int main(int argc, char *argv[]) {
 
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
 
-        stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla ../../test/stream_example.R");
+        stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R");
 
         reduce_cube cstream(std::make_shared<stream_cube>(s), "min");
         cstream.set_threads(1);
@@ -109,9 +111,22 @@ int main(int argc, char *argv[]) {
         //cstream.write_gtiff_directory("testgtif");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
-        std::cout << cstream.make_constructible_json().dump(2) << std::endl;
+        //  std::cout << cstream.make_constructible_json().dump(2) << std::endl;
+
+        std::vector<std::string> servers;
+        servers.push_back("http://localhost:1111/gdalcubes/api");
+        gdalcubes_swarm swarm = gdalcubes_swarm::from_urls(servers);
+
+        //swarm.push_execution_context();
+        swarm.push_cube(std::make_shared<reduce_cube>(cstream));
+
+        swarm.post_start(0, 0);
+        std::shared_ptr<chunk_data> testchunk = swarm.get_download(0, 0);
+        std::cout << testchunk->size()[0] << "x" << testchunk->size()[1] << "x" << testchunk->size()[2] << "x" << testchunk->size()[3] << std::endl;
 
     } catch (std::string e) {
         std::cout << e << std::endl;
     }
+
+    gdalcubes_swarm::cleanup();
 }

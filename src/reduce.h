@@ -189,13 +189,12 @@ class reduce_cube : public cube {
  * @param format GDAL format (see https://www.gdal.org/formats_list.html)
  * @param co GDAL create options
  */
-    void write_gdal_image(std::string path, std::string format = "GTiff", std::vector<std::string> co = std::vector<std::string>());
+    void write_gdal_image(std::string path, std::string format = "GTiff", std::vector<std::string> co = std::vector<std::string>(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     nlohmann::json make_constructible_json() override {
         nlohmann::json out;
         out["cube_type"] = "reduce";
         out["reducer"] = _reducer;
-        out["nthreads"] = _nthreads;
         out["in_cube"] = _in_cube->make_constructible_json();
         return out;
     }

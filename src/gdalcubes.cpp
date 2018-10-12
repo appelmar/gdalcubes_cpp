@@ -73,8 +73,7 @@ void print_usage(std::string command = "") {
         std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
-        std::cout << "  -w, --worker             TODO                                                               " << std::endl;
-        std::cout << "      --context            TODO                                                               " << std::endl;
+        std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
         std::cout << std::endl;
     } else if (command == "stream") {
         std::cout << "Usage: gdalcubes stream [options] SOURCE DEST" << std::endl;
@@ -90,8 +89,7 @@ void print_usage(std::string command = "") {
         std::cout << "      --gdal-of            GDAL output format for optional reduction, defaults to GTiff, only relevant if -r is given" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings for optional redutction, can be passed multiple times, only relevant if -r is given" << std::endl;
         std::cout << "  -t  --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
-        std::cout << "  -w, --worker             TODO                                                               " << std::endl;
-        std::cout << "      --context            TODO                                                               " << std::endl;
+        std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
         std::cout << std::endl;
 
     } else {
@@ -109,12 +107,7 @@ void print_usage(std::string command = "") {
 }
 
 int main(int argc, char *argv[]) {
-    GDALAllRegister();
-    GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
-    CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
-    gdalcubes_swarm::init();
-
-    srand(time(NULL));
+    config::instance()->gdalcubes_init();
 
     namespace po = boost::program_options;
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
@@ -255,6 +248,7 @@ int main(int argc, char *argv[]) {
             reduce_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");
             reduce_desc.add_options()("output", po::value<std::string>(), "Filename of the output image.");
             reduce_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), " Number of threads used for parallel chunk processing, defaults to 1");
+            reduce_desc.add_options()("swarm", po::value<std::string>(), "Simple text file defining a gdalcubes_server swarm");
 
             po::positional_options_description reduce_pos;
             reduce_pos.add("input", 1);
@@ -280,12 +274,23 @@ int main(int argc, char *argv[]) {
             std::string reducer = vm["reducer"].as<std::string>();
             std::string outformat = vm["gdal-of"].as<std::string>();
             std::string json_view_path = vm["view"].as<std::string>();
+
             uint16_t nthreads = vm["threads"].as<uint16_t>();
+
+            if (vm.count("swarm")) {
+                auto p = gdalcubes_swarm::from_txtfile(vm["swarm"].as<std::string>());
+                p->set_threads(nthreads);
+                config::instance()->set_default_chunk_processor(p);
+            } else {
+                if (nthreads > 1) {
+                    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
+                }
+            }
 
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
             std::shared_ptr<cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
             std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_in, reducer);
-            c_reduce->set_threads(nthreads);
+            // TODO: configure default chunk processor here
 
             c_reduce->write_gdal_image(output, outformat, create_options);
 
@@ -319,6 +324,15 @@ int main(int argc, char *argv[]) {
             std::string exec = vm["exec"].as<std::string>();
             std::string json_view_path = vm["view"].as<std::string>();
             uint16_t nthreads = vm["threads"].as<uint16_t>();
+            if (vm.count("swarm")) {
+                auto p = gdalcubes_swarm::from_txtfile(vm["swarm"].as<std::string>());
+                p->set_threads(nthreads);
+                config::instance()->set_default_chunk_processor(p);
+            } else {
+                if (nthreads > 1) {
+                    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
+                }
+            }
 
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
             std::shared_ptr<image_collection_cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
@@ -372,7 +386,7 @@ int main(int argc, char *argv[]) {
                 }
 
                 std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_stream, reducer);
-                c_reduce->set_threads(nthreads);
+                // TODO: configure default chunk processor here
                 c_reduce->write_gdal_image(output, outformat, create_options);
             }
 
@@ -383,13 +397,13 @@ int main(int argc, char *argv[]) {
         }
     } catch (std::string s) {
         std::cout << s << std::endl;
-        gdalcubes_swarm::cleanup();
+        config::instance()->gdalcubes_cleanup();
         return 1;
     } catch (...) {
         std::cout << "ERROR in gdalcubes: invalid arguments." << std::endl;
         print_usage();
-        gdalcubes_swarm::cleanup();
+        config::instance()->gdalcubes_cleanup();
         return 1;
     }
-    gdalcubes_swarm::cleanup();
+    config::instance()->gdalcubes_cleanup();
 }

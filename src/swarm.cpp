@@ -24,45 +24,77 @@ size_t post_file_read_callback(char *buffer, size_t size, size_t nitems, void *u
     return is->gcount();
 }
 
-void gdalcubes_swarm::post_file(std::string path, uint16_t server_index) {
-    std::ifstream is(path, std::ifstream::in | std::ifstream::binary);
-    if (!is.is_open()) {
-        throw std::string("ERROR in gdalcubes_swarm::push_execution_context(): cannot open file '" + path + "'");
+std::shared_ptr<gdalcubes_swarm> gdalcubes_swarm::from_txtfile(std::string path) {
+    std::ifstream file(path);
+    std::vector<std::string> urllist;
+    std::string line;
+    while (std::getline(file, line)) {
+        // TODO: check if valid URL
+        if (!line.empty()) urllist.push_back(line);
     }
 
+    file.close();
+    return gdalcubes_swarm::from_urls(urllist);
+}
+
+void gdalcubes_swarm::post_file(std::string path, uint16_t server_index) {
     if (_server_handles[server_index]) {
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_URL, (_server_uris[server_index] + "/file" + "?name=" + path).c_str());
+        curl_easy_reset(_server_handles[server_index]);
 
-        struct curl_slist *header = NULL;
-        header = curl_slist_append(header, "Content-Type: application/octet-stream");
-        // curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
-
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_UPLOAD, 1L);
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_POST, 1L);
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_CUSTOMREQUEST, "POST");  // for whatever reason all requests are PUT if not set
-
-        // This will most likely work only as long as curl_easy_perform is synchronous, otherwise &is might become invalid
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_READDATA, &is);
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_READFUNCTION, &post_file_read_callback);
-
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_INFILESIZE_LARGE, (curl_off_t)boost::filesystem::file_size(path));
-
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, 1L);
+        // Step 1: send a HEAD HTTP request to check whether the file already exists on the server
+        curl_easy_setopt(_server_handles[server_index], CURLOPT_URL, (_server_uris[server_index] + "/file" + "?name=" + path + "&size=" + std::to_string(boost::filesystem::file_size(path))).c_str());
+        curl_easy_setopt(_server_handles[server_index], CURLOPT_CUSTOMREQUEST, "HEAD");
+        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, config::instance()->get_swarm_curl_verbose() ? 1L : 0L);
 
         CURLcode res = curl_easy_perform(_server_handles[server_index]);
+        long response_code;
         if (res != CURLE_OK) {
+            throw std::string("ERROR in gdalcubes_swarm::post_file(): HEAD /file?name='" + path + "' to '" + _server_uris[server_index] + "' failed");
+        } else {
+            curl_easy_getinfo(_server_handles[server_index], CURLINFO_RESPONSE_CODE, &response_code);
+        }
+
+        if (response_code == 200) {
+            // already exists on server
+            return;
+        } else if (response_code == 204 || response_code == 409) {
+            // file does not exist or has different size
+
+            // Step 2: if not upload
+
+            std::ifstream is(path, std::ifstream::in | std::ifstream::binary);
+            if (!is.is_open()) {
+                throw std::string("ERROR in gdalcubes_swarm::push_execution_context(): cannot open file '" + path + "'");
+            }
+
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_URL, (_server_uris[server_index] + "/file" + "?name=" + path).c_str());
+
+            struct curl_slist *header = NULL;
+            header = curl_slist_append(header, "Content-Type: application/octet-stream");
+            // curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
+
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_UPLOAD, 1L);
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_POST, 1L);
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_CUSTOMREQUEST, "POST");  // for whatever reason all requests are PUT if not set
+
+            // This will most likely work only as long as curl_easy_perform is synchronous, otherwise &is might become invalid
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_READDATA, &is);
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_READFUNCTION, &post_file_read_callback);
+
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_INFILESIZE_LARGE, (curl_off_t)boost::filesystem::file_size(path));
+
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, config::instance()->get_swarm_curl_verbose() ? 1L : 0L);
+
+            CURLcode res = curl_easy_perform(_server_handles[server_index]);
+            if (res != CURLE_OK) {
+                if (is.is_open()) is.close();
+                throw std::string("ERROR in gdalcubes_swarm::post_file(): uploading '" + path + "' to '" + _server_uris[server_index] + "' failed");
+            }
             if (is.is_open()) is.close();
-            throw std::string("ERROR in gdalcubes_swarm::post_file(): uploading '" + path + "' to '" + _server_uris[server_index] + "' failed");
+        } else {
+            throw std::string("ERROR in gdalcubes_swarm::post_file(): HEAD /file?name='" + path + "' to '" + _server_uris[server_index] + "' returned HTTP code " + std::to_string(response_code));
         }
     }
-    if (is.is_open()) is.close();
-}
-void gdalcubes_swarm::init() {
-    curl_global_init(CURL_GLOBAL_ALL);
-}
-
-void gdalcubes_swarm::cleanup() {
-    curl_global_cleanup();
 }
 
 void gdalcubes_swarm::push_execution_context(bool recursive) {
@@ -133,7 +165,7 @@ uint32_t gdalcubes_swarm::post_cube(std::string json, uint16_t server_index) {
         std::vector<char> response_body_bytes;
         curl_easy_setopt(_server_handles[server_index], CURLOPT_WRITEDATA, &response_body_bytes);
 
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, config::instance()->get_swarm_curl_verbose() ? 1L : 0L);
 
         CURLcode res = curl_easy_perform(_server_handles[server_index]);
         if (res != CURLE_OK) {
@@ -153,7 +185,6 @@ void gdalcubes_swarm::push_cube(std::shared_ptr<cube> c) {
     // TODO: parallelize requests
     for (uint16_t is = 0; is < _server_uris.size(); ++is) {
         _cube_ids.push_back(post_cube(json, is));
-        std::cout << "Cube ID: " << _cube_ids[is] << std::endl;
     }
 }
 
@@ -164,8 +195,7 @@ void gdalcubes_swarm::post_start(uint32_t chunk_id, uint16_t server_index) {
         curl_easy_setopt(_server_handles[server_index], CURLOPT_URL, (_server_uris[server_index] + "/cube/" + std::to_string(_cube_ids[server_index]) + "/" + std::to_string(chunk_id) + "/start").c_str());
         curl_easy_setopt(_server_handles[server_index], CURLOPT_POST, 1L);
         curl_easy_setopt(_server_handles[server_index], CURLOPT_CUSTOMREQUEST, "POST");
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, 1L);
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, config::instance()->get_swarm_curl_verbose() ? 1L : 0L);
 
         CURLcode res = curl_easy_perform(_server_handles[server_index]);
         if (res != CURLE_OK) {
@@ -194,7 +224,7 @@ std::shared_ptr<chunk_data> gdalcubes_swarm::get_download(uint32_t chunk_id, uin
         std::vector<char> response_body_bytes;
         curl_easy_setopt(_server_handles[server_index], CURLOPT_WRITEDATA, &response_body_bytes);
 
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, 1L);
+        curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, config::instance()->get_swarm_curl_verbose() ? 1L : 0L);
 
         CURLcode res = curl_easy_perform(_server_handles[server_index]);
         if (res != CURLE_OK) {
@@ -213,6 +243,15 @@ std::shared_ptr<chunk_data> gdalcubes_swarm::get_download(uint32_t chunk_id, uin
 }
 
 void gdalcubes_swarm::apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) {
+    uint32_t nthreads = 1;
+    // try whether default chunk processor is multithread and read number of threads if successful
+    if (std::dynamic_pointer_cast<chunk_processor_multithread>(config::instance()->get_default_chunk_processor())) {
+        nthreads = std::dynamic_pointer_cast<chunk_processor_multithread>(config::instance()->get_default_chunk_processor())->get_threads();
+    }
+
+    push_execution_context(false);
+    push_cube(c);
+
     // TODO: what if servers fail?
     std::map<uint16_t, std::vector<uint32_t>> chunk_distr;
     for (uint32_t i = 0; i < c->count_chunks(); ++i) {
@@ -221,10 +260,9 @@ void gdalcubes_swarm::apply(std::shared_ptr<cube> c, std::function<void(chunkid_
     }
     std::mutex mutex;
     std::vector<std::thread> workers;
-    uint16_t nthreads = std::min(c->get_threads(), (uint16_t)_server_uris.size());
     for (uint16_t it = 0; it < nthreads; ++it) {
         workers.push_back(std::thread([this, c, &chunk_distr, nthreads, &f, it, &mutex](void) {
-            // One remote server is processed by a single thread for now, changing this will require to use the multi interface of curl
+            // One remote server is processed by a single thread for now, changing this will require to using the multi interface of curl
             for (uint32_t iserver = it; iserver < _server_uris.size(); iserver += _server_uris.size()) {
                 for (uint32_t ichunk = 0; ichunk < chunk_distr[iserver].size(); ++ichunk) {
                     std::shared_ptr<chunk_data> dat = get_download(chunk_distr[iserver][ichunk], iserver);

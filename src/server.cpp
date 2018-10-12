@@ -17,6 +17,7 @@
 #include "server.h"
 #include <cpprest/filestream.h>
 #include <cpprest/rawptrstream.h>
+#include <boost/program_options.hpp>
 #include <condition_variable>
 #include "build_info.h"
 #include "cube_factory.h"
@@ -43,11 +44,14 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
     //    std::for_each(query_pars.begin(), query_pars.end(), [](std::pair<std::string, std::string> s) { std::cout << s.first << ":" << s.second << std::endl; });
     if (!path.empty()) {
         if (path[0] == "version") {
+            std::cout << "GET /version" << std::endl;
             std::string version = "gdalcubes_server " + std::to_string(VERSION_MAJOR) + "." + std::to_string(VERSION_MINOR) + "." + std::to_string(VERSION_PATCH);
             req.reply(web::http::status_codes::OK, version.c_str(), "text/plain");
         } else if (path[0] == "cube") {
             if (path.size() == 2) {
                 uint32_t cube_id = std::stoi(path[1]);
+                std::cout << "GET /cube/" << cube_id << std::endl;
+
                 if (_cubestore.find(cube_id) == _cubestore.end()) {
                     req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}: cube with given id is not available.", "text/plain");
                 } else {
@@ -59,6 +63,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                 uint32_t chunk_id = std::stoi(path[2]);
                 std::string cmd = path[3];
                 if (cmd == "download") {
+                    std::cout << "GET /cube/" << cube_id << "/" << chunk_id << "/download" << std::endl;
                     if (_cubestore.find(cube_id) == _cubestore.end()) {
                         req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}/{chunk_id}/download: cube is not available", "text/plain");
                     } else if (chunk_id >= _cubestore[cube_id]->count_chunks()) {
@@ -92,13 +97,13 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                     }
 
                 } else if (cmd == "status") {
+                    std::cout << "GET /cube/" << cube_id << "/" << chunk_id << "/status" << std::endl;
                     if (_cubestore.find(cube_id) == _cubestore.end()) {
                         req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}/{chunk_id}/status: cube is not available", "text/plain");
                     } else if (chunk_id >= _cubestore[cube_id]->count_chunks()) {
                         req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}/{chunk_id}/status: invalid chunk_id given", "text/plain");
                     }
 
-                    // TODO: /GET /cube/{cube_id}/{chunk_id}/status
                     if (server_chunk_cache::instance()->has(std::make_pair(cube_id, chunk_id))) {
                         req.reply(web::http::status_codes::OK, "finished", "text/plain");
                     } else if (_chunk_read_executing.find(std::make_pair(cube_id, chunk_id)) !=
@@ -134,7 +139,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
 
     if (!path.empty()) {
         if (path[0] == "file") {
-            // TODO: check if file with same path and size exists, if yes do not upload again
+            std::cout << "POST /file" << std::endl;
             std::string fname;
             if (query_pars.find("name") != query_pars.end()) {
                 fname = query_pars["name"];
@@ -143,7 +148,15 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
             }
             fname = (_workdir / fname).string();
             if (boost::filesystem::exists(fname)) {
-                req.reply(web::http::status_codes::Conflict);
+                if (req.headers().has("Content-Length")) {
+                    if (req.headers().content_length() == boost::filesystem::file_size(fname)) {
+                        req.reply(web::http::status_codes::OK);
+                    } else {
+                        req.reply(web::http::status_codes::Conflict);
+                    }
+                } else {
+                    req.reply(web::http::status_codes::Conflict);
+                }
             } else {
                 boost::filesystem::create_directories(boost::filesystem::path(fname).parent_path());
                 auto fstream = std::make_shared<concurrency::streams::ostream>();
@@ -162,6 +175,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
             }
         } else if (path[0] == "cube") {
             if (path.size() == 1) {
+                std::cout << "POST /cube" << std::endl;
                 // we do not use cpprest JSON library here
                 uint32_t id;
                 req.extract_string(true).then([&id, this](std::string s) {
@@ -179,6 +193,8 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
 
                 std::string cmd = path[3];
                 if (cmd == "start") {
+                    std::cout << "POST /cube/" << cube_id << "/" << chunk_id << "/start" << std::endl;
+
                     if (_cubestore.find(cube_id) == _cubestore.end()) {
                         req.reply(web::http::status_codes::NotFound, "ERROR in /POST /cube/{cube_id}/{chunk_id}/start: cube is not available", "text/plain");
                     } else if (chunk_id >= _cubestore[cube_id]->count_chunks()) {
@@ -192,7 +208,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
                         req.reply(web::http::status_codes::OK);
                     } else {
                         _mutex_worker_threads.lock();
-                        if (_worker_threads.size() < _worker_thread_max) {
+                        if (_worker_threads.size() < config::instance()->get_server_worker_threads_max()) {
                             // immediately start a thread
 
                             _worker_threads.push_back(std::thread([this, cube_id, chunk_id]() {
@@ -253,8 +269,6 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
                             req.reply(web::http::status_codes::OK);
                         }
                     }
-                } else if (cmd == "cancel") {
-                    //TODO: POST /cube/{cube_id}/{chunk_id}/cancel
                 } else {
                     req.reply(web::http::status_codes::NotFound);
                 }
@@ -274,22 +288,99 @@ void gdalcubes_server::handle_put(web::http::http_request req) {
     req.reply(web::http::status_codes::MethodNotAllowed);
 }
 
+void gdalcubes_server::handle_head(web::http::http_request req) {
+    std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
+    std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
+    if (!path.empty() && path[0] == "file") {
+        std::cout << "HEAD /file" << std::endl;
+        std::string fname;
+        if (query_pars.find("name") != query_pars.end()) {
+            fname = query_pars["name"];
+            fname = (_workdir / fname).string();
+            if (boost::filesystem::exists(fname)) {
+                if (query_pars.find("size") != query_pars.end()) {
+                    if (std::stoi(query_pars["size"]) == boost::filesystem::file_size(fname)) {
+                        req.reply(web::http::status_codes::OK);  // File exists and has the same size
+                    } else {
+                        req.reply(web::http::status_codes::Conflict);  // File exists but has different size
+                    }
+                } else {
+                    req.reply(web::http::status_codes::BadRequest);  // File exists but Content Length missing for comparison
+                }
+            } else {
+                req.reply(web::http::status_codes::NoContent);  // File does not exist yet
+            }
+
+        } else {
+            req.reply(web::http::status_codes::BadRequest);  // no name given in request
+        }
+    } else {
+        req.reply(web::http::status_codes::NotFound);  //
+    }
+}
+
+void print_usage() {
+    std::cout << "Usage: gdalcubes_server [options]" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Run gdalcubes_server and wait for incoming HTTP requests."
+              << std::endl;
+    std::cout << std::endl;
+    std::cout << "Options:" << std::endl;
+    std::cout << "  -b, --basepath              Base path for all API endpoints, defaults to /gdalcubes/api/" << std::endl;
+    std::cout << "  -p, --port                  The port where gdalcubes_server is listening, defaults to 1111" << std::endl;
+    std::cout << "  -t, --worker_threads        Maximum number of threads perfoming chunk reads, defaults to 1" << std::endl;
+    std::cout << "  -D, --dir                   Working directory where files are stored, defaults to {TEMPDIR}/gdalcubes" << std::endl;
+    std::cout << "      --ssl                   Use HTTPS (currently not implemented)" << std::endl;
+    std::cout << std::endl;
+}
+
 std::unique_ptr<gdalcubes_server> server;
 int main(int argc, char* argv[]) {
-    GDALAllRegister();
-    GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
-    CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
+    config::instance()->gdalcubes_init();
 
-    srand(time(NULL));
+    namespace po = boost::program_options;
+    // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
-    std::unique_ptr<gdalcubes_server> srv = std::unique_ptr<gdalcubes_server>(new gdalcubes_server("0.0.0.0"));
+    po::options_description global_args("Options");
+    global_args.add_options()("help,h", "")("version", "")("basepath,b", po::value<std::string>()->default_value("/gdalcubes/api"), "")("port,p", po::value<uint16_t>()->default_value(1111), "")("ssl", "")("worker_threads,t", po::value<uint16_t>()->default_value(1), "")("dir,D", po::value<std::string>()->default_value((boost::filesystem::temp_directory_path() / "gdalcubes").string()), "");
+
+    po::variables_map vm;
+
+    bool ssl;
+    try {
+        po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).allow_unregistered().run();
+        po::store(parsed, vm);
+        if (vm.count("version")) {
+            std::cout << "gdalcubes_server " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH
+                      << " built on " << __DATE__ << " " << __TIME__;
+            std::cout << " linked against " << GDALVersionInfo("--version")
+                      << std::endl;  // TODO add version info for other linked libraries
+            return 0;
+        }
+        if (vm.count("help")) {
+            print_usage();
+            return 0;
+        }
+
+        ssl = vm.count("ssl") > 0;
+    } catch (...) {
+        std::cout << "ERROR in gdalcubes_server: cannot parse arguments." << std::endl;
+        return 1;
+    }
+
+    std::unique_ptr<gdalcubes_server> srv = std::unique_ptr<gdalcubes_server>(
+        new gdalcubes_server("0.0.0.0", vm["port"].as<uint16_t>(), vm["basepath"].as<std::string>(), ssl,
+                             vm["dir"].as<std::string>()));
+
+    config::instance()->set_server_worker_threads_max(vm["worker_threads"].as<uint16_t>());
+
     srv->open().wait();
-
+    std::cout << "gdalcubes_server waiting for incoming HTTP requests on " << srv->get_service_url() << "." << std::endl;
     std::cout << "Press ENTER to exit" << std::endl;
     std::string line;
     std::getline(std::cin, line);
 
     srv->close().wait();
-
+    config::instance()->gdalcubes_cleanup();
     return 0;
 }

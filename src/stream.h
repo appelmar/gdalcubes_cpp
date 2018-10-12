@@ -139,7 +139,6 @@ class stream_cube : public cube {
         nlohmann::json out;
         out["cube_type"] = "stream";
         out["command"] = _cmd;
-        out["nthreads"] = _nthreads;
         out["in_cube"] = _in_cube->make_constructible_json();
         return out;
     }

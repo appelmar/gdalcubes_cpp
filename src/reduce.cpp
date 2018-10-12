@@ -64,7 +64,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
-void reduce_cube::write_gdal_image(std::string path, std::string format, std::vector<std::string> co) {
+void reduce_cube::write_gdal_image(std::string path, std::string format, std::vector<std::string> co, std::shared_ptr<chunk_processor> p) {
     GDALDriver *drv = (GDALDriver *)GDALGetDriverByName(format.c_str());
     if (!drv) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): Cannot find GDAL driver for given format.");
@@ -136,5 +136,5 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
         GDALClose(gdal_out);
     };
 
-    apply(f, _nthreads);
+    p->apply(shared_from_this(), f);
 }

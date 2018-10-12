@@ -20,9 +20,15 @@
 #include <curl/curl.h>
 #include "cube.h"
 
-class gdalcubes_swarm {
+/**
+ * TODO:
+ * - add / remove method for workers
+ *
+ *
+ */
+class gdalcubes_swarm : public chunk_processor {
    public:
-    gdalcubes_swarm(std::vector<std::string> urls) : _cube(nullptr), _cube_ids(), _server_uris(urls), _server_handles() {
+    gdalcubes_swarm(std::vector<std::string> urls) : _cube(nullptr), _cube_ids(), _server_uris(urls), _server_handles(), _nthreads(1) {
         for (uint16_t i = 0; i < _server_uris.size(); ++i)
             _server_handles.push_back(curl_easy_init());
     }
@@ -32,13 +38,10 @@ class gdalcubes_swarm {
             curl_easy_cleanup(_server_handles[i]);
     }
 
-    inline static gdalcubes_swarm from_urls(std::vector<std::string> urls) { return gdalcubes_swarm(urls); }
+    inline static std::shared_ptr<gdalcubes_swarm> from_urls(std::vector<std::string> urls) { return std::make_shared<gdalcubes_swarm>(urls); }
 
     // Create from txt file where each line is a uri
-    static gdalcubes_swarm from_txtfile(std::string path);
-
-    static void init();
-    static void cleanup();
+    static std::shared_ptr<gdalcubes_swarm> from_txtfile(std::string path);
 
     // upload execution context to all servers
     void push_execution_context(bool recursive = false);
@@ -47,10 +50,13 @@ class gdalcubes_swarm {
     void push_cube(std::shared_ptr<cube> c);
 
     // Mimic cube::apply with distributed calls to cube::read_chunk()
-    void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f);
+    void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) override;
 
     void post_start(uint32_t chunk_id, uint16_t server_index);                           // TODO: make protected
     std::shared_ptr<chunk_data> get_download(uint32_t chunk_id, uint16_t server_index);  // TODO: make protected
+
+    inline uint16_t get_threads() { return _nthreads; }
+    inline void set_threads(uint16_t threads) { _nthreads = threads; }
 
    protected:
     void post_file(std::string path, uint16_t server_index);
@@ -62,6 +68,8 @@ class gdalcubes_swarm {
 
     std::vector<CURL *> _server_handles;
     std::vector<std::string> _server_uris;
+
+    uint16_t _nthreads;
 };
 
 #endif  //CLIENT_H

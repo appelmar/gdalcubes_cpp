@@ -100,9 +100,11 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 add_library(libgdalcubes  ${SOURCE_FILES})
 set_target_properties(libgdalcubes PROPERTIES PREFIX "")
 target_link_libraries(libgdalcubes ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
+install(TARGETS libgdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 
 add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 target_link_libraries (gdalcubes libgdalcubes)
+install(TARGETS gdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 
 
 file(GLOB TEST_FILES
@@ -123,6 +125,7 @@ else (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
     message(STATUS "crypto library found at ${CRYPTO_LIB}")
     add_executable(gdalcubes_server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
     target_link_libraries (gdalcubes_server libgdalcubes ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB})
+    install(TARGETS gdalcubes_server RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 endif (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
 
 
@@ -131,3 +134,5 @@ endif (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
 
 add_executable(gdalcubes_example ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
 target_link_libraries (gdalcubes_example libgdalcubes)
+
+

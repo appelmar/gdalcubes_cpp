@@ -20,7 +20,7 @@
 #include <netcdf>
 #include "build_info.h"
 
-void cube::write_gtiff_directory(std::string dir) {
+void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
     namespace fs = boost::filesystem;
     fs::path op(dir);
 
@@ -80,7 +80,7 @@ void cube::write_gtiff_directory(std::string dir) {
  * TODO: Use CF conventions (http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#_abstract)
  * @param dir
  */
-void cube::write_netcdf_directory(std::string dir) {
+void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
     namespace fs = boost::filesystem;
     fs::path op(dir);
 
@@ -216,30 +216,57 @@ void cube::write_netcdf_directory(std::string dir) {
         }
     };
 
-    apply(f, _nthreads);
+    p->apply(shared_from_this(), f);
 }
 
-void cube::apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f, uint16_t nthreads) {
-    if (nthreads == 1) {
-        std::mutex mutex;
-        uint32_t nchunks = count_chunks();
-        for (uint32_t i = 0; i < nchunks; ++i) {
-            std::shared_ptr<chunk_data> dat = read_chunk(i);
-            f(i, dat, mutex);
-        }
-    } else {
-        std::mutex mutex;
-        std::vector<std::thread> workers;
-        for (uint16_t it = 0; it < nthreads; ++it) {
-            workers.push_back(std::thread([this, &f, it, nthreads, &mutex](void) {
-                for (uint32_t i = it; i < count_chunks(); i += nthreads) {
-                    std::shared_ptr<chunk_data> dat = read_chunk(i);
-                    f(i, dat, mutex);
-                }
-            }));
-        }
-        for (uint16_t it = 0; it < nthreads; ++it) {
-            workers[it].join();
-        }
+void chunk_processor_singlethread::apply(std::shared_ptr<cube> c,
+                                         std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) {
+    std::mutex mutex;
+    uint32_t nchunks = c->count_chunks();
+    for (uint32_t i = 0; i < nchunks; ++i) {
+        std::shared_ptr<chunk_data> dat = c->read_chunk(i);
+        f(i, dat, mutex);
     }
 }
+
+void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
+                                        std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) {
+    std::mutex mutex;
+    std::vector<std::thread> workers;
+    for (uint16_t it = 0; it < _nthreads; ++it) {
+        workers.push_back(std::thread([this, &c, &f, it, &mutex](void) {
+            for (uint32_t i = it; i < c->count_chunks(); i += _nthreads) {
+                std::shared_ptr<chunk_data> dat = c->read_chunk(i);
+                f(i, dat, mutex);
+            }
+        }));
+    }
+    for (uint16_t it = 0; it < _nthreads; ++it) {
+        workers[it].join();
+    }
+}
+
+//void cube::apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f, uint16_t nthreads) {
+//    if (nthreads == 1) {
+//        std::mutex mutex;
+//        uint32_t nchunks = count_chunks();
+//        for (uint32_t i = 0; i < nchunks; ++i) {
+//            std::shared_ptr<chunk_data> dat = read_chunk(i);
+//            f(i, dat, mutex);
+//        }
+//    } else {
+//        std::mutex mutex;
+//        std::vector<std::thread> workers;
+//        for (uint16_t it = 0; it < nthreads; ++it) {
+//            workers.push_back(std::thread([this, &f, it, nthreads, &mutex](void) {
+//                for (uint32_t i = it; i < count_chunks(); i += nthreads) {
+//                    std::shared_ptr<chunk_data> dat = read_chunk(i);
+//                    f(i, dat, mutex);
+//                }
+//            }));
+//        }
+//        for (uint16_t it = 0; it < nthreads; ++it) {
+//            workers[it].join();
+//        }
+//    }
+//}

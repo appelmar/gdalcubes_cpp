@@ -64,8 +64,8 @@ class server_chunk_cache {
                 throw std::string("ERROR in server_chunk_cache::add(): caching empty chunks is useless");
             }
             _m.lock();
-            while (_size_bytes + value->total_size_bytes() > 1024 * 1024 * 256) {  // TODO; make size configurable
-                auto it = _prio_backward.lower_bound(0);                           // lowest value greater than or equal to 0
+            while (_size_bytes + value->total_size_bytes() > config::instance()->get_server_chunkcache_max()) {
+                auto it = _prio_backward.lower_bound(0);  // lowest value greater than or equal to 0
                 uint32_t p = it->first;
 
                 // remove it from the data
@@ -158,7 +158,7 @@ class server_chunk_cache {
 
 class gdalcubes_server {
    public:
-    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false) : _host(host), _worker_cond(), _chunk_read_requests_set(), _mutex_worker_cond(), _mutex_chunk_read_executing(), _mutex_worker_threads(), _cur_id(0), _mutex_id(), _mutex_cubestore(), _port(port), _ssl(ssl), _basepath(basepath), _worker_thread_count(0), _cubestore(), _worker_thread_max(1), _worker_threads(), _workdir(boost::filesystem::temp_directory_path() / "gdalcubes_server"), _listener() {
+    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, boost::filesystem::path workdir = boost::filesystem::temp_directory_path() / "gdalcubes_server") : _host(host), _worker_cond(), _chunk_read_requests_set(), _mutex_worker_cond(), _mutex_chunk_read_executing(), _mutex_worker_threads(), _cur_id(0), _mutex_id(), _mutex_cubestore(), _port(port), _ssl(ssl), _basepath(basepath), _worker_thread_count(0), _cubestore(), _worker_threads(), _workdir(workdir), _listener() {
         if (boost::filesystem::exists(_workdir) && boost::filesystem::is_directory(_workdir)) {
             // boost::filesystem::remove_all(_workdir); // TODO: uncomment after testing
         } else if (boost::filesystem::exists(_workdir) && !boost::filesystem::is_directory(_workdir)) {
@@ -177,16 +177,20 @@ class gdalcubes_server {
         _listener.support(web::http::methods::GET, std::bind(&gdalcubes_server::handle_get, this, std::placeholders::_1));
         _listener.support(web::http::methods::POST, std::bind(&gdalcubes_server::handle_post, this, std::placeholders::_1));
         _listener.support(web::http::methods::PUT, std::bind(&gdalcubes_server::handle_put, this, std::placeholders::_1));
+        _listener.support(web::http::methods::HEAD, std::bind(&gdalcubes_server::handle_head, this, std::placeholders::_1));
     }
 
    public:
     inline pplx::task<void> open() { return _listener.open(); }
     inline pplx::task<void> close() { return _listener.close(); }
 
+    inline std::string get_service_url() { return _listener.uri().to_string(); }
+
    protected:
     void handle_get(web::http::http_request req);
     void handle_post(web::http::http_request req);
     void handle_put(web::http::http_request req);
+    void handle_head(web::http::http_request req);
 
     web::http::experimental::listener::http_listener _listener;
 
@@ -209,7 +213,6 @@ class gdalcubes_server {
     std::mutex _mutex_id;
     std::mutex _mutex_cubestore;
 
-    uint16_t _worker_thread_max;
     uint16_t _worker_thread_count;
     std::mutex _mutex_worker_thread_count;
 

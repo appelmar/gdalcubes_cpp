@@ -36,12 +36,7 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
 }
 
 int main(int argc, char *argv[]) {
-    GDALAllRegister();
-    GDALSetCacheMax(1024 * 1024 * 256);            // 256 MiB
-    CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
-    gdalcubes_swarm::init();
-
-    srand(time(NULL));
+    config::instance()->gdalcubes_init();
 
     collection_format fmt("../../test/collection_format_test.json");
     //std::vector<std::string> temp;
@@ -103,8 +98,7 @@ int main(int argc, char *argv[]) {
 
         stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R");
 
-        reduce_cube cstream(std::make_shared<stream_cube>(s), "min");
-        cstream.set_threads(1);
+        std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(std::make_shared<stream_cube>(s), "min");
         t0.start();
         //        cstream.write_gdal_image("test_stream.tif");
         //cstream.write_netcdf_directory("testnetcdf");
@@ -115,18 +109,13 @@ int main(int argc, char *argv[]) {
 
         std::vector<std::string> servers;
         servers.push_back("http://localhost:1111/gdalcubes/api");
-        gdalcubes_swarm swarm = gdalcubes_swarm::from_urls(servers);
-
-        //swarm.push_execution_context();
-        swarm.push_cube(std::make_shared<reduce_cube>(cstream));
-
-        swarm.post_start(0, 0);
-        std::shared_ptr<chunk_data> testchunk = swarm.get_download(0, 0);
-        std::cout << testchunk->size()[0] << "x" << testchunk->size()[1] << "x" << testchunk->size()[2] << "x" << testchunk->size()[3] << std::endl;
+        std::shared_ptr<gdalcubes_swarm> swarm = std::make_shared<gdalcubes_swarm>(servers);
+        config::instance()->set_default_chunk_processor(swarm);
+        cstream->write_gdal_image("test_swarm.tif");
 
     } catch (std::string e) {
         std::cout << e << std::endl;
     }
 
-    gdalcubes_swarm::cleanup();
+    config::instance()->gdalcubes_cleanup();
 }

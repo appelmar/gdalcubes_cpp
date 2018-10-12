@@ -18,6 +18,7 @@
 #define CUBE_H
 
 #include <mutex>
+#include "config.h"
 #include "view.h"
 
 typedef std::array<uint32_t, 4> cube_coordinate_btyx;
@@ -30,6 +31,30 @@ typedef std::array<uint32_t, 4> chunk_size_btyx;
 typedef std::array<uint32_t, 3> chunk_size_tyx;
 
 typedef uint32_t chunkid_t;
+
+class cube;
+class chunk_data;
+
+class chunk_processor {
+   public:
+    virtual void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) = 0;
+};
+
+class chunk_processor_singlethread : public chunk_processor {
+   public:
+    void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) override;
+};
+
+class chunk_processor_multithread : public chunk_processor {
+   public:
+    chunk_processor_multithread(uint16_t nthreads) : _nthreads(nthreads) {}
+    void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) override;
+
+    inline uint16_t get_threads() { return _nthreads; }
+
+   private:
+    uint16_t _nthreads;
+};
 
 struct band {
     band(std::string name) : name(name), no_data_value(NAN), offset(0), scale(1), unit(""), type("float64") {}
@@ -113,9 +138,9 @@ class chunk_data {
     chunk_size_btyx _size;
 };
 
-class cube {
+class cube : public std::enable_shared_from_this<cube> {
    public:
-    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _nthreads(1), _size() {
+    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _size() {
         _size[0] = 0;
         _size[1] = st_ref->nt();
         _size[2] = st_ref->ny();
@@ -355,17 +380,14 @@ class cube {
 
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) = 0;
 
-    void write_gtiff_directory(std::string dir);
-    void write_netcdf_directory(std::string dir);
+    void write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     inline band_collection bands() {
         return _bands;
     }
 
-    void apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f, uint16_t nthreads = 1);
-
-    inline void set_threads(uint16_t n) { _nthreads = n; }
-    inline uint16_t get_threads() { return _nthreads; }
+    //void apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f, uint16_t nthreads = 1);
 
     virtual nlohmann::json make_constructible_json() = 0;
 
@@ -375,7 +397,6 @@ class cube {
     cube_size_tyx _chunk_size;
 
     band_collection _bands;
-    uint16_t _nthreads;
 };
 
 #endif  //CUBE_H

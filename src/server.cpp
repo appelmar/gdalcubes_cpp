@@ -61,6 +61,13 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
             } else if (path.size() == 4) {
                 uint32_t cube_id = std::stoi(path[1]);
                 uint32_t chunk_id = std::stoi(path[2]);
+                
+                //debug 
+                if (chunk_id == 48) {
+                    std::cout << "BREAK";
+                }
+                
+               // uint32_t chunk_id = 0; // debug
                 std::string cmd = path[3];
                 if (cmd == "download") {
                     std::cout << "GET /cube/" << cube_id << "/" << chunk_id << "/download" << std::endl;
@@ -82,18 +89,41 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                             _chunk_cond[std::make_pair(cube_id, chunk_id)].first.wait(lck);
                         }
                         std::shared_ptr<chunk_data> dat = server_chunk_cache::instance()->get(std::make_pair(cube_id, chunk_id));
-                        std::vector<unsigned char> rawdata;
-                        rawdata.resize(4 * sizeof(uint32_t) + dat->total_size_bytes());
-                        std::copy((unsigned char*)(dat->size().data()), (unsigned char*)(dat->size().data()) + (sizeof(uint32_t) * 4), (unsigned char*)(rawdata.data()));
-                        std::copy((unsigned char*)(dat->buf()), (unsigned char*)(dat->buf() + dat->total_size_bytes()), rawdata.begin() + (sizeof(uint32_t) * 4));
+                        std::cout << "chunk " << chunk_id << ": " << (double)server_chunk_cache::instance()->total_size_bytes() / (double)(1024*1024) << std::endl;
+                        if (dat->empty())
+                            std::cout << "chunk " << chunk_id << " is empty" << std::endl;
 
-                        if (query_pars.find("clean") != query_pars.end() && query_pars["clean"] == "true") {
-                            server_chunk_cache::instance()->remove(std::make_pair(cube_id, chunk_id));
+
+                        uint8_t* rawdata = (uint8_t*)malloc(4 * sizeof(uint32_t) + dat->total_size_bytes());
+                        memcpy((void*)rawdata,(void*)(dat->size().data()),4 * sizeof(uint32_t));
+                        if (!dat->empty()) {
+                            memcpy(rawdata + 4 * sizeof(uint32_t), dat->buf(), dat->total_size_bytes());
                         }
-                        web::http::http_response res;
-                        res.set_body(rawdata);
-                        res.set_status_code(web::http::status_codes::OK);
-                        req.reply(res);
+
+                        concurrency::streams::basic_istream<uint8_t> is = concurrency::streams::rawptr_stream<uint8_t>::open_istream(rawdata, 4 * sizeof(uint32_t) + dat->total_size_bytes() );
+                        if (!is.is_open()){
+                            std::cout << "input stream is not open" << std::endl;
+                        }
+
+
+                        req.reply(web::http::status_codes::OK, is,  4 * sizeof(uint32_t) + dat->total_size_bytes(), "application/octet-stream").then([&is, &rawdata](){
+                            is.close();
+                            free(rawdata);});
+
+
+//                        std::shared_ptr<std::vector<unsigned char>> rawdata = std::make_shared<std::vector<unsigned char>>();
+//                        rawdata->resize(4 * sizeof(uint32_t) + dat->total_size_bytes());
+//                        std::copy((unsigned char*)(dat->size().data()), (unsigned char*)(dat->size().data()) + (sizeof(uint32_t) * 4), (unsigned char*)(rawdata->data()));
+//                        if (!dat->empty())
+//                            std::copy((unsigned char*)(dat->buf()), (unsigned char*)(dat->buf() + dat->total_size_bytes()), rawdata->begin() + (sizeof(uint32_t) * 4));
+//
+//                        if (query_pars.find("clean") != query_pars.end() && query_pars["clean"] == "true") {
+//                            server_chunk_cache::instance()->remove(std::make_pair(cube_id, chunk_id));
+//                        }
+//                        web::http::http_response res;
+//                        res.set_body(*rawdata);
+//                        res.set_status_code(web::http::status_codes::OK);
+//                        req.reply(res);
                     }
 
                 } else if (cmd == "status") {

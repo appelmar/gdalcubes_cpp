@@ -100,15 +100,13 @@ int main(int argc, char *argv[]) {
 
         std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(std::make_shared<stream_cube>(s), "min");
         t0.start();
-        //        cstream.write_gdal_image("test_stream.tif");
-        //cstream.write_netcdf_directory("testnetcdf");
-        //cstream.write_gtiff_directory("testgtif");
+        //cstream->write_gdal_image("test_stream.tif");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
         //  std::cout << cstream.make_constructible_json().dump(2) << std::endl;
 
         std::vector<std::string> servers;
-        servers.push_back("http://localhost:1111/gdalcubes/api");
+        servers.push_back("http://localhost:1112/gdalcubes/api");
         std::shared_ptr<gdalcubes_swarm> swarm = std::make_shared<gdalcubes_swarm>(servers);
         config::instance()->set_default_chunk_processor(swarm);
         cstream->write_gdal_image("test_swarm.tif");

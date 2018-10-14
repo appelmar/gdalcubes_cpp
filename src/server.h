@@ -60,9 +60,6 @@ class server_chunk_cache {
 
     void add(std::pair<uint32_t, uint32_t> key, std::shared_ptr<chunk_data> value) {
         if (!has(key)) {
-            if (value->empty()) {
-                throw std::string("ERROR in server_chunk_cache::add(): caching empty chunks is useless");
-            }
             _m.lock();
             while (_size_bytes + value->total_size_bytes() > config::instance()->get_server_chunkcache_max()) {
                 auto it = _prio_backward.lower_bound(0);  // lowest value greater than or equal to 0

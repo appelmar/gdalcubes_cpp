@@ -102,10 +102,10 @@ class band_collection {
 
 class chunk_data {
    public:
-    chunk_data() : _buf(nullptr), _size() {}
+    chunk_data() : _buf(nullptr), _size({{0,0,0,0}}) {}
 
     ~chunk_data() {
-        if (_buf) free(_buf);
+        if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) free(_buf);
     }
 
     inline uint16_t count_bands() { return _size[0]; }
@@ -115,8 +115,9 @@ class chunk_data {
     }
 
     inline bool empty() {
-        if (_buf) return false;
-        return true;
+        if (_size[0] * _size[1] * _size[2] * _size[3] == 0) return true;
+        if (!_buf) return true;
+        return false;
     }
 
     /** These methods are dangerous and provide direct access to the data buffers, use with caution and never free any memory /
@@ -126,7 +127,7 @@ class chunk_data {
     inline void* buf() { return _buf; }
 
     inline void buf(void* b) {
-        if (_buf) free(_buf);
+        if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) free(_buf);
         _buf = b;
     }
 

@@ -1,0 +1,2 @@
+# Distributed image collection processing
+

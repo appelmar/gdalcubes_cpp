@@ -32,6 +32,11 @@ POST /cube/{cube_id}/{chunk_id}/start
 GET /cube/{cube_id}/{chunk_id}/status status= "notrequested", "submitted" "queued" "running" "canceled" "finished" "error"
 GET /cube/{cube_id}/{chunk_id}/download
 
+
+ TODO:
+ - implement SSL
+ - implement auth
+ - implement whitelist to accept connections from selected clients only
 **/
 
 server_chunk_cache* server_chunk_cache::_instance = nullptr;

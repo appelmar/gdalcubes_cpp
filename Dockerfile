@@ -16,9 +16,13 @@ RUN apt-get install  -y libcpprest-dev
 # replace with git clone
 COPY . /opt/gdalcubes
 WORKDIR /opt/gdalcubes
-RUN mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release ../ && make -j 2
+RUN mkdir -p build && cd build && cmake -DCMAKE_BUILD_TYPE=Release ../ && make -j 2 && make install
 
 COPY supervisord.conf /opt/supervisord.conf
 
 EXPOSE 1111
 CMD ["/usr/bin/supervisord", "-c", "/opt/supervisord.conf"]
+
+
+# docker build -t appelmar/gdalcubes_server .
+# docker run -p 11111:1111 appelmar/gdalcubes_server

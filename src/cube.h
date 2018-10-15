@@ -102,7 +102,7 @@ class band_collection {
 
 class chunk_data {
    public:
-    chunk_data() : _buf(nullptr), _size({{0,0,0,0}}) {}
+    chunk_data() : _buf(nullptr), _size({{0, 0, 0, 0}}) {}
 
     ~chunk_data() {
         if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) free(_buf);

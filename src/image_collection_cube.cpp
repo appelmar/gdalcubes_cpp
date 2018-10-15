@@ -175,9 +175,8 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
-    if (size_btyx[0] *size_btyx[1] *size_btyx[2] *size_btyx[3] == 0)
+    if (size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3] == 0)
         return out;
-
 
     // Fill buffers accordingly
     out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));

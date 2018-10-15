@@ -235,10 +235,10 @@ std::shared_ptr<chunk_data> gdalcubes_swarm::get_download(uint32_t chunk_id, uin
         std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
         std::array<uint32_t, 4> size = {((uint32_t *)response_body_bytes.data())[0], ((uint32_t *)response_body_bytes.data())[1], ((uint32_t *)response_body_bytes.data())[2], ((uint32_t *)response_body_bytes.data())[3]};
         out->size(size);
-        if (size[0] * size[1] * size[2]* size[3] > 0) {
+        if (size[0] * size[1] * size[2] * size[3] > 0) {
             out->buf(malloc(out->size()[0] * out->size()[1] * out->size()[2] * out->size()[3] * sizeof(double)));
             std::copy(response_body_bytes.begin() + sizeof(std::array<uint32_t, 4>), response_body_bytes.end(),
-                      (char *) out->buf());
+                      (char *)out->buf());
         }
 
         return out;

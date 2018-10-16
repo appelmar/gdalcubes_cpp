@@ -155,7 +155,7 @@ class server_chunk_cache {
 
 class gdalcubes_server {
    public:
-    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, boost::filesystem::path workdir = boost::filesystem::temp_directory_path() / "gdalcubes_server") : _host(host), _worker_cond(), _chunk_read_requests_set(), _mutex_worker_cond(), _mutex_chunk_read_executing(), _mutex_worker_threads(), _cur_id(0), _mutex_id(), _mutex_cubestore(), _port(port), _ssl(ssl), _basepath(basepath), _worker_thread_count(0), _cubestore(), _worker_threads(), _workdir(workdir), _listener() {
+    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, boost::filesystem::path workdir = boost::filesystem::temp_directory_path() / "gdalcubes_server", std::set<std::string> whitelist = {}) : _host(host), _worker_cond(), _chunk_read_requests_set(), _mutex_worker_cond(), _mutex_chunk_read_executing(), _mutex_worker_threads(), _cur_id(0), _mutex_id(), _mutex_cubestore(), _port(port), _ssl(ssl), _basepath(basepath), _worker_thread_count(0), _cubestore(), _worker_threads(), _workdir(workdir), _listener(), _whitelist(whitelist) {
         if (boost::filesystem::exists(_workdir) && boost::filesystem::is_directory(_workdir)) {
             // boost::filesystem::remove_all(_workdir); // TODO: uncomment after testing
         } else if (boost::filesystem::exists(_workdir) && !boost::filesystem::is_directory(_workdir)) {
@@ -173,7 +173,6 @@ class gdalcubes_server {
 
         _listener.support(web::http::methods::GET, std::bind(&gdalcubes_server::handle_get, this, std::placeholders::_1));
         _listener.support(web::http::methods::POST, std::bind(&gdalcubes_server::handle_post, this, std::placeholders::_1));
-        _listener.support(web::http::methods::PUT, std::bind(&gdalcubes_server::handle_put, this, std::placeholders::_1));
         _listener.support(web::http::methods::HEAD, std::bind(&gdalcubes_server::handle_head, this, std::placeholders::_1));
     }
 
@@ -186,7 +185,6 @@ class gdalcubes_server {
    protected:
     void handle_get(web::http::http_request req);
     void handle_post(web::http::http_request req);
-    void handle_put(web::http::http_request req);
     void handle_head(web::http::http_request req);
 
     web::http::experimental::listener::http_listener _listener;
@@ -227,6 +225,8 @@ class gdalcubes_server {
     std::mutex _mutex_worker_cond;
 
     std::map<std::pair<uint32_t, uint32_t>, std::pair<std::condition_variable, std::mutex>> _chunk_cond;
+
+    std::set<std::string> _whitelist;
 };
 
 #endif  //SERVER_H

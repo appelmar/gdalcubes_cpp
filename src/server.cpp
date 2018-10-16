@@ -43,6 +43,15 @@ server_chunk_cache* server_chunk_cache::_instance = nullptr;
 std::mutex server_chunk_cache::_singleton_mutex;
 
 void gdalcubes_server::handle_get(web::http::http_request req) {
+    if (!_whitelist.empty()){
+       std::string remote = req.remote_address();
+       if (_whitelist.find(remote) == _whitelist.end()) {
+           req.reply(web::http::status_codes::NotFound);
+       }
+    }
+    std::cout << "request from " << req.remote_address() << std::endl;
+
+
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
     //    std::for_each(path.begin(), path.end(), [](std::string s) { std::cout << s << std::endl; });
@@ -142,6 +151,14 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
 }
 
 void gdalcubes_server::handle_post(web::http::http_request req) {
+    if (!_whitelist.empty()){
+        std::string remote = req.remote_address();
+        if (_whitelist.find(remote) == _whitelist.end()) {
+            req.reply(web::http::status_codes::NotFound);
+        }
+    }
+    std::cout << "request from " << req.remote_address() << std::endl;
+
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
     //    std::for_each(path.begin(), path.end(), [](std::string s) { std::cout << s << std::endl; });
@@ -294,11 +311,15 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
     }
 }
 
-void gdalcubes_server::handle_put(web::http::http_request req) {
-    req.reply(web::http::status_codes::MethodNotAllowed);
-}
 
 void gdalcubes_server::handle_head(web::http::http_request req) {
+    if (!_whitelist.empty()){
+        std::string remote = req.remote_address();
+        if (_whitelist.find(remote) == _whitelist.end()) {
+            req.reply(web::http::status_codes::NotFound);
+        }
+    }
+    std::cout << "request from " << req.remote_address() << std::endl;
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
     if (!path.empty() && path[0] == "file") {
@@ -341,6 +362,7 @@ void print_usage() {
     std::cout << "  -t, --worker_threads        Maximum number of threads perfoming chunk reads, defaults to 1" << std::endl;
     std::cout << "  -D, --dir                   Working directory where files are stored, defaults to {TEMPDIR}/gdalcubes" << std::endl;
     std::cout << "      --ssl                   Use HTTPS (currently not implemented)" << std::endl;
+    std::cout << "  -w, --whitelist             Optional path to a whitelist text file with a list of acceptable clients" << std::endl;
     std::cout << std::endl;
 }
 
@@ -352,11 +374,12 @@ int main(int argc, char* argv[]) {
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
     po::options_description global_args("Options");
-    global_args.add_options()("help,h", "")("version", "")("basepath,b", po::value<std::string>()->default_value("/gdalcubes/api"), "")("port,p", po::value<uint16_t>()->default_value(1111), "")("ssl", "")("worker_threads,t", po::value<uint16_t>()->default_value(1), "")("dir,D", po::value<std::string>()->default_value((boost::filesystem::temp_directory_path() / "gdalcubes").string()), "");
+    global_args.add_options()("help,h", "")("version", "")("basepath,b", po::value<std::string>()->default_value("/gdalcubes/api"), "")("port,p", po::value<uint16_t>()->default_value(1111), "")("ssl", "")("worker_threads,t", po::value<uint16_t>()->default_value(1), "")("dir,D", po::value<std::string>()->default_value((boost::filesystem::temp_directory_path() / "gdalcubes").string()), "")("whitelist,w", po::value<std::string>(), "");
 
     po::variables_map vm;
 
     bool ssl;
+    std::set<std::string> whitelist;
     try {
         po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).allow_unregistered().run();
         po::store(parsed, vm);
@@ -371,6 +394,12 @@ int main(int argc, char* argv[]) {
             print_usage();
             return 0;
         }
+        if (vm.count("whitelist")) {
+            std::string line;
+            std::ifstream infile(vm["whitelist"].as<std::string>());
+            while (std::getline(infile, line))
+                whitelist.insert(line);
+        }
 
         ssl = vm.count("ssl") > 0;
     } catch (...) {
@@ -380,7 +409,7 @@ int main(int argc, char* argv[]) {
 
     std::unique_ptr<gdalcubes_server> srv = std::unique_ptr<gdalcubes_server>(
         new gdalcubes_server("0.0.0.0", vm["port"].as<uint16_t>(), vm["basepath"].as<std::string>(), ssl,
-                             vm["dir"].as<std::string>()));
+                             vm["dir"].as<std::string>(), whitelist));
 
     config::instance()->set_server_worker_threads_max(vm["worker_threads"].as<uint16_t>());
 

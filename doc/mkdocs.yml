@@ -1,0 +1,11 @@
+site_name: gdalcubes
+site_url: https://github.com/appelmar/gdalcubes
+repo_url: https://github.com/appelmar/gdalcubes
+site_author: Marius Appel
+nav:
+    - Home: index.md
+    - Basic Concepts: concepts.md
+    - R package: R.md
+
+theme: readthedocs
+use_directory_urls: false

@@ -7,6 +7,9 @@ nav:
     - Getting started: R.md
     - Basic concepts: concepts.md
     - R package: R.md
+    - C++ API: cpp-api.md
+    - Server API: server-api.md
 
-theme: readthedocs
+theme:
+  name: 'material'
 use_directory_urls: false

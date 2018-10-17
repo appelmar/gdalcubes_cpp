@@ -69,12 +69,20 @@ class config {
     inline bool get_swarm_curl_verbose() { return _swarm_curl_verbose; }
     inline void set_swarm_curl_verbose(bool verbose) { _swarm_curl_verbose = verbose; }
 
+    inline void set_gdal_num_threads(uint16_t threads) {
+        _gdal_num_threads = threads;
+        CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
+    }
+
+    inline uint16_t get_gdal_num_threads() { return _gdal_num_threads; }
+
     void gdalcubes_init() {
         curl_global_init(CURL_GLOBAL_ALL);
         GDALAllRegister();
         GDALSetCacheMax(_gdal_cache_max);
         CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
         curl_global_init(CURL_GLOBAL_ALL);
+        CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
         srand(time(NULL));
     }
 
@@ -88,6 +96,7 @@ class config {
     uint32_t _server_chunkcache_max;
     uint16_t _server_worker_threads_max;  // number of threads for parallel chunk reads
     bool _swarm_curl_verbose;
+    uint16_t _gdal_num_threads;
 
    private:
     config();

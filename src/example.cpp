@@ -89,10 +89,10 @@ int main(int argc, char *argv[]) {
         //         c.write_gtiff_directory("test");
         //        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
-        //        reduce_cube cr(std::make_shared<image_collection_cube>(c), "median");
-        //        t0.start();
-        //        cr.write_gdal_image("test.tif");
-        //        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+        std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "count");
+        t0.start();
+        cr->write_gdal_image("test.tif");
+        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
 
@@ -105,11 +105,11 @@ int main(int argc, char *argv[]) {
 
         //  std::cout << cstream.make_constructible_json().dump(2) << std::endl;
 
-//        std::vector<std::string> servers;
-//        servers.push_back("http://localhost:1112/gdalcubes/api");
-//        std::shared_ptr<gdalcubes_swarm> swarm = std::make_shared<gdalcubes_swarm>(servers);
-//        config::instance()->set_default_chunk_processor(swarm);
-//        cstream->write_gdal_image("test_swarm.tif");
+        //        std::vector<std::string> servers;
+        //        servers.push_back("http://localhost:1112/gdalcubes/api");
+        //        std::shared_ptr<gdalcubes_swarm> swarm = std::make_shared<gdalcubes_swarm>(servers);
+        //        config::instance()->set_default_chunk_processor(swarm);
+        //        cstream->write_gdal_image("test_swarm.tif");
 
     } catch (std::string e) {
         std::cout << e << std::endl;

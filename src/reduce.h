@@ -115,6 +115,30 @@ struct max_reducer : public reducer {
     void finalize(std::shared_ptr<chunk_data> a) override {}
 };
 
+struct count_reducer : public reducer {
+    void init(std::shared_ptr<chunk_data> a) override {
+        for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
+            ((double *)a->buf())[ibxy] = 0;
+        }
+    }
+
+    void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b) override {
+        for (uint16_t ib = 0; ib < a->size()[0]; ++ib) {
+            for (uint32_t it = 0; it < b->size()[1]; ++it) {
+                for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
+                    double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
+                    if (!isnan(v)) {
+                        double *w = &(((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy]);
+                        *w += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    void finalize(std::shared_ptr<chunk_data> a) override {}
+};
+
 struct median_reducer : public reducer {
     void init(std::shared_ptr<chunk_data> a) override {
         _m_buckets = (std::vector<double> *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(std::vector<double>));
@@ -175,7 +199,8 @@ class reduce_cube : public cube {
         if (!(reducer == "min" ||
               reducer == "max" ||
               reducer == "mean" ||
-              reducer == "median"))
+              reducer == "median" ||
+              reducer == "count"))
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }
 

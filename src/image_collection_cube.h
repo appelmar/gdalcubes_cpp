@@ -56,6 +56,8 @@ class image_collection_cube : public cube {
     const std::shared_ptr<image_collection> _collection;
 
     void load_bands();
+
+    band_collection _input_bands;
 };
 
 #endif  //IMAGE_COLLECTION_CUBE_H

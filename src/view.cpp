@@ -79,12 +79,26 @@ cube_view cube_view::read_json_string(std::string str) {
     v._t0.unit() = v._dt.dt_unit;
     v._t1.unit() = v._dt.dt_unit;
 
-    v._nx = j.at("space").at("nx").get<uint32_t>();
-    v._ny = j.at("space").at("ny").get<uint32_t>();
     v._win.left = j.at("space").at("left").get<double>();
     v._win.right = j.at("space").at("right").get<double>();
     v._win.top = j.at("space").at("top").get<double>();
     v._win.bottom = j.at("space").at("bottom").get<double>();
+
+    if (j.at("space").count("nx") && (j.at("space").count("ny"))) {
+        v._nx = j.at("space").at("nx").get<uint32_t>();
+        v._ny = j.at("space").at("ny").get<uint32_t>();
+    }
+    // if only one of nx and ny is given, use the aspect ratio of the spatial extent to derive the other
+    else if (j.at("space").count("nx") && !(j.at("space").count("ny"))) {
+        v._nx = j.at("space").at("nx").get<uint32_t>();
+        v._ny = (uint32_t)((double)v._nx * (v._win.top - v._win.bottom) / (v._win.right - v._win.left));
+    } else if (!j.at("space").count("nx") && (j.at("space").count("ny"))) {
+        v._ny = j.at("space").at("ny").get<uint32_t>();
+        v._nx = (uint32_t)((double)v._ny * (v._win.right - v._win.left) / (v._win.top - v._win.bottom));
+    } else {
+        throw std::string("ERROR in cube_view::read_json_string(): at least one of nx or ny must be given.");
+    }
+
     v._proj = j.at("space").at("proj").get<std::string>();
 
     if (j.count("resampling") == 0) {

@@ -20,10 +20,10 @@
 #include <map>
 #include "utils.h"
 
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic), cube(std::make_shared<cube_view>(v)) { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v)) { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))) { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic), cube(std::make_shared<cube_view>(v)), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v)), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _input_bands() { load_bands(); }
 
 std::string image_collection_cube::to_string() {
     std::stringstream out;
@@ -385,9 +385,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         std::string nodata_value_list;
         uint16_t hasnodata_count = 0;
         for (uint16_t b = 0; b < band_rels.size(); ++b) {
-            if (!_bands.get(std::get<0>(band_rels[b])).no_data_value.empty()) {
+            if (!_input_bands.get(std::get<0>(band_rels[b])).no_data_value.empty()) {
                 ++hasnodata_count;
-                nodata_value_list += _bands.get(std::get<0>(band_rels[b])).no_data_value;
+                nodata_value_list += _input_bands.get(std::get<0>(band_rels[b])).no_data_value;
                 if (b < band_rels.size() - 1) nodata_value_list += " ";
             }
         }
@@ -462,16 +462,24 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
 void image_collection_cube::load_bands() {
     // Access image collection and fetch band information
-    std::vector<image_collection::band_info_row> bands_info = _collection->get_bands();
+    std::vector<image_collection::band_info_row> band_info = _collection->get_bands();
 
-    for (uint16_t ib = 0; ib < bands_info.size(); ++ib) {
-        band b(bands_info[ib].name);
-        b.unit = bands_info[ib].unit;
-        b.type = "float64";
-        b.scale = bands_info[ib].scale;
-        b.offset = bands_info[ib].offset;
-        b.no_data_value = bands_info[ib].nodata;
-        _bands.add(b);
+    // this is the band information of the cube, not of the original image bands
+    for (uint16_t ib = 0; ib < band_info.size(); ++ib) {
+        band bout(band_info[ib].name);
+        band bin(band_info[ib].name);
+        bout.unit = band_info[ib].unit;
+        bin.unit = band_info[ib].unit;
+        bout.type = "float64";
+        bin.type = utils::string_from_gdal_type(band_info[ib].type);
+        bout.scale = band_info[ib].scale;
+        bin.scale = band_info[ib].scale;
+        bout.offset = band_info[ib].offset;
+        bin.offset = band_info[ib].offset;
+        bout.no_data_value = std::to_string(NAN);
+        bin.no_data_value = band_info[ib].nodata;
+        _bands.add(bout);
+        _input_bands.add(bin);
     }
     _size[0] = _bands.count();
 }

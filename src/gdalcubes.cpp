@@ -69,7 +69,7 @@ void print_usage(std::string command = "") {
         std::cout << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "  -v, --view               Filename of the JSON data view description, this option is required" << std::endl;
-        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', defaults to 'mean'" << std::endl;
+        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', 'max', or 'count', defaults to 'mean'" << std::endl;
         std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;

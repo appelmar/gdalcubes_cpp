@@ -45,6 +45,8 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
         r = new mean_reducer();
     } else if (_reducer == "median") {
         r = new median_reducer();
+    } else if (_reducer == "count") {
+        r = new count_reducer();
     } else
         throw std::string("ERROR in reduce_cube::read_chunk(): Unknown reducer given");
 

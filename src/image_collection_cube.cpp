@@ -245,49 +245,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     affine[2] = 0.0;
     affine[4] = 0.0;
 
-    CPLStringList warp_args(NULL);
-    warp_args.AddString("-of");
-    warp_args.AddString("GTiff");  // TODO: make this configurable depending on the output size, maybe GTiff is faster? Alternatively a temporary directory might be given as configuration option that can be a ramdisk
-
-    warp_args.AddString("-t_srs");
-    warp_args.AddString(_st_ref->proj().c_str());
-
-    warp_args.AddString("-te");  // xmin ymin xmax ymax
-    warp_args.AddString(std::to_string(cextent.s.left).c_str());
-    warp_args.AddString(std::to_string(cextent.s.bottom).c_str());
-    warp_args.AddString(std::to_string(cextent.s.right).c_str());
-    warp_args.AddString(std::to_string(cextent.s.top).c_str());
-
-    warp_args.AddString("-dstnodata");
-    warp_args.AddString("nan");
-
-    warp_args.AddString("-srcnodata");  // <-- for testing only
-    warp_args.AddString("0");           // <-- for testing only
-
-    warp_args.AddString("-ot");
-    warp_args.AddString("Float64");
-
-    warp_args.AddString("-te_srs");
-    warp_args.AddString(_st_ref->proj().c_str());
-
-    warp_args.AddString("-ts");
-    warp_args.AddString(std::to_string(size_btyx[3]).c_str());
-    warp_args.AddString(std::to_string(size_btyx[2]).c_str());
-
-    warp_args.AddString("-r");
-    warp_args.AddString(resampling::to_string(view()->resampling_method()).c_str());
-
-    warp_args.AddString("-wo");
-    warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
-
-    warp_args.AddString("-overwrite");
-    //warp_args.AddString("-dstalpha"); // TODO: depend on data type?
-
-    GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
-    if (warp_opts == NULL) {
-        throw std::string(" default_chunking::read(): cannot create gdalwarp options.");
-    }
-
     OGRSpatialReference proj_out;
     proj_out.SetFromUserInput(_st_ref->proj().c_str());
     char *out_wkt;
@@ -409,7 +366,65 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             gdal_out->GetRasterBand(b + 1)->SetNoDataValue(NAN);  // why is the no data flag not available in the resulting files?
         }
 
+        CPLStringList warp_args(NULL);
+        warp_args.AddString("-of");
+        warp_args.AddString("GTiff");  // TODO: make this configurable depending on the output size, maybe GTiff is faster? Alternatively a temporary directory might be given as configuration option that can be a ramdisk
+
+        warp_args.AddString("-t_srs");
+        warp_args.AddString(_st_ref->proj().c_str());
+
+        warp_args.AddString("-te");  // xmin ymin xmax ymax
+        warp_args.AddString(std::to_string(cextent.s.left).c_str());
+        warp_args.AddString(std::to_string(cextent.s.bottom).c_str());
+        warp_args.AddString(std::to_string(cextent.s.right).c_str());
+        warp_args.AddString(std::to_string(cextent.s.top).c_str());
+
+        warp_args.AddString("-dstnodata");
+        warp_args.AddString("nan");
+
+        std::string nodata_value_list;
+        uint16_t hasnodata_count = 0;
+        for (uint16_t b = 0; b < band_rels.size(); ++b) {
+            if (!_bands.get(std::get<0>(band_rels[b])).no_data_value.empty()) {
+                ++hasnodata_count;
+                nodata_value_list += _bands.get(std::get<0>(band_rels[b])).no_data_value;
+                if (b < band_rels.size() - 1) nodata_value_list += " ";
+            }
+        }
+        if (hasnodata_count == band_rels.size() || hasnodata_count == 1) {
+            warp_args.AddString("-srcnodata");
+            warp_args.AddString(("\"" + nodata_value_list + "\"").c_str());
+        } else if (hasnodata_count != 0) {
+            // What if nodata value is only defined for some of the bands?
+            std::cout << "WARNING in image_collection_cube::read_chunk(): incomplete nodata information, will be ognored" << std::endl;
+        }
+
+        warp_args.AddString("-ot");
+        warp_args.AddString("Float64");
+
+        warp_args.AddString("-te_srs");
+        warp_args.AddString(_st_ref->proj().c_str());
+
+        warp_args.AddString("-ts");
+        warp_args.AddString(std::to_string(size_btyx[3]).c_str());
+        warp_args.AddString(std::to_string(size_btyx[2]).c_str());
+
+        warp_args.AddString("-r");
+        warp_args.AddString(resampling::to_string(view()->resampling_method()).c_str());
+
+        warp_args.AddString("-wo");
+        warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
+
+        //warp_args.AddString("-overwrite");
+        //warp_args.AddString("-dstalpha"); // TODO: depend on data type?
+
+        GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
+        if (warp_opts == NULL) {
+            throw std::string(" default_chunking::read(): cannot create gdalwarp options.");
+        }
+
         (GDALDataset *)GDALWarp(NULL, gdal_out, 1, &cropped_vrt, warp_opts, NULL);
+        GDALWarpAppOptionsFree(warp_opts);
 
         GDALClose(cropped_vrt);
 
@@ -442,8 +457,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     free(img_buf);
 
-    GDALWarpAppOptionsFree(warp_opts);
-
     return out;
 }
 
@@ -457,7 +470,7 @@ void image_collection_cube::load_bands() {
         b.type = "float64";
         b.scale = bands_info[ib].scale;
         b.offset = bands_info[ib].offset;
-        // TODO: Add na value if available!!!!
+        b.no_data_value = bands_info[ib].nodata;
         _bands.add(b);
     }
     _size[0] = _bands.count();

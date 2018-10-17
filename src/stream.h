@@ -98,7 +98,7 @@ class stream_cube : public cube {
 
         for (uint16_t ib = 0; ib < csize_out_1[0]; ++ib) {
             band b("band" + std::to_string(ib + 1));
-            b.no_data_value = NAN;
+            b.no_data_value = std::to_string(NAN);
             b.type = "float64";
             _bands.add(b);
         }

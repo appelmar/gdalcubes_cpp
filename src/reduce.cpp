@@ -99,9 +99,10 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
 
     // The following loop seems to be needed for some drivers only
     for (uint16_t b = 0; b < _bands.count(); ++b) {  //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);
-        gdal_out->GetRasterBand(b + 1)->Fill(_bands.get(b).no_data_value);
-        gdal_out->GetRasterBand(b + 1)->SetNoDataValue(_bands.get(b).no_data_value);  // why is the no data flag not available in the resulting files?
-        // TODO: set scale and offset
+        if (!_bands.get(b).no_data_value.empty()) {
+            gdal_out->GetRasterBand(b + 1)->Fill(std::stod(_bands.get(b).no_data_value));
+            gdal_out->GetRasterBand(b + 1)->SetNoDataValue(std::stod(_bands.get(b).no_data_value));  // why is the no data flag not available in the resulting files?
+        }                                                                                            // TODO: set scale and offset
     }
 
     //    for (uint32_t i = 0; i < count_chunks(); ++i) {

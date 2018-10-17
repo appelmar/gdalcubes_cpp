@@ -42,7 +42,7 @@ image_collection::image_collection(collection_format format) : _format(format), 
     }
 
     // Create Bands
-    std::string sql_schema_bands = "CREATE TABLE bands (id INTEGER PRIMARY KEY, name TEXT, type VARCHAR(16), offset NUMERIC, scale NUMERIC, unit VARCHAR(16));";
+    std::string sql_schema_bands = "CREATE TABLE bands (id INTEGER PRIMARY KEY, name TEXT, type VARCHAR(16), offset NUMERIC DEFAULT 0.0, scale NUMERIC DEFAULT 1.0, unit VARCHAR(16) DEFAULT '', nodata VARCHAR(16) DEFAULT '');";
     if (sqlite3_exec(_db, sql_schema_bands.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
         throw std::string("ERROR in collection_format::apply(): cannot create image collection schema (ii).");
     }
@@ -56,7 +56,12 @@ image_collection::image_collection(collection_format format) : _format(format), 
 
     uint16_t band_id = 0;
     for (auto it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
-        std::string sql_insert_band = "INSERT INTO bands(id, name) VALUES(" + std::to_string(band_id) + ",'" + it.key() + "');";
+        std::string sql_insert_band;
+        if (it.value().count("nodata")) {
+            sql_insert_band = "INSERT INTO bands(id, name, nodata) VALUES(" + std::to_string(band_id) + ",'" + it.key() + "','" + std::to_string(it.value()["nodata"].get<double>()) + "');";
+        } else {
+            sql_insert_band = "INSERT INTO bands(id, name) VALUES(" + std::to_string(band_id) + ",'" + it.key() + "');";
+        }
         ++band_id;
         if (sqlite3_exec(_db, sql_insert_band.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
             throw std::string("ERROR in collection_format::apply(): cannot insert bands to collection database.");
@@ -119,6 +124,7 @@ struct image_band {
     std::string unit;
     double scale;
     double offset;
+    std::string nodata;
 };
 
 void image_collection::add(std::vector<std::string> descriptors, bool strict) {
@@ -207,6 +213,11 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             b.offset = dataset->GetRasterBand(i + 1)->GetOffset();
             b.scale = dataset->GetRasterBand(i + 1)->GetScale();
             b.unit = dataset->GetRasterBand(i + 1)->GetUnitType();
+            b.nodata = "";
+            int hasnodata = 0;
+            double nd = dataset->GetRasterBand(i + 1)->GetNoDataValue(&hasnodata);
+            if (hasnodata)
+                b.nodata = std::to_string(nd);
             bands.push_back(b);
         }
         GDALClose((GDALDatasetH)dataset);
@@ -539,7 +550,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
 std::vector<image_collection::band_info_row> image_collection::get_bands() {
     std::vector<image_collection::band_info_row> out;
 
-    std::string sql = "SELECT id, name, type, offset,scale, unit FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
+    std::string sql = "SELECT id, name, type, offset,scale, unit, nodata FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {
@@ -554,6 +565,7 @@ std::vector<image_collection::band_info_row> image_collection::get_bands() {
         row.offset = sqlite3_column_double(stmt, 3);
         row.scale = sqlite3_column_double(stmt, 4);
         row.unit = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
+        row.nodata = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6)));
         out.push_back(row);
     }
     sqlite3_finalize(stmt);

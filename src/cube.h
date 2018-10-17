@@ -57,9 +57,9 @@ class chunk_processor_multithread : public chunk_processor {
 };
 
 struct band {
-    band(std::string name) : name(name), no_data_value(NAN), offset(0), scale(1), unit(""), type("float64") {}
+    band(std::string name) : name(name), no_data_value(std::to_string(NAN)), offset(0), scale(1), unit(""), type("float64") {}
     std::string name;
-    double no_data_value;
+    std::string no_data_value;
     double offset;
     double scale;
     std::string unit;

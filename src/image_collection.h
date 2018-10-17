@@ -263,6 +263,7 @@ class image_collection {
         GDALDataType type;
         double offset;
         double scale;
+        std::string nodata;
         std::string unit;
     };
 

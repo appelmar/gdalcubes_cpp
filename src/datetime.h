@@ -64,7 +64,7 @@ struct duration {
     }
 
     static duration from_string(std::string s) {
-        boost::regex rexp("P(T?)([0-9]+)([YMWD])");
+        boost::regex rexp("P(T?)([0-9]+)([YMWDHS])");
 
         boost::cmatch res;
         if (!boost::regex_match(s.c_str(), res, rexp)) {

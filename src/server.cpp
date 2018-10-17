@@ -43,14 +43,13 @@ server_chunk_cache* server_chunk_cache::_instance = nullptr;
 std::mutex server_chunk_cache::_singleton_mutex;
 
 void gdalcubes_server::handle_get(web::http::http_request req) {
-    if (!_whitelist.empty()){
-       std::string remote = req.remote_address();
-       if (_whitelist.find(remote) == _whitelist.end()) {
-           req.reply(web::http::status_codes::NotFound);
-       }
+    if (!_whitelist.empty()) {
+        std::string remote = req.remote_address();
+        if (_whitelist.find(remote) == _whitelist.end()) {
+            req.reply(web::http::status_codes::NotFound);
+        }
     }
     std::cout << "request from " << req.remote_address() << std::endl;
-
 
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
@@ -151,7 +150,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
 }
 
 void gdalcubes_server::handle_post(web::http::http_request req) {
-    if (!_whitelist.empty()){
+    if (!_whitelist.empty()) {
         std::string remote = req.remote_address();
         if (_whitelist.find(remote) == _whitelist.end()) {
             req.reply(web::http::status_codes::NotFound);
@@ -311,9 +310,8 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
     }
 }
 
-
 void gdalcubes_server::handle_head(web::http::http_request req) {
-    if (!_whitelist.empty()){
+    if (!_whitelist.empty()) {
         std::string remote = req.remote_address();
         if (_whitelist.find(remote) == _whitelist.end()) {
             req.reply(web::http::status_codes::NotFound);

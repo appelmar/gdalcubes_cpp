@@ -28,7 +28,9 @@ struct aggregation {
         MIN,
         MAX,
         MEAN,
-        MEDIAN
+        MEDIAN,
+        FIRST,
+        LAST
     };
 
     static aggregation_type from_string(std::string s) {
@@ -43,6 +45,10 @@ struct aggregation {
             return MEAN;
         } else if (s == "median") {
             return MEDIAN;
+        } else if (s == "first") {
+            return FIRST;
+        } else if (s == "last") {
+            return LAST;
         }
         return NONE;
     }
@@ -59,6 +65,10 @@ struct aggregation {
                 return "mean";
             case MEDIAN:
                 return "median";
+            case FIRST:
+                return "first";
+            case LAST:
+                return "last";
             default:
                 return "none";
         }

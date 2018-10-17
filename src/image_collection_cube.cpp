@@ -100,8 +100,45 @@ struct aggregation_state_mean : public aggregation_state {
     std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t *>> _val_count;
 };
 
+//TODO: implement median aggregation.
 struct aggregation_state_median : public aggregation_state {
     aggregation_state_median(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
+};
+
+struct aggregation_state_first : public aggregation_state {
+    aggregation_state_first(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
+
+    void init() override {}
+
+    void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
+        // iterate over all pixels
+        for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
+            if (isnan(((double *)img_buf)[i])) continue;
+            if (!isnan(((double *)chunk_buf)[i]))
+                continue;
+            else {
+                ((double *)chunk_buf)[i] = ((double *)img_buf)[i];
+            }
+        }
+    }
+
+    void finalize(void *buf) override {}
+};
+
+struct aggregation_state_last : public aggregation_state {
+    aggregation_state_last(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
+
+    void init() override {}
+
+    void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
+        // iterate over all pixels
+        for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
+            if (isnan(((double *)img_buf)[i])) continue;
+            ((double *)chunk_buf)[i] = ((double *)img_buf)[i];
+        }
+    }
+
+    void finalize(void *buf) override {}
 };
 
 struct aggregation_state_min : public aggregation_state {
@@ -240,7 +277,8 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     warp_args.AddString("-r");
     warp_args.AddString(resampling::to_string(view()->resampling_method()).c_str());
 
-    // TODO: add resampling
+    warp_args.AddString("-wo");
+    warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
 
     warp_args.AddString("-overwrite");
     //warp_args.AddString("-dstalpha"); // TODO: depend on data type?
@@ -262,6 +300,10 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         agg = new aggregation_state_min(size_btyx);
     } else if (view()->aggregation_method() == aggregation::MAX) {
         agg = new aggregation_state_max(size_btyx);
+    } else if (view()->aggregation_method() == aggregation::FIRST) {
+        agg = new aggregation_state_first(size_btyx);
+    } else if (view()->aggregation_method() == aggregation::LAST) {
+        agg = new aggregation_state_last(size_btyx);
     }
     //    else if (->view()->aggregation_method() == aggregation::MEDIAN) {
     //        agg = new aggregation_state_median(size_btyx);

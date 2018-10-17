@@ -7,13 +7,15 @@ for R and (in the future) Python. gdalcubes is not a database, i.e., it does not
 simply links to and indexes existing files / GDAL datasets. 
 
 Core features:
+
 - Creating image collections that link to and index existing files / cloud storage 
-- Convert image collections to data cubes on-the-fly during processing with desired spatiotemporal resoltion, extent, 
+- Convert image collections to data cubes on-the-fly during processing with desired spatiotemporal resolution, extent, 
 - Stream chunks of data cubes to external programs (R, python)
 - Distributed processing with `gdalcubes_server` and deployment via Docker
 
 
 Basic workflow:
+
 1. Create an image collection from existing imagery (local files, or cloud storage)
 2. Define a _data cube view_ to specify spatiotemporal resolution, extent, and projection of the target data cube
 3. Stream chunks of the data cube to your analysis in R / Python

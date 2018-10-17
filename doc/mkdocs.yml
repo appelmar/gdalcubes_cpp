@@ -4,7 +4,8 @@ repo_url: https://github.com/appelmar/gdalcubes
 site_author: Marius Appel
 nav:
     - Home: index.md
-    - Basic Concepts: concepts.md
+    - Getting started: R.md
+    - Basic concepts: concepts.md
     - R package: R.md
 
 theme: readthedocs

@@ -396,7 +396,7 @@ uint32_t image_collection::count_gdalrefs() {
 
 std::string image_collection::to_string() {
     std::stringstream ss;
-    ss << "IMAGE COLLECTION '" << _filename << "' has ";
+    ss << "IMAGE COLLECTION '" << (_filename.empty() ? "unnamed" : _filename) << "' has ";
     ss << std::to_string(count_images()) << " images with ";
     ss << std::to_string(count_bands()) << " bands from ";
     ss << std::to_string(count_gdalrefs()) << " GDAL dataset references";

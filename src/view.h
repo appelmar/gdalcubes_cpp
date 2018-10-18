@@ -302,6 +302,7 @@ class cube_view : public cube_st_reference {
     inline resampling::resampling_type& resampling_method() { return _resampling; }
 
    protected:
+    static cube_view read(nlohmann::json j);
     resampling::resampling_type _resampling;
     aggregation::aggregation_type _aggregation;
 };

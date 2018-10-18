@@ -17,54 +17,7 @@
 #include "view.h"
 #include <boost/regex.hpp>
 
-cube_view cube_view::read_json(std::string filename) {
-    namespace fs = boost::filesystem;
-    if (!fs::exists(filename))
-        throw std::string("ERROR in cube_view::read_json(): image_collection_cube view file does not exist.");
-    std::ifstream i(filename);
-    nlohmann::json j;
-    i >> j;
-    cube_view v;
-
-    v._dt = duration::from_string(j.at("time").at("dt").get<std::string>());
-
-    std::string st0 = j.at("time").at("t0").get<std::string>();
-    std::string st1 = j.at("time").at("t1").get<std::string>();
-
-    v._t0 = datetime::from_string(st0);
-    v._t1 = datetime::from_string(st1);
-
-    // No matter how the start and end datetime are given, use the unit of the datetime interval!
-    v._t0.unit() = v._dt.dt_unit;
-    v._t1.unit() = v._dt.dt_unit;
-
-    v._nx = j.at("space").at("nx").get<uint32_t>();
-    v._ny = j.at("space").at("ny").get<uint32_t>();
-    v._win.left = j.at("space").at("left").get<double>();
-    v._win.right = j.at("space").at("right").get<double>();
-    v._win.top = j.at("space").at("top").get<double>();
-    v._win.bottom = j.at("space").at("bottom").get<double>();
-    v._proj = j.at("space").at("proj").get<std::string>();
-
-    if (j.count("resampling") == 0) {
-        v._resampling = resampling::resampling_type::NEAR;
-    } else {
-        v._resampling = resampling::from_string(j.at("resampling").get<std::string>());
-    }
-
-    if (j.count("aggregation") == 0) {
-        v._aggregation = aggregation::aggregation_type::NONE;
-    } else {
-        v._aggregation = aggregation::from_string(j.at("aggregation").get<std::string>());
-    }
-
-    return v;
-}
-
-cube_view cube_view::read_json_string(std::string str) {
-    std::istringstream i(str);
-    nlohmann::json j;
-    i >> j;
+cube_view cube_view::read(nlohmann::json j) {
     cube_view v;
 
     v._dt = duration::from_string(j.at("time").at("dt").get<std::string>());
@@ -114,6 +67,25 @@ cube_view cube_view::read_json_string(std::string str) {
     }
 
     return v;
+}
+
+cube_view cube_view::read_json(std::string filename) {
+    namespace fs = boost::filesystem;
+    if (!fs::exists(filename))
+        throw std::string("ERROR in cube_view::read_json(): image_collection_cube view file does not exist.");
+    std::ifstream i(filename);
+    nlohmann::json j;
+    i >> j;
+    return read(j);
+}
+
+cube_view cube_view::read_json_string(std::string str) {
+    std::istringstream i(str);
+    nlohmann::json j;
+    i >> j;
+    cube_view v;
+
+    return read(j);
 }
 
 void cube_view::write_json(std::string filename) {

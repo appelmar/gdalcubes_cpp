@@ -223,22 +223,24 @@ int main(int argc, char *argv[]) {
 
             bounds_st e = ic.extent();
             std::cout << ic.to_string() << std::endl;
-            std::cout << "date range: " << e.t0.to_string() << " to " << e.t1.to_string() << std::endl;
-            std::cout << "x / lat range: " << e.s.left << " to " << e.s.right << std::endl;
-            std::cout << "y / lon range: " << e.s.bottom << " to " << e.s.top << std::endl;
-            std::cout << "BAND"
-                      << ":("
-                      << "type"
-                      << ","
-                      << "offset"
-                      << ","
-                      << "scale"
-                      << ","
-                      << "unit"
-                      << ")" << std::endl;
+            std::cout << "DIMENSIONS: " << std::endl;
+            std::cout << "  BANDS:       ";
             for (uint16_t i = 0; i < bands.size(); ++i) {
-                std::cout << bands[i].name << ":(" << utils::string_from_gdal_type(bands[i].type) << "," << bands[i].offset << "," << bands[i].scale << "," << bands[i].unit << ")" << std::endl;
+                std::cout << "(" << bands[i].name << ")";
+                if (i == bands.size() - 1) {
+                    std::cout << std::endl;
+                } else {
+                    std::cout << " ";
+                }
             }
+
+            std::cout << "  DATETIME:    "
+                      << "(" << e.t0.to_string() << " - " << e.t1.to_string() << ")" << std::endl;
+            std::cout << "  Y / LAT:     "
+                      << "(" << e.s.bottom << " - " << e.s.top << ")" << std::endl;
+            std::cout << "  X / LON:     "
+                      << "(" << e.s.left << " - " << e.s.right << ")" << std::endl;
+
         } else if (cmd == "reduce") {
             po::options_description reduce_desc("reduce arguments");
             reduce_desc.add_options()("view,v", po::value<std::string>(), "Path to the JSON data view description");

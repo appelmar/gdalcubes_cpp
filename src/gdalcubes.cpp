@@ -51,6 +51,7 @@ void print_usage(std::string command = "") {
         std::cout << "Options:" << std::endl;
         std::cout << "  -f, --format                  Path of the collection format description JSON file, this option is required" << std::endl;
         std::cout << "  -R, --recursive               If IN is a directory, do a recursive file listing" << std::endl;
+        std::cout << "    , --noarchives              If given, do not scan within zip, tar, gz, tar.gz archive files" << std::endl;
         std::cout << "  -s, --strict                  Cancel if a single GDALDataset cannot be added to the collection. If not given, ignore failing datasets in the output collection" << std::endl;
         std::cout << std::endl;
     } else if (command == "info") {
@@ -106,7 +107,7 @@ void print_usage(std::string command = "") {
     }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     config::instance()->gdalcubes_init();
 
     namespace po = boost::program_options;
@@ -142,7 +143,7 @@ int main(int argc, char *argv[]) {
         std::string cmd = vm["command"].as<std::string>();
         if (cmd == "create_collection") {
             po::options_description cc_desc("create_collection arguments");
-            cc_desc.add_options()("recursive,R", "Scan provided directory recursively")("format,f", po::value<std::string>(), "Path of JSON collection format description")("strict,s", "stop the creation of the complete image collection if adding one of the images fails. ")("input", po::value<std::string>(), "Input, either a directory or a text file with GDALDataset references such as file paths or URLs per line.")("output", po::value<std::string>(), "Filename of the created image collection.");
+            cc_desc.add_options()("recursive,R", "Scan provided directory recursively")("format,f", po::value<std::string>(), "")("strict,s", "")("noarchives", "")("input", po::value<std::string>(), "")("output", po::value<std::string>(), "");
 
             po::positional_options_description cc_pos;
             cc_pos.add("input", 1).add("output", 1);
@@ -159,6 +160,7 @@ int main(int argc, char *argv[]) {
 
             // TODO: implement debug flags
 
+            bool scan_archives = true;
             bool recursive = false;
             bool strict = false;
             if (vm.count("recursive")) {
@@ -166,6 +168,9 @@ int main(int argc, char *argv[]) {
             }
             if (vm.count("strict")) {
                 strict = true;
+            }
+            if (vm.count("noarchives")) {
+                scan_archives = false;
             }
 
             std::string input = vm["input"].as<std::string>();
@@ -180,12 +185,81 @@ int main(int argc, char *argv[]) {
                 if (recursive) {
                     fs::recursive_directory_iterator end;
                     for (fs::recursive_directory_iterator i(p); i != end; ++i) {
-                        in.push_back(fs::absolute((*i).path()).string());
+                        // if is zip, tar, tar, tar.gz, .gz
+                        if (fs::is_regular_file(i->path())) {
+                            if (scan_archives) {
+                                std::string s = i->path().string();
+                                if (s.compare(s.length() - 4, 4, ".zip") == 0 || s.compare(s.length() - 4, 4, ".ZIP") == 0) {
+                                    char** y = VSIReadDirRecursive(("/vsizip/" + s).c_str());
+                                    char** x = y;
+                                    while (*x != NULL) {
+                                        in.push_back("/vsizip/" + (fs::absolute((*i).path()) / *x).string());
+                                        ++x;
+                                    }
+                                    CSLDestroy(y);
+                                } else if (s.compare(s.length() - 3, 3, ".gz") == 0 || s.compare(s.length() - 3, 3, ".GZ") == 0) {
+                                    char** y = VSIReadDirRecursive(("/vsigzip/" + s).c_str());
+                                    char** x = y;
+                                    while (*x != NULL) {
+                                        in.push_back("/vsigzip/" + (fs::absolute((*i).path()) / *x).string());
+                                        ++x;
+                                    }
+                                    CSLDestroy(y);
+                                } else if (s.compare(s.length() - 4, 4, ".tar") == 0 || s.compare(s.length() - 4, 4, ".TAR") == 0 ||
+                                           s.compare(s.length() - 7, 7, ".tar.gz") == 0 || s.compare(s.length() - 7, 7, ".TAR.GZ") == 0 ||
+                                           s.compare(s.length() - 4, 4, ".tgz") == 0 || s.compare(s.length() - 4, 4, ".TGZ") == 0) {
+                                    char** y = VSIReadDirRecursive(("/vsitar/" + s).c_str());
+                                    char** x = y;
+                                    while (*x != NULL) {
+                                        in.push_back("/vsitar/" + (fs::absolute((*i).path()) / *x).string());
+                                        ++x;
+                                    }
+                                    CSLDestroy(y);
+                                } else {
+                                    in.push_back(fs::absolute((*i).path()).string());
+                                }
+                            } else {
+                                in.push_back(fs::absolute((*i).path()).string());
+                            }
+                        }
                     }
                 } else {
                     fs::directory_iterator end;
                     for (fs::directory_iterator i(p); i != end; ++i) {
-                        in.push_back(fs::absolute((*i).path()).string());
+                        if (scan_archives) {
+                            std::string s = i->path().string();
+                            if (s.compare(s.length() - 4, 4, ".zip") == 0 || s.compare(s.length() - 4, 4, ".ZIP") == 0) {
+                                char** y = VSIReadDirRecursive(("/vsizip/" + s).c_str());
+                                char** x = y;
+                                while (*x != NULL) {
+                                    in.push_back("/vsizip/" + (fs::absolute((*i).path()) / *x).string());
+                                    ++x;
+                                }
+                                CSLDestroy(y);
+                            } else if (s.compare(s.length() - 3, 3, ".gz") == 0 || s.compare(s.length() - 3, 3, ".GZ") == 0) {
+                                char** y = VSIReadDirRecursive(("/vsigzip/" + s).c_str());
+                                char** x = y;
+                                while (*x != NULL) {
+                                    in.push_back("/vsigzip/" + (fs::absolute((*i).path()) / *x).string());
+                                    ++x;
+                                }
+                                CSLDestroy(y);
+                            } else if (s.compare(s.length() - 4, 4, ".tar") == 0 || s.compare(s.length() - 4, 4, ".TAR") == 0 ||
+                                       s.compare(s.length() - 7, 7, ".tar.gz") == 0 || s.compare(s.length() - 7, 7, ".TAR.GZ") == 0 ||
+                                       s.compare(s.length() - 4, 4, ".tgz") == 0 || s.compare(s.length() - 4, 4, ".TGZ") == 0) {
+                                char** y = VSIReadDirRecursive(("/vsitar/" + s).c_str());
+                                char** x = y;
+                                while (*x != NULL) {
+                                    in.push_back("/vsitar/" + (fs::absolute((*i).path()) / *x).string());
+                                    ++x;
+                                }
+                                CSLDestroy(y);
+                            } else {
+                                in.push_back(fs::absolute((*i).path()).string());
+                            }
+                        } else {
+                            in.push_back(fs::absolute((*i).path()).string());
+                        }
                     }
                 }
             } else if (fs::is_regular_file(p)) {

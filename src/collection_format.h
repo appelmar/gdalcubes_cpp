@@ -23,7 +23,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
-#include "../include/json.hpp"
+#include "external/json.hpp"
 
 /**
  * The image collection format describes rules how image collections can be build from a simple list of files / URLs.

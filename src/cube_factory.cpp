@@ -16,7 +16,7 @@
 
 #include "cube_factory.h"
 
-#include "../include/json.hpp"
+#include "external/json.hpp"
 #include "image_collection_cube.h"
 #include "reduce.h"
 #include "stream.h"

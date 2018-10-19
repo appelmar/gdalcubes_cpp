@@ -18,8 +18,8 @@
 #define VIEW_H
 
 #include <algorithm>
-#include "../include/json.hpp"
 #include "datetime.h"
+#include "external/json.hpp"
 #include "image_collection.h"
 
 struct aggregation {

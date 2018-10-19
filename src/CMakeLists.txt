@@ -102,6 +102,12 @@ set_target_properties(libgdalcubes PROPERTIES PREFIX "")
 target_link_libraries(libgdalcubes ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
 install(TARGETS libgdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 
+
+# install header files
+install(DIRECTORY . DESTINATION include/gdalcubes
+        FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
+
+
 add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 target_link_libraries (gdalcubes libgdalcubes)
 install(TARGETS gdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)

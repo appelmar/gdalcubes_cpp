@@ -52,10 +52,37 @@ else (NOT CLANG_FORMAT)
 endif()
 
 
-# export src archive
-find_program (TARBIN NAMES tar)
-if(${TARBIN-NOTFOUND})
-    message(WARNING "could not find tar, skipping source code archive creation.")
-else (${TARBIN-NOTFOUND})
-    add_custom_target(srczip ALL COMMAND ${CMAKE_COMMAND} -E chdir .. tar "cfz" "${PROJECT_NAME}_src_${PROJECT_VERSION}.tar.gz" src  CMakeLists.txt LICENSE .gitignore .clang-format README.md)
+
+# documentation
+find_program (DOXYGEN NAMES doxygen)
+if(NOT DOXYGEN)
+    message(WARNING "could not find doxygen, skipping documentation build")
 endif()
+find_program (MKDOCS NAMES mkdocs)
+if(NOT MKDOCS)
+    message(WARNING "could not find mkdocs, skipping documentation build")
+endif()
+if (DOXYGEN AND MKDOCS)
+    add_custom_target(docs
+            COMMAND ${DOXYGEN} ../src/Doxyfile
+            COMMAND ${MKDOCS} build
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc
+            COMMENT "Building documentation" VERBATIM)
+endif()
+
+
+
+
+
+
+
+
+
+
+## export src archive
+#find_program (TARBIN NAMES tar)
+#if(${TARBIN-NOTFOUND})
+#    message(WARNING "could not find tar, skipping source code archive creation.")
+#else (${TARBIN-NOTFOUND})
+#    add_custom_target(srczip ALL COMMAND ${CMAKE_COMMAND} -E chdir .. tar "cfz" "${PROJECT_NAME}_src_${PROJECT_VERSION}.tar.gz" src  CMakeLists.txt LICENSE .gitignore .clang-format README.md)
+#endif()

@@ -9,8 +9,10 @@ nav:
     - Getting started: getting_started.md
     - Basic concepts: concepts.md
     - R package: R.md
+    - Tutorial: tutorial.md
     - C++ API: cpp-api.md
     - Server API: server-api.md
+
 
 theme:
   name: 'material'

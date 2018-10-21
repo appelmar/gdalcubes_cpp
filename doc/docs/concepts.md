@@ -15,24 +15,22 @@ or in several files and bands may also differ in their spatial resolution. Two d
 
 
 
-## GDAL dataset references
+###GDAL dataset references
+
 In gdalcubes, anything that is readable by GDAL may contain actual band data of an image. Typically, this will be local files, 
 but actually can be anything that [the `gdalinfo` command](https://www.gdal.org/gdalinfo.html) understands, including
 cloud storage, databases, and archive files (see below) through [GDAL virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html).
 Instead of _files_ we therefore often use the terms _GDAL dataset reference_ or _GDAL dataset descriptor_.
 
 ```
-gdalinfo /vsizip/my.zip/my.tif  # file in a .zip archive
-gdalinfo test.tif               # local file
+gdalinfo /vsizip/archive.zip/xyz.tif  # file in a .zip archive
+gdalinfo test.tif                     # local file
 gdalinfo /vsicurl/https://download.osgeo.org/geotiff/samples/spot/chicago/UTM2GTIF.TIF # file on a HTTP server
 ``` 
 
-## Image collections are not data cubes
 
 
-
-
-## Creating image collection files
+### Creating image collection files
 gdalcubes has its own file format to store an index including links to GDAL dataset descriptors and define how 
 they relate images and bands in a collection. Image collection files are simple [SQLite](https://www.sqlite.org/index.html)
 databases with three important tables `bands`, `images`, and `gdalrefs`. 
@@ -43,15 +41,19 @@ databases with three important tables `bands`, `images`, and `gdalrefs`.
 ---
 
 
-## JSON collection format description
+### JSON collection format description
 
-## Sharing image collections
+### Sharing image collections
 
 
 
-# Data cube views
+## Data cubes
 
-Data cube views (or simply _views_) convert an image collection to a data cube by defining the 
+gdalcubes are multidimensional arrays with dimensions band, datetime, y (latitude), and x (longitude). Cells of a cube
+all have the same size in space and time. Data cubes are fundamentally different from image collections. Image collections are irregular 
+in time, may contain gaps, do not have a globally valid projection, ....
+
+To create data cubes from image collections, we define a _data cube view_ (or simply _view_). Data cube views convert an image collection to a data cube by defining the 
 basic shape of the cube, i.e. how we look at the data. It includes
  
 - the spatiotemporal extent, 
@@ -60,13 +62,14 @@ basic shape of the cube, i.e. how we look at the data. It includes
 - a resampling algorithm used in [`gdalwarp`](https://www.gdal.org/gdalwarp.html), and 
 - a temporal aggregation algorithm that combines values of several image if they are located in the same cell of the target cube 
 
-Views can be serialized as simple JSON object as in the example below.
-
+Views can be serialized as simple JSON object as in the example below. Note that there is no single correct view for a specific image collections. Instead, they are 
+useful e.g. to run analysis an small subsets during model development before running on the full-resolution data.
+  
 example_view.json
 ```
 {
-  "aggregation" : "none",
-  "resampling" : "near",
+  "aggregation" : "min",
+  "resampling" : "bilinear",
   "space" :
   {
     "left" : 22.9,

@@ -1,0 +1,4 @@
+PKG_CPPFLAGS=-I/usr/include/gdal
+PKG_LIBS=/usr/local/lib/static/libgdalcubes.a -lboost_system
+CXX_STD=CXX11
+# TODO: use autoconf to derive locations for gdal and gdalcubes

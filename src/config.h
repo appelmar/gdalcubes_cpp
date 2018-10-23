@@ -74,6 +74,9 @@ class config {
         CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
     }
 
+    inline void set_verbose(bool v) { _verbose = v; }
+    inline bool get_verbose(void) { return _verbose; }
+
     inline uint16_t get_gdal_num_threads() { return _gdal_num_threads; }
 
     void gdalcubes_init() {
@@ -97,6 +100,7 @@ class config {
     uint16_t _server_worker_threads_max;  // number of threads for parallel chunk reads
     bool _swarm_curl_verbose;
     uint16_t _gdal_num_threads;
+    bool _verbose;
 
    private:
     config();

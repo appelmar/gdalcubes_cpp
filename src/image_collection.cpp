@@ -295,6 +295,8 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                                                   "scale=" + std::to_string(bands[band_num[i] - 1].scale) + "," +
                                                   "offset=" + std::to_string(bands[band_num[i] - 1].offset) + "," +
                                                   "unit='" + bands[band_num[i] - 1].unit + "' WHERE name='" + band_name[i] + "';";
+                    // if has no data
+
                     if (sqlite3_exec(_db, sql_band_update.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                         if (strict) throw std::string("ERROR in image_collection::add(): cannot update band table.");
                         std::cout << "WARNING: skipping  " << *it << " due to failed band table update" << std::endl;

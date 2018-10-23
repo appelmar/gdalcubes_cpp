@@ -39,7 +39,7 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
             throw std::string("ERROR: cannot find GDAL driver for GTiff.");
         }
 
-        CPLStringList out_co(NULL);
+        CPLStringList out_co;
         //out_co.AddNameValue("TILED", "YES");
         //out_co.AddNameValue("BLOCKXSIZE", "256");
         // out_co.AddNameValue("BLOCKYSIZE", "256");

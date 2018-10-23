@@ -60,7 +60,6 @@ struct mean_reducer : public reducer {
     uint32_t *_count;
 };
 
-// TODO: handle nodata values
 struct min_reducer : public reducer {
     void init(std::shared_ptr<chunk_data> a) override {
         for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {

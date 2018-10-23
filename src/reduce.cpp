@@ -73,7 +73,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
     }
     // TODO: Check whether driver supports Create()
 
-    CPLStringList out_co(NULL);
+    CPLStringList out_co;
     for (uint16_t i = 0; i < co.size(); ++i) {
         out_co.AddString(co[i].c_str());
     }
@@ -106,19 +106,6 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
             gdal_out->GetRasterBand(b + 1)->SetNoDataValue(std::stod(_bands.get(b).no_data_value));  // why is the no data flag not available in the resulting files?
         }                                                                                            // TODO: set scale and offset
     }
-
-    //    for (uint32_t i = 0; i < count_chunks(); ++i) {
-    //        std::shared_ptr<chunk_data> dat = read_chunk(i);
-    //        bounds_nd<uint32_t, 3> cb = chunk_limits(i);
-    //        for (uint16_t b = 0; b < _bands.count(); ++b) {
-    //            uint32_t yoff = (count_chunks_y() - 1) * _chunk_size[1] - cb.low[1];
-    //
-    //            gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Write, cb.low[2], yoff, cb.high[2] - cb.low[2] + 1,
-    //                                                     cb.high[1] - cb.low[1] + 1, ((double *)dat->buf()) + b * dat->size()[2] * dat->size()[3], cb.high[2] - cb.low[2] + 1, cb.high[1] - cb.low[1] + 1,
-    //                                                     GDT_Float64, 0, 0, NULL);
-    //        }
-    //    }
-    //  GDALClose(gdal_out);
 
     GDALClose(gdal_out);
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, &path](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {

@@ -7,7 +7,7 @@ In this tutorial we use a small  (approx. 24 GB) Landsat 8 surface reflectance d
 in Indonesia in September and October 2018, before and after the earthquake and tsunami.
 
 
-The dataset can be downloaded from XXX. After extraction of the ZIP file, you will see the atmospherically corrected images in subdirectories as shown below.
+The dataset can be downloaded [here](https://uni-muenster.sciebo.de/s/6OjnEyxzt4rk6px/download). After extraction of the ZIP file, you will see the atmospherically corrected images in subdirectories as shown below.
 
 ```
 ./LC081140612018091601T1-SC20181019060231
@@ -225,4 +225,25 @@ gdalcubes reduce -r median -t 2 -v view_post.json L08.db post.tif
 ## Stream data into R
 
 
+
+
+
+```
+library(gdalcubes)
+x = read_stream_as_array() # get input chunk as four dimensional array
+
+out <- reduce_time_multiband(x, function(x) {
+    ndvi <- (x[8,]-x[4,])/(x[8,]+x[4,])
+    if (all(is.na(x))) return(NA)
+    
+    xx = max(ndvi,na.rm=TRUE) - min(ndvi, na.rm=T)
+    return(xx)
+})
+
+write_stream_from_array(out)
+
+```
  
+```
+gdalcubes stream --exec="Rscript --vanilla ../../test/stream_example.R" -r mean -v "../../test/view2.json" -t 8 -c "16 256 256" s2test.db stream_result_8.tif
+```

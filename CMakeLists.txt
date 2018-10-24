@@ -54,6 +54,7 @@ endif()
 
 
 # documentation
+
 find_program (DOXYGEN NAMES doxygen)
 if(NOT DOXYGEN)
     message(WARNING "could not find doxygen, skipping documentation build")
@@ -63,10 +64,12 @@ if(NOT MKDOCS)
     message(WARNING "could not find mkdocs, skipping documentation build")
 endif()
 if (DOXYGEN AND MKDOCS)
-    add_custom_target(docs
-            COMMAND ${DOXYGEN} ../src/Doxyfile
-            COMMAND ${MKDOCS} build
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/doc
+    file(GLOB_RECURSE DOC_FILES "doc/mkdocs.yml" "doc/docs/*" )
+        message(STATUS "${DOC_FILES}")
+    add_custom_target(docs ALL
+            COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/docs.cmake
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            DEPENDS ${DOC_FILES}
             COMMENT "Building documentation" VERBATIM)
 endif()
 

@@ -38,7 +38,7 @@ docker run appelmar/gdalcubes /bin/bash # get a command line where you can run g
 
 ## Sample data
 
-A small (approx. 20 GB ) sample dataset with 18 Landsat images can be downloaded from XXX
+A small (approx. 24 GB ) sample dataset with 20 Landsat images can be downloaded [here](https://uni-muenster.sciebo.de/s/6OjnEyxzt4rk6px/download).
 
 
 

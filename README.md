@@ -59,7 +59,7 @@ docker run appelmar/gdalcubes /bin/bash # get a command line where you can run g
 
 # Command line interface
 The CLI can be used to create image collections (`gdalcubes create_collection`), to print information about existing 
-image collections ('gdalcubes info`), to stream chunks of image collection data cubes to external tools (gdalcubes stream), and to
+image collections (`gdalcubes info`), to stream chunks of image collection data cubes to external tools (`gdalcubes stream`), and to
 reduce image collection data cubes over time. More functionality, e.g. to update existing image collections, will be added in the future. 
 
 
@@ -73,4 +73,4 @@ install_github("appelmar/gdalcubes", subdir="Rpkg/gdalcubes")
 
 
 # Tutorial
-Further documentation including a tutorial with different datasets can be found at http://appelmar.github.io/gdalcubes.
+Further documentation including a tutorial with different datasets can be found at https://appelmar.github.io/gdalcubes.

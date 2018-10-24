@@ -1,24 +1,21 @@
 # gdalcubes - Earth observation data cubes from GDAL image collections
 
-**_This project is in initial development_**
+**gdalcubes** is a library and toolkit to represent collections of Earth Observation (EO) images
+as on-demand data cubes (or _multidimensional arrays_). It presents a single model how multitemporal and multispectral 
+imagery can be processed and streamed into external programs such as R or Python on local computers or distributed cloud environments. 
+gdalcubes is not a database, i.e., it does not need to store additional copies of the imagery but instead
+simply links to and indexes existing files / GDAL datasets. It is written in C++ and includes a command line interface as well as a package for R. A python package is
+planned for the future. gdalcubes is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
-This C++ library and toolkit presents a data model for Earth observation image collections from many 
-two-dimensional GDAL datasets. Gdalcubes strongly build on GDAL but differs by
-- adding date/time to images,
-- formalizing how multiple GDALDatasets  correspond to multi-band images,
-- and supporting images with different projections in single image collections.
+Core features:
 
-gdalcubes includes both, a data model for image collections as well as tools to stream data as multidimensional arrays
-into external tools such as R.  
+- Create image collections that link to and index existing files / cloud storage 
+- Process multitemporal, multispectral image collections as on demand data cubes with desired spatiotemporal resolution, extent, and projection.
+- Stream chunks of data cubes to external programs (R, python)
+- Scale processing in distributed environments with `gdalcubes_server` and Docker
 
-
-## gdalcubes in a nutshell
-
-What is a _gdalcube_? Image collection + data view
-
-What is an _image collection_? A bunch of GDAL datasets (e.g. image files) and their relation with regard to datetime and raster bands.
-
-What is a _data view_? A spatial and temporal window + resolution + projection how we look at the data. 
+gdalcubes alone does **not** provide a rich set of algorithms besides reducing data-cubes over time and filtering by space, time, and bands. 
+However, streaming chunks of cubes into external programs allows to apply e.g. arbitrary R or Python code on the data with little amount of reimplementations needed.     
 
 
 
@@ -26,146 +23,54 @@ What is a _data view_? A spatial and temporal window + resolution + projection h
 
 - Proposing a simple image collection file format to reference many images on local disk, remote servers, or in the cloud. 
 - Extent GDAL to work with multi-temporal, multi-spectral imagery.
-- Read image collection data as on demand data cubes and stream data chunks into analysis tools such as R or Python. 
+- Read image collection data as on demand data cubes and stream data chunks into common analysis tools such as R or Python. 
 - Provide simple possibilities to scale analysis to several machines  (e.g. by using Docker for deployment).
-- Demonstrate how to use gdalcubes for typical use cases. 
 
 
-# Command line utilities
+
+# Installation
+
+
+## Installation from sources
+
+gdalcubes uses CMake and can be compiled with a typical CMake workflow sa listed below.
 
 ```
-# Creating image collections
-gdalcubes create_collection -f collection_format.json list.txt out.db 
-gdalcubes create_collection -R -f collection_format.json /home/user/data/ out.db 
+git clone https://github.com/appelmar/gdalcubes && cd gdalcubes
+mkdir -p build 
+cd build 
+cmake -DCMAKE_BUILD_TYPE=Release ../ 
+make 
+make install
+```
 
+## Docker image
+This repository includes a Docker image which you can use either to run the gdalcubes command line interface interactively
+or to run gdalcubes_server as a service for distribute processing. The commands below demonstrate how to build the image and run a container.
+ 
 
-gdalcubes info in.db
-
-gdalcubes join in1.db in2.db out.db 
-
-gdalcubes stream -v view.json -t reduce_time -o result.db > Rscript timeseries_stats.R
-gdalcubes stream -v view.json -t apply_pixel > Rscript timeseries_stats.R
-
-gdalcubes reduce -r average -v view.json --gdal-of="Gtiff" --gdal-co="TILED=YES" --gdal-co="COMPRESS=JPEG" --gdal-co="PHOTOMETRIC=YCBCR" in.db out.tif 
+```
+git clone https://github.com/appelmar/gdalcubes && cd gdalcubes 
+docker build -t appelmar/gdalcubes .
+docker run -d -p 11111:1111 appelmar/gdalcubes # runs gdalcubes_server as a deamon 
+docker run appelmar/gdalcubes /bin/bash # get a command line where you can run gdalcubes 
 ``` 
 
 
-# Creating image collections: The JSON collection format description
+# Command line interface
+The CLI can be used to create image collections (`gdalcubes create_collection`), to print information about existing 
+image collections ('gdalcubes info`), to stream chunks of image collection data cubes to external tools (gdalcubes stream), and to
+reduce image collection data cubes over time. More functionality, e.g. to update existing image collections, will be added in the future. 
 
 
-
-## Example: Local Sentinel 2 imagery
-
-Consider the local archive of a few Sentinel images each in on of their directories
-
-```
-ls
-> S2A_MSIL1C_20161213T093402_N0204_R136_T34UFD_20161213T093403.SAFE
-> S2A_MSIL1C_20170101T082332_N0204_R121_T34KGD_20170101T084243.SAFE
-> S2A_MSIL1C_20170111T082311_N0204_R121_T34KGD_20170111T084257.SAFE
-> S2A_MSIL1C_20171002T094031_N0205_R036_T34UFD_20171002T094035.SAFE
-> S2A_MSIL1C_20170131T082151_N0204_R121_T34KGD_20170131T084118.SAFE
-> S2A_MSIL1C_20170829T081601_N0205_R121_T34KGD_20170829T083601.SAFE
-> S2A_MSIL1C_20161222T082342_N0204_R121_T34KGD_20161222T083840.SAFE
-> S2A_MSIL1C_20170411T081601_N0204_R121_T34KGD_20170411T083418.SAFE
-> S2B_MSIL1C_20170726T125259_N0205_R138_T27WWM_20170726T125301.SAFE
-> S2A_MSIL1C_20170815T102021_N0205_R065_T32TMR_20170815T102513.SAFE
-> S2A_MSIL1C_20161212T082332_N0204_R121_T34KGD_20161212T084403.SAFE
-```
-
-Each of these directories stores the complete Sentinel 2 subfolder structure (see https://sentinel.esa.int/web/sentinel/user-guides/sentinel-2-msi/data-formats).
-To automatically derive an image collection from our archive, we need to specify the structure as a collection format JSON file.
-
+# R package
+The R package is currently under development. You can install the current version using the `devtools` package as below.
 
 ```
-{
-  "pattern" : ".+/IMG_DATA/.+\\.jp2",
-  "images" : {
-    "pattern" : ".*/(.+)\\.SAFE.*"
-  },
-  "datetime" : {
-    "pattern" : ".*MSIL1C_(.+?)_.*",
-    "format" : "%Y%m%dT%H%M%S"
-  },
-  "bands" : {
-    "band1" : {
-      "pattern" : ".+_B01\\.jp2"
-    },
-    "band2" : {
-      "pattern" : ".+_B02\\.jp2"
-    },
-    "band3" : {
-      "pattern" : ".+_B03\\.jp2"
-    },
-    "band4" : {
-      "pattern" : ".+_B04\\.jp2"
-    },
-    "band5" : {
-      "pattern" : ".+_B05\\.jp2"
-    },
-    "band6" : {
-      "pattern" : ".+_B06\\.jp2"
-    },
-    "band7" : {
-      "pattern" : ".+_B07\\.jp2"
-    },
-    "band8" : {
-      "pattern" : ".+_B08\\.jp2"
-    },
-    "band8A" : {
-      "pattern" : ".+_B8A\\.jp2"
-    },
-    "band9" : {
-      "pattern" : ".+_B09\\.jp2"
-    },
-    "band10" : {
-      "pattern" : ".+_B10\\.jp2"
-    },
-    "band11" : {
-      "pattern" : ".+_B11\\.jp2"
-    },
-    "band12" : {
-      "pattern" : ".+_B12\\.jp2"
-    }
-  }
-}
-```
-
-This file involves a few regular expressions to extract datetime, bands from individual .jp2 files.
-
-
-
-
-# Data Views
-
-Data views define how we look at the EO imagery and how it is transformed to a data image_collection_cube (or multidimensional array). It includes an area of interest, the projection, and the temporal and spatial resolutions.
-Views are serialized as JSON documents as in the example below:
-```
-{
-  "space" :
-  {
-    "left" : 6.9,
-    "right" : 7.1,
-    "top" : 52.0,
-    "bottom" : 51.8,
-    "proj" : "EPSG:4326",
-    "nx" : 100,
-    "ny" : 100
-  },
-  "time" :
-  {
-    "t0" : "2016-01-01",
-    "t1" : "2018-09-01",
-    "dt" : "P6M"
-  }
-}
+library(devtools)
+install_github("appelmar/gdalcubes", subdir="Rpkg/gdalcubes")
 ```
 
 
-# Ongoing work (without priority)
-- Test cases with some imagery
-- Examples for cloud storage
-- Unit tests for datetime
-- gdalcubes info CLI
-- processing example
-- Docker image for distributed processing
+# Tutorial
+Further documenta tion including a tutorial with different datasets can be found at http://appelmar.github.io/gdalcubes.

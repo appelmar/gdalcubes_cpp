@@ -73,4 +73,4 @@ install_github("appelmar/gdalcubes", subdir="Rpkg/gdalcubes")
 
 
 # Tutorial
-Further documenta tion including a tutorial with different datasets can be found at http://appelmar.github.io/gdalcubes.
+Further documentation including a tutorial with different datasets can be found at http://appelmar.github.io/gdalcubes.

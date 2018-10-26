@@ -75,12 +75,6 @@ write_stream_from_array <- function(v) {
   flush(f)
 }
 
-serialize_function <- function(f) {
-  src <- attr(f,"srcref", exact = TRUE)
-  if (is.null(src))
-    stop("source for given function is not available")
-  return(paste(as.character(src),collapse = "\n"))
-}
 
 
 #' ASSUMPTION: FUN RECEIVES MULTIBAND TIMESERIES AS INPUT AND PRODUCES

@@ -10,4 +10,15 @@ x_red_cube
 
 gcbs_eval(x_red_cube, "test.tif", "GTiff")
 
+f <- function() {
+  x = read_stream_as_array()
+  out <- reduce_time_multiband(x, function(x) {
+    ndvi <- (x[8,]-x[4,])/(x[8,]+x[4,])
+    if (all(is.na(x))) return(NA)
+    xx = max(ndvi,na.rm=TRUE) - min(ndvi, na.rm=T)
+    return(xx)
+  })
+  write_stream_from_array(out)
+}
 
+scube <- gcbs_stream(xcube, f,c(16,256,256))

@@ -65,10 +65,25 @@ SEXP libgdalcubes_create_reduce_cube(SEXP inptr, std::string reducer) {
 
 // [[Rcpp::export]]
 void libgdalcubes_eval_reduce_cube(SEXP inptr, std::string outfile, std::string of) {
-
-
   Rcpp::XPtr< std::shared_ptr<reduce_cube> > pin(inptr);
-
   (*pin)->write_gdal_image(outfile, of);
+}
 
+
+
+
+// [[Rcpp::export]]
+SEXP libgdalcubes_create_stream_cube(SEXP inptr, std::string cmd, std::vector<int> chunk_size) {
+
+  Rcpp::XPtr< std::shared_ptr<image_collection_cube> > pin(inptr);
+
+  std::shared_ptr<stream_cube>* x = new std::shared_ptr<stream_cube>( std::make_shared<stream_cube>(*pin, cmd));
+  (*pin)->set_chunk_size(chunk_size[0], chunk_size[1], chunk_size[3]);
+
+  Rcpp::XPtr< std::shared_ptr<stream_cube> > p(x, true) ;
+
+  Rcout << (*x)->to_string() << std::endl;
+
+  // TODO also return size / band information as members of an output list
+  return p;
 }

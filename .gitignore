@@ -11,3 +11,6 @@ Rpkg/gdalcubes/man
 Rpkg/gdalcubes/gdalcubes.Rproj
 doc/site
 doc/doxygen/
+*.o
+*.so
+*.a

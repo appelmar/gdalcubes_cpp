@@ -3,7 +3,7 @@ Title: Streaming GDAL Data Cubes to R
 Version: 0.0.1.0
 Authors@R: person("Marius", "Appel", email = "marius.appel@uni-muenster.de", role = c("aut", "cre"))
 Description: The gdalcubes package constructs Earth Observation data cubes from many GDAL images / datasets and allows streaming data chunk-wise into R. 
-Depends: R (>= 3.4.4), Rcpp
+Depends: R (>= 3.4.4), Rcpp, DBI, RSQLite, jsonlite
 License: GPL-3
 Encoding: UTF-8
 LazyData: true

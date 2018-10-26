@@ -1,22 +1,4 @@
 
-# .First<-function(){
-#   library('devtools')
-#   if(Sys.getenv("GDALCUBES_STREAMING") == "1") {
-#     sink(tempfile(),type = "output")
-#     sink(tempfile(),type="message")
-#   }
-# }
-
-
-
-.onAttach = function(libname,pkgname)
-{
-  # if the package is used inside streaming, redirect stdout to stderr
-  # in order to not disturb the (binary) communication with gdalcubes
-  if(Sys.getenv("GDALCUBES_STREAMING") == "1") {
-    sink(stderr())
-  }
-}
 
 #' Test
 #' @export

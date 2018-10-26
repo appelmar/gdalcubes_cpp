@@ -65,7 +65,6 @@ if(NOT MKDOCS)
 endif()
 if (DOXYGEN AND MKDOCS)
     file(GLOB_RECURSE DOC_FILES "doc/mkdocs.yml" "doc/docs/*" )
-        message(STATUS "${DOC_FILES}")
     add_custom_target(docs ALL
             COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/docs.cmake
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

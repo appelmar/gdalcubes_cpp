@@ -97,10 +97,18 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 
 
 
-add_library(libgdalcubes  ${SOURCE_FILES})
-set_target_properties(libgdalcubes PROPERTIES PREFIX "")
-target_link_libraries(libgdalcubes ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
-install(TARGETS libgdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
+add_library(libgdalcubes_static STATIC  ${SOURCE_FILES})
+set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(libgdalcubes_static PROPERTIES OUTPUT_NAME "gdalcubes")
+target_link_libraries(libgdalcubes_static ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
+
+
+add_library(libgdalcubes_shared SHARED  ${SOURCE_FILES})
+set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(libgdalcubes_shared PROPERTIES OUTPUT_NAME "gdalcubes")
+target_link_libraries(libgdalcubes_shared ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
+
+install(TARGETS libgdalcubes_static libgdalcubes_shared RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 
 
 # install header files
@@ -109,7 +117,7 @@ install(DIRECTORY . DESTINATION include/gdalcubes
 
 
 add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
-target_link_libraries (gdalcubes libgdalcubes)
+target_link_libraries (gdalcubes libgdalcubes_static)
 install(TARGETS gdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 
 
@@ -117,7 +125,7 @@ file(GLOB TEST_FILES
         "test/*.cpp" "*.h")
 
 add_executable(gdalcubes_test ${TEST_FILES})
-target_link_libraries (gdalcubes_test libgdalcubes)
+target_link_libraries (gdalcubes_test libgdalcubes_static)
 
 
 find_library(CPPRESTSDK_LIB cpprest)
@@ -130,7 +138,7 @@ else (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
     message(STATUS "openssl library found at ${OPENSSL_LIB}")
     message(STATUS "crypto library found at ${CRYPTO_LIB}")
     add_executable(gdalcubes_server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
-    target_link_libraries (gdalcubes_server libgdalcubes ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB})
+    target_link_libraries (gdalcubes_server libgdalcubes_static ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB})
     install(TARGETS gdalcubes_server RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 endif (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
 
@@ -139,6 +147,6 @@ endif (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
 
 
 add_executable(gdalcubes_example ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
-target_link_libraries (gdalcubes_example libgdalcubes)
+target_link_libraries (gdalcubes_example libgdalcubes_static)
 
 

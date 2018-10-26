@@ -233,17 +233,18 @@ library(gdalcubes)
 x = read_stream_as_array() # get input chunk as four dimensional array
 
 out <- reduce_time_multiband(x, function(x) {
-    ndvi <- (x[8,]-x[4,])/(x[8,]+x[4,])
-    if (all(is.na(x))) return(NA)
-    
-    xx = max(ndvi,na.rm=TRUE) - min(ndvi, na.rm=T)
-    return(xx)
+    clouds <- which(x[8,] == 8)
+    x[5,clouds] <- NA
+    x[4,clouds] <- NA
+    ndvi <- (x[5,]-x[4,])/(x[5,]+x[4,])
+    if (all(!is.finite(ndvi))) return(NA)
+    if (sum(!is.na(ndvi)) == 1) return(NA)
+    return(max(ndvi,na.rm=T) - min(ndvi, na.rm=T))
 })
 
 write_stream_from_array(out)
-
 ```
  
 ```
-gdalcubes stream --exec="Rscript --vanilla ../../test/stream_example.R" -r mean -v "../../test/view2.json" -t 8 -c "16 256 256" s2test.db stream_result_8.tif
+gdalcubes stream --exec="Rscript --vanilla stream.R" -r median -v "view.json" -t 2 -c "16 256 256" L08.db stream.tif
 ```

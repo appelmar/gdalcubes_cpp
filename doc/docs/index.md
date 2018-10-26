@@ -12,10 +12,10 @@ planned for the future. gdalcubes is licensed under the [Apache License 2.0](htt
 
 Core features:
 
-- Create image collections that link to and index existing files / cloud storage 
-- Process multitemporal, multispectral image collections as on demand data cubes with desired spatiotemporal resolution, extent, and projection.
+- Create image collections that link to and index existing imagery from local files or cloud storage 
+- Read multitemporal, multispectral image collections as on demand data cubes with desired spatiotemporal resolution, extent, and projection
 - Stream chunks of data cubes to external programs (R, python)
-- Scale processing in distributed environments with `gdalcubes_server` and Docker
+- Scale computations on data cubes in distributed environments with `gdalcubes_server` and Docker
 
 gdalcubes alone does **not** provide a rich set of algorithms besides reducing data-cubes over time and filtering by space, time, and bands. 
 However, streaming chunks of cubes into external programs allows to apply e.g. arbitrary R or Python code on the data with little amount of reimplementations needed.     

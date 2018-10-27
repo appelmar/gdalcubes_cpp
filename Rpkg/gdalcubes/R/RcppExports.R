@@ -33,3 +33,7 @@ libgdalcubes_create_stream_cube <- function(inptr, cmd, chunk_size) {
     .Call('_gdalcubes_libgdalcubes_create_stream_cube', PACKAGE = 'gdalcubes', inptr, cmd, chunk_size)
 }
 
+libgdalcubes_set_threads <- function(n) {
+    invisible(.Call('_gdalcubes_libgdalcubes_set_threads', PACKAGE = 'gdalcubes', n))
+}
+

@@ -50,6 +50,7 @@ SEXP libgdalcubes_create_image_collection_cube(std::string filename, std::string
 SEXP libgdalcubes_create_reduce_cube(SEXP inptr, std::string reducer) {
 
 
+
   Rcpp::XPtr< std::shared_ptr<cube> > pin(inptr);
 
   std::shared_ptr<reduce_cube>* x = new std::shared_ptr<reduce_cube>( std::make_shared<reduce_cube>(*pin, reducer));
@@ -57,6 +58,7 @@ SEXP libgdalcubes_create_reduce_cube(SEXP inptr, std::string reducer) {
 
   Rcout << (*x)->to_string() << std::endl;
 
+  Rcout << (*x)->make_constructible_json().dump(2) << std::endl;
     // TODO also return size / band information as members of an output list
   return p;
 }
@@ -78,7 +80,7 @@ SEXP libgdalcubes_create_stream_cube(SEXP inptr, std::string cmd, std::vector<in
   Rcpp::XPtr< std::shared_ptr<image_collection_cube> > pin(inptr);
 
   std::shared_ptr<stream_cube>* x = new std::shared_ptr<stream_cube>( std::make_shared<stream_cube>(*pin, cmd));
-  (*pin)->set_chunk_size(chunk_size[0], chunk_size[1], chunk_size[3]);
+  (*pin)->set_chunk_size(chunk_size[0], chunk_size[1], chunk_size[2]);
 
   Rcpp::XPtr< std::shared_ptr<stream_cube> > p(x, true) ;
 
@@ -87,3 +89,16 @@ SEXP libgdalcubes_create_stream_cube(SEXP inptr, std::string cmd, std::vector<in
   // TODO also return size / band information as members of an output list
   return p;
 }
+
+
+// [[Rcpp::export]]
+void libgdalcubes_set_threads(IntegerVector n) {
+  if (n[0] > 1) {
+    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(n[0])));
+  }
+  else {
+    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_singlethread>()));
+  }
+}
+
+

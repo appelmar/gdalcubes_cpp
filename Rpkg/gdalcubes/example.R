@@ -8,7 +8,7 @@ xcube
 x_red_cube <- gcbs_reduce(xcube,"median")
 x_red_cube
 
-gcbs_eval(x_red_cube, "test.tif", "GTiff")
+#gcbs_eval(x_red_cube, "test.tif", "GTiff")
 
 f <- function() {
   x = read_stream_as_array()
@@ -22,3 +22,10 @@ f <- function() {
 }
 
 scube <- gcbs_stream(xcube, f,c(16,256,256))
+
+
+scube_reduce <- gcbs_reduce(scube, "median")
+scube_reduce
+gcbs_eval(scube_reduce, "test_stream.tif", "GTiff")
+
+

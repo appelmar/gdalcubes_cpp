@@ -20,5 +20,16 @@ is.gcbs_cube <- function(obj) {
 
 #' @export
 print.gcbs_cube <- function(obj) {
-  print("A gdalcubes proxy object.")
+  cat("A GDAL data cube proxy object of type", obj$type, "\n")
+  cat("Dimensions:\n")
+  print(obj$dimensions)
+  cat("\n")
+  cat("Bands:\n")
+  print(obj$bands)
+  cat("\n")
+
 }
+
+
+# size_bytes <- function(obj)
+# projection <- function(obj)

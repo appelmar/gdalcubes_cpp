@@ -27,5 +27,6 @@
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"
+#include "progress.h"
 
 #endif  //GDALCUBES_H

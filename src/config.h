@@ -20,6 +20,7 @@
 #include <curl/curl.h>
 #include <gdal_priv.h>
 #include <memory>
+#include "progress.h"
 
 // forward declarations
 class chunk_processor;
@@ -44,6 +45,15 @@ class config {
     inline void set_default_chunk_processor(std::shared_ptr<chunk_processor> p) {
         _chunk_processor = p;
     }
+
+    inline void set_default_progress_bar(std::shared_ptr<progress> p) {
+        _progress_bar = p;
+    }
+
+    inline std::shared_ptr<progress> get_default_progress_bar() {
+        return _progress_bar;
+    }
+
 
     inline void set_gdal_cache_max(uint32_t size_bytes) {
         GDALSetCacheMax(size_bytes);
@@ -95,6 +105,7 @@ class config {
 
    private:
     std::shared_ptr<chunk_processor> _chunk_processor;
+    std::shared_ptr<progress> _progress_bar;
     uint32_t _gdal_cache_max;
     uint32_t _server_chunkcache_max;
     uint16_t _server_worker_threads_max;  // number of threads for parallel chunk reads

@@ -67,6 +67,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
 }
 
 void reduce_cube::write_gdal_image(std::string path, std::string format, std::vector<std::string> co, std::shared_ptr<chunk_processor> p) {
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     GDALDriver *drv = (GDALDriver *)GDALGetDriverByName(format.c_str());
     if (!drv) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): Cannot find GDAL driver for given format.");
@@ -107,8 +108,9 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
         }                                                                                            // TODO: set scale and offset
     }
 
+
     GDALClose(gdal_out);
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, &path](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, &path, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         m.lock();
         GDALDataset *gdal_out = (GDALDataset *)GDALOpenShared(path.c_str(), GA_Update);
         m.unlock();
@@ -128,7 +130,9 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
         m.lock();
         GDALClose(gdal_out);
         m.unlock();
+        prg->increment((double)1/(double)this->count_chunks());
     };
 
     p->apply(shared_from_this(), f);
+    prg->finalize();
 }

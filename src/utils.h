@@ -17,6 +17,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <iostream>
+#include <iomanip>
+#include <string>
+#include <sstream>
+#include <boost/filesystem.hpp>
+
 class utils {
    public:
     static std::string generate_unique_filename() {

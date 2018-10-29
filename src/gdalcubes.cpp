@@ -109,6 +109,8 @@ void print_usage(std::string command = "") {
 
 int main(int argc, char* argv[]) {
     config::instance()->gdalcubes_init();
+    config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
+
 
     namespace po = boost::program_options;
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options

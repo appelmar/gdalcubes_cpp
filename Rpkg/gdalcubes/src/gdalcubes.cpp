@@ -1,7 +1,47 @@
-#include <Rcpp.h>
+
 #include <gdalcubes/gdalcubes.h>
+
+
+// [[Rcpp::depends(RcppProgress)]]
+#include <Rcpp.h>
+#include <progress.hpp>
+#include <progress_bar.hpp>
+
 using namespace Rcpp;
 
+
+
+
+struct progress_simple_R : public progress {
+  std::shared_ptr<progress> get() override { return std::make_shared<progress_simple_R>(); }
+  void set(double p) override {
+    if (!_rp) _rp = new Progress(100,true);
+    _m.lock();
+    double p_old = _p;
+    _p = p;
+    _rp->update((int)(_p*100));
+    _m.unlock();
+  };
+  void increment(double dp) override {
+    if (!_rp) _rp = new Progress(100,true);
+    set(_p + dp);
+  }
+  virtual void finalize() override {
+    _rp->update(100);
+  }
+
+
+  progress_simple_R() : _p(0), _rp(nullptr) {}
+
+  ~progress_simple_R(){
+    if (_rp) delete _rp;
+  }
+
+private:
+  std::mutex _m;
+  double _p;
+  Progress *_rp;
+};
 
 
 // [[Rcpp::export]]
@@ -13,6 +53,7 @@ void libgdalcubes_version() {
 // [[Rcpp::export]]
 void libgdalcubes_init() {
   config::instance()->gdalcubes_init();
+  config::instance()->set_default_progress_bar(std::make_shared<progress_simple_R>());
 }
 
 // [[Rcpp::export]]

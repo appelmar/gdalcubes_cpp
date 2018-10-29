@@ -1,14 +1,16 @@
 library(gdalcubes)
 
 x = gcbs_open_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/src/test.db")
-v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=22, r=24,t=-18,b=-20, aggregation = "min")
+v <- gcbs_view(nx = 800, ny=800, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=22, r=24,t=-18,b=-20, aggregation = "min")
 xcube <- gcbs_cube(x,v)
 xcube
 
 x_red_cube <- gcbs_reduce(xcube,"median")
 x_red_cube
 
-#gcbs_eval(x_red_cube, "test.tif", "GTiff")
+gcbs_set_threads(2)
+gcbs_eval(x_red_cube, "test.tif", "GTiff")
+
 
 f <- function() {
   x = read_stream_as_array()
@@ -26,6 +28,6 @@ scube <- gcbs_stream(xcube, f,c(16,256,256))
 
 scube_reduce <- gcbs_reduce(scube, "median")
 scube_reduce
-gcbs_eval(scube_reduce, "test_stream.tif", "GTiff")
+gcbs_eval(scube_reduce, "test_stream3.tif", "GTiff")
 
 

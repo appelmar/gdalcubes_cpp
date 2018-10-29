@@ -55,7 +55,7 @@ struct progress_simple_stdout : public progress {
         for (uint16_t i = 0; i < (((int)(100 * _p)) / 10); ++i) {
             std::cout << "=";
         }
-        std::cout << "<| DONE." << std::endl;
+        std::cout << ">| DONE." << std::endl;
     }
 
     progress_simple_stdout() : _p(0) {}

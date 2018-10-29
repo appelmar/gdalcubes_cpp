@@ -9,7 +9,9 @@
 
 using namespace Rcpp;
 
-
+/**
+ * TODO: return more cube information. including bands, spatial / temporal footprint, ...
+ */
 
 
 struct progress_simple_R : public progress {
@@ -80,7 +82,10 @@ SEXP libgdalcubes_create_image_collection_cube(std::string filename, std::string
 
   Rcpp::XPtr< std::shared_ptr<image_collection_cube> > p(x, true) ;
 
-  Rcout << (*x)->to_string() << std::endl;
+  return Rcpp::List::create(Rcpp::Named("type") = "image_collection_cube",
+                            Rcpp::Named("graph") = (*x)->make_constructible_json().dump(),
+                            Rcpp::Named("size") = Rcpp::IntegerVector::create((*x)->size()[0], (*x)->size()[1], (*x)->size()[2], (*x)->size()[3]),
+                            Rcpp::Named("xptr") = p);
 
   // TODO also return size / band information as members of an output list
   return p;
@@ -88,27 +93,24 @@ SEXP libgdalcubes_create_image_collection_cube(std::string filename, std::string
 
 
 // [[Rcpp::export]]
-SEXP libgdalcubes_create_reduce_cube(SEXP inptr, std::string reducer) {
-
-
-
-  Rcpp::XPtr< std::shared_ptr<cube> > pin(inptr);
-
+SEXP libgdalcubes_create_reduce_cube(Rcpp::List incube, std::string reducer) {
+  Rcpp::XPtr< std::shared_ptr<cube> > pin = incube["xptr"];
   std::shared_ptr<reduce_cube>* x = new std::shared_ptr<reduce_cube>( std::make_shared<reduce_cube>(*pin, reducer));
   Rcpp::XPtr< std::shared_ptr<reduce_cube> > p(x, true) ;
 
-  Rcout << (*x)->to_string() << std::endl;
 
-  Rcout << (*x)->make_constructible_json().dump(2) << std::endl;
-    // TODO also return size / band information as members of an output list
-  return p;
+ // TODO: add inptr as list
+  return Rcpp::List::create(Rcpp::Named("type") = "reduce_cube",
+                     Rcpp::Named("graph") = (*x)->make_constructible_json().dump(),
+                     Rcpp::Named("size") = Rcpp::IntegerVector::create((*x)->size()[0], (*x)->size()[1], (*x)->size()[2], (*x)->size()[3]),
+                     Rcpp::Named("xptr") = p);
 }
 
 
 
 // [[Rcpp::export]]
-void libgdalcubes_eval_reduce_cube(SEXP inptr, std::string outfile, std::string of) {
-  Rcpp::XPtr< std::shared_ptr<reduce_cube> > pin(inptr);
+void libgdalcubes_eval_reduce_cube(Rcpp::List incube, std::string outfile, std::string of) {
+  Rcpp::XPtr< std::shared_ptr<reduce_cube> > pin = incube["xptr"];
   (*pin)->write_gdal_image(outfile, of);
 }
 
@@ -116,18 +118,22 @@ void libgdalcubes_eval_reduce_cube(SEXP inptr, std::string outfile, std::string 
 
 
 // [[Rcpp::export]]
-SEXP libgdalcubes_create_stream_cube(SEXP inptr, std::string cmd, std::vector<int> chunk_size) {
+SEXP libgdalcubes_create_stream_cube(Rcpp::List incube, std::string cmd, std::vector<int> chunk_size) {
 
-  Rcpp::XPtr< std::shared_ptr<image_collection_cube> > pin(inptr);
+  Rcpp::XPtr< std::shared_ptr<image_collection_cube> > pin = incube["xptr"];
+
 
   std::shared_ptr<stream_cube>* x = new std::shared_ptr<stream_cube>( std::make_shared<stream_cube>(*pin, cmd));
   (*pin)->set_chunk_size(chunk_size[0], chunk_size[1], chunk_size[2]);
 
   Rcpp::XPtr< std::shared_ptr<stream_cube> > p(x, true) ;
 
-  Rcout << (*x)->to_string() << std::endl;
 
   // TODO also return size / band information as members of an output list
+  return Rcpp::List::create(Rcpp::Named("type") = "stream_cube",
+                            Rcpp::Named("graph") = (*x)->make_constructible_json().dump(),
+                            Rcpp::Named("size") = Rcpp::IntegerVector::create((*x)->size()[0], (*x)->size()[1], (*x)->size()[2], (*x)->size()[3]),
+                            Rcpp::Named("xptr") = p);
   return p;
 }
 

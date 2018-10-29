@@ -4,7 +4,7 @@ gcbs_cube <- function(image_collection, view, chunking=c(16, 256, 256)) {
   stopifnot(is.gcbs_image_collection(image_collection))
   stopifnot(is.gcbs_view(view))
   x = libgdalcubes_create_image_collection_cube(image_collection$path, as_json(view))
-  class(x) <- c("gcbs_image_collection_cube", "gcbs_cube") # hide Xptr class
+  class(x) <- c("gcbs_image_collection_cube", "gcbs_cube", "list")
   return(x)
 }
 

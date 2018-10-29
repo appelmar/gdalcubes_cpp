@@ -3,7 +3,7 @@ gcbs_reduce <- function(cube, reducer=c("mean","median","min","max")) {
   stopifnot(is.gcbs_cube(cube))
 
   x = libgdalcubes_create_reduce_cube(cube, reducer) # TODO: add output
-  class(x) <- c("gcbs_reduce_cube", "gcbs_cube") # hide Xptr class
+  class(x) <- c("gcbs_reduce_cube", "gcbs_cube", "list")
   return(x)
 }
 

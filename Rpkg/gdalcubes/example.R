@@ -8,7 +8,7 @@ xcube
 x_red_cube <- gcbs_reduce(xcube,"median")
 x_red_cube
 
-gcbs_set_threads(2)
+gcbs_set_threads(4)
 gcbs_eval(x_red_cube, "test.tif", "GTiff")
 
 

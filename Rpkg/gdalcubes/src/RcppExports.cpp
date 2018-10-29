@@ -56,39 +56,39 @@ BEGIN_RCPP
 END_RCPP
 }
 // libgdalcubes_create_reduce_cube
-SEXP libgdalcubes_create_reduce_cube(SEXP inptr, std::string reducer);
-RcppExport SEXP _gdalcubes_libgdalcubes_create_reduce_cube(SEXP inptrSEXP, SEXP reducerSEXP) {
+SEXP libgdalcubes_create_reduce_cube(Rcpp::List incube, std::string reducer);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_reduce_cube(SEXP incubeSEXP, SEXP reducerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type inptr(inptrSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type incube(incubeSEXP);
     Rcpp::traits::input_parameter< std::string >::type reducer(reducerSEXP);
-    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_reduce_cube(inptr, reducer));
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_reduce_cube(incube, reducer));
     return rcpp_result_gen;
 END_RCPP
 }
 // libgdalcubes_eval_reduce_cube
-void libgdalcubes_eval_reduce_cube(SEXP inptr, std::string outfile, std::string of);
-RcppExport SEXP _gdalcubes_libgdalcubes_eval_reduce_cube(SEXP inptrSEXP, SEXP outfileSEXP, SEXP ofSEXP) {
+void libgdalcubes_eval_reduce_cube(Rcpp::List incube, std::string outfile, std::string of);
+RcppExport SEXP _gdalcubes_libgdalcubes_eval_reduce_cube(SEXP incubeSEXP, SEXP outfileSEXP, SEXP ofSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type inptr(inptrSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type incube(incubeSEXP);
     Rcpp::traits::input_parameter< std::string >::type outfile(outfileSEXP);
     Rcpp::traits::input_parameter< std::string >::type of(ofSEXP);
-    libgdalcubes_eval_reduce_cube(inptr, outfile, of);
+    libgdalcubes_eval_reduce_cube(incube, outfile, of);
     return R_NilValue;
 END_RCPP
 }
 // libgdalcubes_create_stream_cube
-SEXP libgdalcubes_create_stream_cube(SEXP inptr, std::string cmd, std::vector<int> chunk_size);
-RcppExport SEXP _gdalcubes_libgdalcubes_create_stream_cube(SEXP inptrSEXP, SEXP cmdSEXP, SEXP chunk_sizeSEXP) {
+SEXP libgdalcubes_create_stream_cube(Rcpp::List incube, std::string cmd, std::vector<int> chunk_size);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_stream_cube(SEXP incubeSEXP, SEXP cmdSEXP, SEXP chunk_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type inptr(inptrSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type incube(incubeSEXP);
     Rcpp::traits::input_parameter< std::string >::type cmd(cmdSEXP);
     Rcpp::traits::input_parameter< std::vector<int> >::type chunk_size(chunk_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_stream_cube(inptr, cmd, chunk_size));
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_stream_cube(incube, cmd, chunk_size));
     return rcpp_result_gen;
 END_RCPP
 }

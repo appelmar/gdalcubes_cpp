@@ -21,16 +21,16 @@ libgdalcubes_create_image_collection_cube <- function(filename, view) {
     .Call('_gdalcubes_libgdalcubes_create_image_collection_cube', PACKAGE = 'gdalcubes', filename, view)
 }
 
-libgdalcubes_create_reduce_cube <- function(inptr, reducer) {
-    .Call('_gdalcubes_libgdalcubes_create_reduce_cube', PACKAGE = 'gdalcubes', inptr, reducer)
+libgdalcubes_create_reduce_cube <- function(incube, reducer) {
+    .Call('_gdalcubes_libgdalcubes_create_reduce_cube', PACKAGE = 'gdalcubes', incube, reducer)
 }
 
-libgdalcubes_eval_reduce_cube <- function(inptr, outfile, of) {
-    invisible(.Call('_gdalcubes_libgdalcubes_eval_reduce_cube', PACKAGE = 'gdalcubes', inptr, outfile, of))
+libgdalcubes_eval_reduce_cube <- function(incube, outfile, of) {
+    invisible(.Call('_gdalcubes_libgdalcubes_eval_reduce_cube', PACKAGE = 'gdalcubes', incube, outfile, of))
 }
 
-libgdalcubes_create_stream_cube <- function(inptr, cmd, chunk_size) {
-    .Call('_gdalcubes_libgdalcubes_create_stream_cube', PACKAGE = 'gdalcubes', inptr, cmd, chunk_size)
+libgdalcubes_create_stream_cube <- function(incube, cmd, chunk_size) {
+    .Call('_gdalcubes_libgdalcubes_create_stream_cube', PACKAGE = 'gdalcubes', incube, cmd, chunk_size)
 }
 
 libgdalcubes_set_threads <- function(n) {

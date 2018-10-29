@@ -16,53 +16,54 @@
 #ifndef PROGRESS_H
 #define PROGRESS_H
 
-#include "utils.h"
-#include "timer.h"
-#include <mutex>
 #include <cmath>
+#include <mutex>
+#include "timer.h"
+#include "utils.h"
 
 struct progress {
     virtual std::shared_ptr<progress> get() = 0;
     virtual void set(double p) = 0;
     virtual void increment(double dp) = 0;
-    virtual void finalize() {};
+    virtual void finalize(){};
 };
 
 struct progress_none : public progress {
-    std::shared_ptr<progress> get() override {return std::make_shared<progress_none>();}
+    std::shared_ptr<progress> get() override { return std::make_shared<progress_none>(); }
     void set(double p) override {}
     void increment(double dp) override {}
 };
 
 struct progress_simple_stdout : public progress {
-    std::shared_ptr<progress> get() override {return std::make_shared<progress_simple_stdout>();}
+    std::shared_ptr<progress> get() override { return std::make_shared<progress_simple_stdout>(); }
     void set(double p) override {
         _m.lock();
         double p_old = _p;
         _p = p;
-        for (uint16_t i=0; i<(((int)(100*p))/10); ++i) {
+        for (uint16_t i = 0; i < (((int)(100 * p)) / 10); ++i) {
             std::cout << "=";
         }
-        std::cout << "> (" << std::round(100*p) << "%)";
+        std::cout << "> (" << std::round(100 * p) << "%)";
         std::cout << "\r";
         std::cout.flush();
         _m.unlock();
     };
     void increment(double dp) override {
-        set(_p+dp);
+        set(_p + dp);
     }
     virtual void finalize() override {
-        for (uint16_t i=0; i<(((int)(100*_p))/10); ++i) {
+        for (uint16_t i = 0; i < (((int)(100 * _p)) / 10); ++i) {
             std::cout << "=";
         }
         std::cout << "<| DONE." << std::endl;
     }
 
-private:
+    progress_simple_stdout() : _p(0) {}
+
+   private:
     std::mutex _m;
     double _p;
 };
-
 
 struct progress_simple_stdout_with_time : public progress {
     std::shared_ptr<progress> get() override {
@@ -72,39 +73,36 @@ struct progress_simple_stdout_with_time : public progress {
         _m.lock();
         double p_old = _p;
         _p = p;
-        for (uint16_t i=0; i<(((int)(100*p))/10); ++i) {
+        for (uint16_t i = 0; i < (((int)(100 * p)) / 10); ++i) {
             std::cout << "=";
         }
-        std::cout << "> (" << std::round(100*p) << "%)";
+        std::cout << "> (" << std::round(100 * p) << "%)";
         std::cout << "\r";
         std::cout.flush();
         _m.unlock();
     };
 
     void increment(double dp) override {
-        set(_p+dp);
+        set(_p + dp);
     }
     virtual void finalize() override {
-        for (uint16_t i=0; i<(((int)(100*_p))/10); ++i) {
+        for (uint16_t i = 0; i < (((int)(100 * _p)) / 10); ++i) {
             std::cout << "=";
         }
         std::cout << ">| DONE (" << _t->time() << "s)." << std::endl;
-
     }
 
-    progress_simple_stdout_with_time() : _t(nullptr) {
-        _t =  new timer();
+    progress_simple_stdout_with_time() : _t(nullptr), _p(0) {
+        _t = new timer();
     }
-    ~progress_simple_stdout_with_time()
-    {
+    ~progress_simple_stdout_with_time() {
         if (_t != nullptr) delete _t;
     }
 
-private:
+   private:
     timer* _t;
     std::mutex _m;
     double _p;
 };
 
-
-#endif //PROGRESS_H
+#endif  //PROGRESS_H

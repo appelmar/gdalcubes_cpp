@@ -92,7 +92,9 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         throw std::string("ERROR in chunking::write_netcdf_directory(): output is not a directory.");
     }
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         fs::path out_file = op / (std::to_string(id) + ".nc");
 
         chunk_size_btyx csize = dat->size();
@@ -214,9 +216,11 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         for (uint16_t i = 0; i < bands().count(); ++i) {
             v_bands[i].putVar(((double *)dat->buf()) + (int)i * (int)size_t() * (int)size_y() * (int)size_x());
         }
+        prg->increment((double)1 / (double)this->count_chunks());
     };
 
     p->apply(shared_from_this(), f);
+    prg->finalize();
 }
 
 void chunk_processor_singlethread::apply(std::shared_ptr<cube> c,

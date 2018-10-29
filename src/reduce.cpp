@@ -108,7 +108,6 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
         }                                                                                            // TODO: set scale and offset
     }
 
-
     GDALClose(gdal_out);
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, &path, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         m.lock();
@@ -130,7 +129,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
         m.lock();
         GDALClose(gdal_out);
         m.unlock();
-        prg->increment((double)1/(double)this->count_chunks());
+        prg->increment((double)1 / (double)this->count_chunks());
     };
 
     p->apply(shared_from_this(), f);

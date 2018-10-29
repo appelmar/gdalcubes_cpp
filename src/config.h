@@ -54,7 +54,6 @@ class config {
         return _progress_bar;
     }
 
-
     inline void set_gdal_cache_max(uint32_t size_bytes) {
         GDALSetCacheMax(size_bytes);
         _gdal_cache_max = size_bytes;

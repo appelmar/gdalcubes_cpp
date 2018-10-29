@@ -17,11 +17,11 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <sstream>
 #include <boost/filesystem.hpp>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 class utils {
    public:

@@ -89,6 +89,15 @@ class config {
     inline bool get_swarm_curl_verbose() { return _swarm_curl_verbose; }
     inline void set_swarm_curl_verbose(bool verbose) { _swarm_curl_verbose = verbose; }
 
+    inline bool get_gdal_debug() { return _gdal_debug; }
+    inline void set_gdal_debug(bool debug) {
+        _gdal_debug = debug;
+        if (debug)
+            CPLSetConfigOption("CPL_DEBUG", "ON");
+        else
+            CPLSetConfigOption("CPL_DEBUG", "OFF");
+    }
+
     inline void set_gdal_num_threads(uint16_t threads) {
         _gdal_num_threads = threads;
         CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
@@ -125,13 +134,11 @@ class config {
     bool _swarm_curl_verbose;
     uint16_t _gdal_num_threads;
     bool _verbose;
+    bool _gdal_debug;
 
    private:
     config();
-    ~config() {
-        //        if (_stdout_red) delete _stdout_red;
-        //        if (_stderr_red) delete _stderr_red;
-    }
+    ~config() {}
     config(const config&) = delete;
     static config* _instance;
 

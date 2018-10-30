@@ -223,8 +223,6 @@ struct aggregation_state_none : public aggregation_state {
     void finalize(void *buf) {}
 };
 
-#define USE_VSIMEM_GTIFF
-
 /**
  *
  * The procedure to read data for a chunk is the following:
@@ -381,7 +379,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
         if (warp_opts == NULL) {
-            throw std::string(" default_chunking::read(): cannot create gdalwarp options.");
+            throw std::string("ERROR in image_collection_cube::read_chunk(): cannot create gdalwarp options.");
         }
 
         //        if (config::instance()->get_verbose()) {

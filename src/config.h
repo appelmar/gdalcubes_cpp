@@ -107,6 +107,7 @@ class config {
         curl_global_init(CURL_GLOBAL_ALL);
         CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
         srand(time(NULL));
+        CPLSetErrorHandler(CPLQuietErrorHandler);
     }
 
     void gdalcubes_cleanup() {
@@ -127,7 +128,10 @@ class config {
 
    private:
     config();
-    ~config() {}
+    ~config() {
+        //        if (_stdout_red) delete _stdout_red;
+        //        if (_stderr_red) delete _stderr_red;
+    }
     config(const config&) = delete;
     static config* _instance;
 

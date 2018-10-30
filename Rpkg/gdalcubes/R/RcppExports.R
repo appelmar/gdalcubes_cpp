@@ -2,7 +2,7 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 libgdalcubes_version <- function() {
-    invisible(.Call('_gdalcubes_libgdalcubes_version', PACKAGE = 'gdalcubes'))
+    .Call('_gdalcubes_libgdalcubes_version', PACKAGE = 'gdalcubes')
 }
 
 libgdalcubes_init <- function() {

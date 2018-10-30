@@ -1,14 +1,6 @@
 .pkgenv <- new.env(parent=emptyenv())
 
 .onLoad <- function(libname,pkgname) {
-  op <- options()
-  op.gdalcubes <- list(
-    gdalcubes.gdal_cache_max = 1024 * 1024 * 256,
-    gdalcubes.gdal_num_threads = 1,
-    gdalcubes.verbose = FALSE
-  )
-  toset <- !(names(op.gdalcubes) %in% names(op))
-  if(any(toset)) options(op.gdalcubes[toset])
 
   # call gdalcubes_init()
   if(!Sys.getenv("GDALCUBES_STREAMING") == "1") {
@@ -17,6 +9,11 @@
   invisible()
 }
 
+.onUnload <- function() {
+  if(!Sys.getenv("GDALCUBES_STREAMING") == "1") {
+    libgdalcubes_cleanup()
+  }
+}
 
 .is_streaming <-function() {
   return(Sys.getenv("GDALCUBES_STREAMING") == "1")
@@ -30,6 +27,7 @@
     sink(stderr())
   }
   else {
-    libgdalcubes_cleanup()
+    x = libgdalcubes_version()
+    packageStartupMessage(paste("Using gdalcubes library version ", x$VERSION_MAJOR, ".", x$VERSION_MINOR, ".", x$VERSION_PATCH, " (", x$GIT_COMMIT, ")", sep=""))
   }
 }

@@ -9,11 +9,6 @@
 
 using namespace Rcpp;
 
-/**
- * TODO: return more cube information. including bands, spatial / temporal footprint, ...
- */
-
-
 struct progress_simple_R : public progress {
   std::shared_ptr<progress> get() override { return std::make_shared<progress_simple_R>(); }
   void set(double p) override {
@@ -47,8 +42,16 @@ private:
 
 
 // [[Rcpp::export]]
-void libgdalcubes_version() {
-  Rcout << "gdalcubes " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << std::endl;
+Rcpp::List libgdalcubes_version() {
+  version_info v = config::instance()->get_version_info();
+  return(Rcpp::List::create(
+      Rcpp::Named("VERSION_MAJOR") = v.VERSION_MAJOR ,
+      Rcpp::Named("VERSION_MINOR") = v.VERSION_MINOR ,
+      Rcpp::Named("VERSION_PATCH") = v.VERSION_PATCH ,
+      Rcpp::Named("BUILD_DATE") = v.BUILD_DATE,
+      Rcpp::Named("BUILD_TIME") = v.BUILD_TIME,
+      Rcpp::Named("GIT_DESC") = v.GIT_DESC,
+      Rcpp::Named("GIT_COMMIT") = v.GIT_COMMIT));
 }
 
 
@@ -147,7 +150,7 @@ Rcpp::List basic_cube_info( std::shared_ptr<cube> x ) {
   return Rcpp::List::create(Rcpp::Named("bands") = bands,
                             Rcpp::Named("dimensions") = dims,
                             Rcpp::Named("proj") = x->st_reference().proj(),
-                            Rcpp::Named("graph") = x->make_constructible_json().dump(),
+                            Rcpp::Named("graph") = x->make_constructible_json().dump(2),
                             Rcpp::Named("size") = Rcpp::IntegerVector::create(x->size()[0], x->size()[1], x->size()[2], x->size()[3]));
 
 }

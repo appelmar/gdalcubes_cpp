@@ -6,12 +6,13 @@
 using namespace Rcpp;
 
 // libgdalcubes_version
-void libgdalcubes_version();
+Rcpp::List libgdalcubes_version();
 RcppExport SEXP _gdalcubes_libgdalcubes_version() {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    libgdalcubes_version();
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_version());
+    return rcpp_result_gen;
 END_RCPP
 }
 // libgdalcubes_init

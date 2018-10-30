@@ -111,7 +111,6 @@ int main(int argc, char* argv[]) {
     config::instance()->gdalcubes_init();
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
 
-
     namespace po = boost::program_options;
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
@@ -127,7 +126,7 @@ int main(int argc, char* argv[]) {
         po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).positional(pos).allow_unregistered().run();
         po::store(parsed, vm);
         if (vm.count("version")) {
-            std::cout << "gdalcubes " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH << " built on " << __DATE__ << " " << __TIME__;
+            std::cout << "gdalcubes " << GDALCUBES_VERSION_MAJOR << "." << GDALCUBES_VERSION_MINOR << "." << GDALCUBES_VERSION_PATCH << " built on " << __DATE__ << " " << __TIME__;
             std::cout << " linked against " << GDALVersionInfo("--version") << std::endl;  // TODO add version info for other linked libraries
             return 0;
         }

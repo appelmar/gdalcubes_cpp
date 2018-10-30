@@ -137,7 +137,7 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         netCDF::NcVar v_x = ncout.addVar(xname.c_str(), netCDF::ncDouble, d_x);
 
         ncout.putAtt("Conventions", "CF-1.6");
-        ncout.putAtt("source", ("gdalcubes " + std::to_string(VERSION_MAJOR) + "." + std::to_string(VERSION_MINOR) + "." + std::to_string(VERSION_PATCH)).c_str());
+        ncout.putAtt("source", ("gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH)).c_str());
 
         v_t.putVar(dim_t);
         v_y.putVar(dim_y);

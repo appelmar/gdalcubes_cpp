@@ -28,3 +28,15 @@ config::config() : _chunk_processor(std::make_shared<chunk_processor_singlethrea
                    _gdal_num_threads(1),
                    _verbose(false) {
 }
+
+version_info config::get_version_info() {
+    version_info v;
+    v.VERSION_MAJOR = GDALCUBES_VERSION_MAJOR;
+    v.VERSION_MINOR = GDALCUBES_VERSION_MINOR;
+    v.VERSION_PATCH = GDALCUBES_VERSION_PATCH;
+    v.BUILD_DATE = __DATE__;
+    v.BUILD_TIME = __TIME__;
+    v.GIT_COMMIT = GDALCUBES_GIT_COMMIT;
+    v.GIT_DESC = GDALCUBES_GIT_DESC;
+    return v;
+}

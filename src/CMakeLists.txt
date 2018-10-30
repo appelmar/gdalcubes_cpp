@@ -1,4 +1,19 @@
 
+
+execute_process(
+        COMMAND git describe --tags --always --abbrev=8
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_DESC
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+execute_process(
+        COMMAND git rev-parse HEAD
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        OUTPUT_VARIABLE GIT_COMMIT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+
 configure_file( ${CMAKE_CURRENT_LIST_DIR}/build_info.h.in ${CMAKE_CURRENT_LIST_DIR}/build_info.h )
 
 

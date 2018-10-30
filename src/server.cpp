@@ -58,7 +58,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
     if (!path.empty()) {
         if (path[0] == "version") {
             std::cout << "GET /version" << std::endl;
-            std::string version = "gdalcubes_server " + std::to_string(VERSION_MAJOR) + "." + std::to_string(VERSION_MINOR) + "." + std::to_string(VERSION_PATCH);
+            std::string version = "gdalcubes_server " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
             req.reply(web::http::status_codes::OK, version.c_str(), "text/plain");
         } else if (path[0] == "cube") {
             if (path.size() == 2) {
@@ -382,7 +382,7 @@ int main(int argc, char* argv[]) {
         po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).allow_unregistered().run();
         po::store(parsed, vm);
         if (vm.count("version")) {
-            std::cout << "gdalcubes_server " << VERSION_MAJOR << "." << VERSION_MINOR << "." << VERSION_PATCH
+            std::cout << "gdalcubes_server " << GDALCUBES_VERSION_MAJOR << "." << GDALCUBES_VERSION_MINOR << "." << GDALCUBES_VERSION_PATCH
                       << " built on " << __DATE__ << " " << __TIME__;
             std::cout << " linked against " << GDALVersionInfo("--version")
                       << std::endl;  // TODO add version info for other linked libraries

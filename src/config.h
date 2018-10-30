@@ -20,11 +20,22 @@
 #include <curl/curl.h>
 #include <gdal_priv.h>
 #include <memory>
+#include "build_info.h"
 #include "progress.h"
 
 // forward declarations
 class chunk_processor;
 class chunk_processor_singlethread;
+
+struct version_info {
+    uint16_t VERSION_MAJOR;
+    uint16_t VERSION_MINOR;
+    uint16_t VERSION_PATCH;
+    std::string BUILD_DATE;
+    std::string BUILD_TIME;
+    std::string GIT_DESC;
+    std::string GIT_COMMIT;
+};
 
 /**
  * A singleton class to manage global configuration options
@@ -101,6 +112,8 @@ class config {
     void gdalcubes_cleanup() {
         curl_global_cleanup();
     }
+
+    version_info get_version_info();
 
    private:
     std::shared_ptr<chunk_processor> _chunk_processor;

@@ -131,7 +131,7 @@ struct image_band {
 void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::vector<boost::regex> regex_band_pattern;
 
-    /* TODO: The following would fail if other applications create image collections and assign ids to bands differently. A better solution would be to load band ids, names, and nums from the database bands table directly
+    /* TODO: The following will fail if other applications create image collections and assign ids to bands differently. A better solution would be to load band ids, names, and nums from the database bands table directly
      */
 
     std::vector<std::string> band_name;
@@ -175,7 +175,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::shared_ptr<progress> p = config::instance()->get_default_progress_bar();
     for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
         ++counter;
-        p->set(counter / descriptors.size());
+        p->set((double)counter / (double)descriptors.size());
         if (!global_pattern.empty()) {  // prevent unnecessary GDALOpen calls
             if (!boost::regex_match(*it, regex_global_pattern)) {
                 // std::cout << "ignoring " << *it << std::endl;

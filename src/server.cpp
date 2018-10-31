@@ -58,8 +58,10 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
     if (!path.empty()) {
         if (path[0] == "version") {
             std::cout << "GET /version" << std::endl;
-            std::string version = "gdalcubes_server " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
-            req.reply(web::http::status_codes::OK, version.c_str(), "text/plain");
+            version_info v = config::instance()->get_version_info();
+            std::stringstream ss;
+            ss << "gdalcubes_server " << v.VERSION_MAJOR << "." << v.VERSION_MINOR << "." << v.VERSION_PATCH << " (" << v.GIT_COMMIT << ") built on " << v.BUILD_DATE << " " << v.BUILD_TIME;
+            req.reply(web::http::status_codes::OK, ss.str().c_str(), "text/plain");
         } else if (path[0] == "cube") {
             if (path.size() == 2) {
                 uint32_t cube_id = std::stoi(path[1]);
@@ -382,10 +384,8 @@ int main(int argc, char* argv[]) {
         po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).allow_unregistered().run();
         po::store(parsed, vm);
         if (vm.count("version")) {
-            std::cout << "gdalcubes_server " << GDALCUBES_VERSION_MAJOR << "." << GDALCUBES_VERSION_MINOR << "." << GDALCUBES_VERSION_PATCH
-                      << " built on " << __DATE__ << " " << __TIME__;
-            std::cout << " linked against " << GDALVersionInfo("--version")
-                      << std::endl;  // TODO add version info for other linked libraries
+            version_info v = config::instance()->get_version_info();
+            std::cout << "gdalcubes_server " << v.VERSION_MAJOR << "." << v.VERSION_MINOR << "." << v.VERSION_PATCH << " (" << v.GIT_COMMIT << ") built on " << v.BUILD_DATE << " " << v.BUILD_TIME << std::endl;
             return 0;
         }
         if (vm.count("help")) {

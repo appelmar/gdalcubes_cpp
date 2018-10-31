@@ -35,27 +35,56 @@ typedef uint32_t chunkid_t;
 class cube;
 class chunk_data;
 
+/**
+ * Virtual base class for processing a data cube chunk-wise, i.e. applying the same function over all chunks in a cube.
+ */
 class chunk_processor {
    public:
+    /**
+     * Apply a function f over all chunks of a given data cube c
+     * @param c data cube
+     * @param f function to be applied over all chunks of c, the function gets the chunk_id, the actual chunk data, and a mutex object as input. The latter is only needed
+     * for parallel chunk processing, e.g., for synchronous file writing.
+     */
     virtual void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) = 0;
 };
 
+/**
+ * Implementation of the chunk_processor class for single-thread sequential chunk processing
+ */
 class chunk_processor_singlethread : public chunk_processor {
    public:
+    /**
+     * @copydoc chunk_processor::apply
+     */
     void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) override;
 };
 
+/**
+ * Implementation of the chunk_processor class for multithreaded parallel chunk processing
+ */
 class chunk_processor_multithread : public chunk_processor {
    public:
     chunk_processor_multithread(uint16_t nthreads) : _nthreads(nthreads) {}
+
+    /**
+    * @copydoc chunk_processor::apply
+    */
     void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) override;
 
+    /**
+     * Query the number of threads to be used in parallel chunk processing
+     * @return the number of threads
+     */
     inline uint16_t get_threads() { return _nthreads; }
 
    private:
     uint16_t _nthreads;
 };
 
+/**
+ * A simple structure for band information
+ */
 struct band {
     band(std::string name) : name(name), no_data_value(std::to_string(NAN)), offset(0), scale(1), unit(""), type("float64") {}
     std::string name;
@@ -66,8 +95,15 @@ struct band {
     std::string type;
 };
 
+/**
+ * Collection class for image bands, accessible by name or id.
+ */
 class band_collection {
    public:
+    /**
+     * Adds a band to a collection
+     * @param b band information for the new band
+     */
     void add(band b) {
         if (!has(b.name)) {
             _bands.push_back(b);
@@ -75,22 +111,46 @@ class band_collection {
         }
     }
 
+    /**
+     * Checks whether the collection contains a band with given name
+     * @param name unique band name
+     * @return true if the collection contains a band with given name, false otherwise
+     */
     inline bool has(std::string name) {
         return _band_idx.find(name) != _band_idx.end();
     }
 
+    /**
+     * Query a band from the collection by name
+     * @param name name of the band
+     * @return band information
+     */
     inline band get(std::string name) {
         return _bands[_band_idx[name]];
     }
 
+    /**
+     * Query the id of a band from its id
+     * @param name name of the band
+     * @return if of the corresponding band
+     */
     inline uint32_t get_index(std::string name) {
         return _band_idx[name];
     }
 
+    /**
+     * Query a band from the collection by id
+     * @param id id of the band (zero-based)
+     * @return band information
+     */
     inline band get(uint32_t i) {
         return _bands[i];
     }
 
+    /**
+     * Count the number of bands in the collection
+     * @return the number of bands in the collection
+     */
     inline uint32_t count() {
         return _bands.size();
     }
@@ -100,6 +160,10 @@ class band_collection {
     std::vector<band> _bands;
 };
 
+/**
+ * A class for storing actual data of one chunk. This is typally used with smart pointers as
+ * std::shared_ptr<chunk_data>.
+ */
 class chunk_data {
    public:
     chunk_data() : _buf(nullptr), _size({{0, 0, 0, 0}}) {}
@@ -108,30 +172,61 @@ class chunk_data {
         if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) free(_buf);
     }
 
+    /**
+     * Count the number of bands in the chunk
+     * @return number of bands
+     */
     inline uint16_t count_bands() { return _size[0]; }
+
+    /**
+     * Count the number of pixels in the chunk
+     * @return number of pixels (nx \times ny \times nt)
+     */
     inline uint32_t count_values() { return _size[1] * _size[2] * _size[3]; }
     uint64_t total_size_bytes() {
         return empty() ? 0 : sizeof(double) * _size[0] * _size[1] * _size[2] * _size[3];
     }
 
+    /**
+     * Checks whether there is data in the buffer
+     * @return
+     */
     inline bool empty() {
         if (_size[0] * _size[1] * _size[2] * _size[3] == 0) return true;
         if (!_buf) return true;
         return false;
     }
 
-    /** These methods are dangerous and provide direct access to the data buffers, use with caution and never free any memory /
+    /**
+     * Access the raw buffer where the data is stored in memory.
+     *
+     * This method is dangerous and provides direct access to the data buffer. Use with caution and never free any memory /
      * remove / add vector elements if you don't know exactly what you do.
-     * @return
+     * @return void pointer pointing to the data buffer
      */
     inline void* buf() { return _buf; }
 
+    /**
+     * (Re)set the raw buffer where the data is stored in memory.
+     *
+     * This method is dangerous and provides direct access to the data buffer. Use with caution and never free any memory /
+     * remove / add vector elements if you don't know exactly what you do.
+     *
+     * @param b new buffer object, this class takes the ownership, i.e., eventually frees memory automatically in the destructor.
+     */
     inline void buf(void* b) {
         if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) free(_buf);
         _buf = b;
     }
 
+    /**
+     * Query the size of the contained data.
+     *
+     * The result is an array of size 4 representing the size of dimensions in the order (bands, time, y, x).
+     * @return std::array<uint32, 4> with number of cells with regard to bands, time, y, and x
+     */
     inline coords_nd<uint32_t, 4> size() { return _size; }
+
     inline void size(coords_nd<uint32_t, 4> s) { _size = s; }
 
    protected:
@@ -139,6 +234,12 @@ class chunk_data {
     chunk_size_btyx _size;
 };
 
+/**
+ * Base class for all data cube types. This class is virtual but provides a few default methods
+ * such as chunk-wise NetCDF export, conversion of chunk-local, cube-local, and spatial coordinates / datetime.
+ *
+ * Cubes should primarily be used as smart pointers, i.e. std::shared_ptr<xxx_cube>.
+ */
 class cube : public std::enable_shared_from_this<cube> {
    public:
     cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _size() {
@@ -379,17 +480,48 @@ class cube : public std::enable_shared_from_this<cube> {
     inline uint32_t size_y() { return _size[2]; }
     inline uint32_t size_x() { return _size[3]; }
 
+    /**
+     * Virtual function that is called to read actual data of a given chunk.
+     * Please make sure that this function is called only when the data is needed (lazy evaluation).
+     *
+     * @param id the id of the requested chunk
+     * @return a smart pointer to chunk data
+     */
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) = 0;
 
+    /**
+     * Writes a cube as a set of GeoTIFF files under a given directory.
+     *
+     * This method must be reimplemented.
+     *
+     * @deprecated
+     * @param dir directory where to store the files
+     * @param p chunk processor instance
+     */
     void write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+
+    /**
+     * Writes a cube as a set of NetCDF files (one per chunk) under a given directory.
+     * The resulting files will be names by chunk id.
+     *
+     * @param dir output directory
+     * @param p chunk processor instance
+     */
     void write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
+    /**
+     * Get the cube's bands
+     * @return all bands of the cube object as band_collection
+     */
     inline band_collection bands() {
         return _bands;
     }
 
-    //void apply(std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f, uint16_t nthreads = 1);
-
+    /**
+     * Abstract function to create a JSON representation of a cube object
+     * @return a JSON object which can be used to recreate it with cube_factory
+     * @see cube_factory
+     */
     virtual nlohmann::json make_constructible_json() = 0;
 
    protected:

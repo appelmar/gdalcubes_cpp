@@ -12,3 +12,4 @@
 * CI
 * R package: Swarm execution
 * Swarm execution fault tolerance
+* Better error handling and debug options

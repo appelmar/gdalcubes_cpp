@@ -111,7 +111,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
     GDALClose(gdal_out);
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, &path, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         m.lock();
-        GDALDataset *gdal_out = (GDALDataset *)GDALOpenShared(path.c_str(), GA_Update);
+        GDALDataset *gdal_out = (GDALDataset *)GDALOpen(path.c_str(), GA_Update);
         m.unlock();
         //bounds_nd<uint32_t, 3> cb = chunk_limits(id);
         chunk_coordinate_tyx ct = chunk_coords_from_id(id);

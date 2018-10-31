@@ -21,6 +21,9 @@
 #include "timer.h"
 #include "utils.h"
 
+/**
+ * Virtual base class for progress updates of long running processes
+*/
 struct progress {
     virtual std::shared_ptr<progress> get() = 0;
     virtual void set(double p) = 0;

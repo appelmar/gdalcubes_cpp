@@ -367,7 +367,6 @@ int main(int argc, char* argv[]) {
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
             std::shared_ptr<cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
             std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_in, reducer);
-            // TODO: configure default chunk processor here
 
             c_reduce->write_gdal_image(output, outformat, create_options);
 

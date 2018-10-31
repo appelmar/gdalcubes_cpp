@@ -216,7 +216,7 @@ class gdalcubes_server {
     std::set<std::pair<uint32_t, uint32_t>> _chunk_read_requests_set;
 
     std::mutex _mutex_chunk_read_executing;
-    std::set<std::pair<uint32_t, uint32_t>> _chunk_read_executing;  // length = nthreads, TODO: read nthreads from gdalcubes_server command line or config file
+    std::set<std::pair<uint32_t, uint32_t>> _chunk_read_executing;
 
     std::vector<std::thread> _worker_threads;
     std::mutex _mutex_worker_threads;

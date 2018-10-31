@@ -185,7 +185,7 @@ class reduce_cube : public cube {
         _chunk_size[0] = 1;
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
-        _size[0] = _in_cube->bands().count();  // TODO: add with band information
+        _size[0] = _in_cube->bands().count();
 
         for (uint16_t ib = 0; ib < in->bands().count(); ++ib) {
             band b = in->bands().get(ib);

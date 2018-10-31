@@ -52,14 +52,14 @@ class gdalcubes_swarm : public chunk_processor {
     // Mimic cube::apply with distributed calls to cube::read_chunk()
     void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) override;
 
-    void post_start(uint32_t chunk_id, uint16_t server_index);                           // TODO: make protected
-    std::shared_ptr<chunk_data> get_download(uint32_t chunk_id, uint16_t server_index);  // TODO: make protected
-
     inline uint16_t get_threads() { return _nthreads; }
     inline void set_threads(uint16_t threads) { _nthreads = threads; }
 
    protected:
     void post_file(std::string path, uint16_t server_index);
+
+    void post_start(uint32_t chunk_id, uint16_t server_index);
+    std::shared_ptr<chunk_data> get_download(uint32_t chunk_id, uint16_t server_index);
 
     uint32_t post_cube(std::string json, uint16_t server_index);
 

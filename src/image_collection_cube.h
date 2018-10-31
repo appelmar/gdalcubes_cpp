@@ -48,7 +48,6 @@ class image_collection_cube : public cube {
         out["chunk_size"] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
         out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
         out["file"] = _collection->get_filename();
-        // TODO: what to do with filename?!
         return out;
     }
 

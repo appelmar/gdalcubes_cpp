@@ -27,6 +27,10 @@
 class chunk_processor;
 class chunk_processor_singlethread;
 
+/**
+ * A simple structure to store
+ * version information of the library
+ */
 struct version_info {
     uint16_t VERSION_MAJOR;
     uint16_t VERSION_MINOR;
@@ -42,6 +46,9 @@ struct version_info {
  */
 class config {
    public:
+    /**
+     * Return the singleton instance
+     */
     static config* instance() {
         static GC g;
         if (!_instance) {

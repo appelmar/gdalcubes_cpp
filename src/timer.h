@@ -19,14 +19,28 @@
 
 #include <chrono>
 
+/**
+ * A simple class to measure real elapsed time with high resolution.
+ */
 class timer {
    public:
+    /**
+     * Create a new timer and start a time measurement.
+     */
     timer() { t = std::chrono::high_resolution_clock::now(); }
 
+    /**
+     * Start measuring time from now, it is not needed to call this function as the constructor automatically starts
+     * a time measurement.
+     */
     void start() {
         t = std::chrono::high_resolution_clock::now();
     }
 
+    /**
+     * Measure real elapsed time since  either the last call of start() or construction.
+     * @return the real elapsed time in seconds
+     */
     double time() {
         std::chrono::high_resolution_clock::time_point tnow = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(

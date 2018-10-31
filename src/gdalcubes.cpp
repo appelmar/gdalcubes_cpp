@@ -126,8 +126,9 @@ int main(int argc, char* argv[]) {
         po::parsed_options parsed = po::command_line_parser(argc, argv).options(global_args).positional(pos).allow_unregistered().run();
         po::store(parsed, vm);
         if (vm.count("version")) {
-            std::cout << "gdalcubes " << GDALCUBES_VERSION_MAJOR << "." << GDALCUBES_VERSION_MINOR << "." << GDALCUBES_VERSION_PATCH << " built on " << __DATE__ << " " << __TIME__;
-            std::cout << " linked against " << GDALVersionInfo("--version") << std::endl;  // TODO add version info for other linked libraries
+            version_info v = config::instance()->get_version_info();
+            std::cout << "gdalcubes " << v.VERSION_MAJOR << "." << v.VERSION_MINOR << "." << v.VERSION_PATCH << " (" << v.GIT_COMMIT << ") built on " << v.BUILD_DATE << " " << v.BUILD_TIME << std::endl;
+            //std::cout << " linked against " << GDALVersionInfo("--version") << std::endl;  // TODO add version info for other linked libraries
             return 0;
         }
         if (vm.count("help") && !vm.count("command")) {
@@ -193,29 +194,29 @@ int main(int argc, char* argv[]) {
                                 if (s.compare(s.length() - 4, 4, ".zip") == 0 || s.compare(s.length() - 4, 4, ".ZIP") == 0) {
                                     char** y = VSIReadDirRecursive(("/vsizip/" + s).c_str());
                                     char** x = y;
-                                    while (*x != NULL) {
-                                        in.push_back("/vsizip/" + (fs::absolute((*i).path()) / *x).string());
-                                        ++x;
+                                    if (x != NULL) {
+                                        while (*x != NULL) {
+                                            in.push_back("/vsizip/" + (fs::absolute((*i).path()) / *x).string());
+                                            ++x;
+                                        }
+                                        CSLDestroy(y);
                                     }
-                                    CSLDestroy(y);
+
                                 } else if (s.compare(s.length() - 3, 3, ".gz") == 0 || s.compare(s.length() - 3, 3, ".GZ") == 0) {
-                                    char** y = VSIReadDirRecursive(("/vsigzip/" + s).c_str());
-                                    char** x = y;
-                                    while (*x != NULL) {
-                                        in.push_back("/vsigzip/" + (fs::absolute((*i).path()) / *x).string());
-                                        ++x;
-                                    }
-                                    CSLDestroy(y);
+                                    // gzip has only one file
+                                    in.push_back("/vsigzip/" + s);
                                 } else if (s.compare(s.length() - 4, 4, ".tar") == 0 || s.compare(s.length() - 4, 4, ".TAR") == 0 ||
                                            s.compare(s.length() - 7, 7, ".tar.gz") == 0 || s.compare(s.length() - 7, 7, ".TAR.GZ") == 0 ||
                                            s.compare(s.length() - 4, 4, ".tgz") == 0 || s.compare(s.length() - 4, 4, ".TGZ") == 0) {
                                     char** y = VSIReadDirRecursive(("/vsitar/" + s).c_str());
                                     char** x = y;
-                                    while (*x != NULL) {
-                                        in.push_back("/vsitar/" + (fs::absolute((*i).path()) / *x).string());
-                                        ++x;
+                                    if (x != NULL) {
+                                        while (*x != NULL) {
+                                            in.push_back("/vsitar/" + (fs::absolute((*i).path()) / *x).string());
+                                            ++x;
+                                        }
+                                        CSLDestroy(y);
                                     }
-                                    CSLDestroy(y);
                                 } else {
                                     in.push_back(fs::absolute((*i).path()).string());
                                 }
@@ -232,29 +233,28 @@ int main(int argc, char* argv[]) {
                             if (s.compare(s.length() - 4, 4, ".zip") == 0 || s.compare(s.length() - 4, 4, ".ZIP") == 0) {
                                 char** y = VSIReadDirRecursive(("/vsizip/" + s).c_str());
                                 char** x = y;
-                                while (*x != NULL) {
-                                    in.push_back("/vsizip/" + (fs::absolute((*i).path()) / *x).string());
-                                    ++x;
+                                if (x != NULL) {
+                                    while (*x != NULL) {
+                                        in.push_back("/vsizip/" + (fs::absolute((*i).path()) / *x).string());
+                                        ++x;
+                                    }
+                                    CSLDestroy(y);
                                 }
-                                CSLDestroy(y);
                             } else if (s.compare(s.length() - 3, 3, ".gz") == 0 || s.compare(s.length() - 3, 3, ".GZ") == 0) {
-                                char** y = VSIReadDirRecursive(("/vsigzip/" + s).c_str());
-                                char** x = y;
-                                while (*x != NULL) {
-                                    in.push_back("/vsigzip/" + (fs::absolute((*i).path()) / *x).string());
-                                    ++x;
-                                }
-                                CSLDestroy(y);
+                                // gzip has only one file
+                                in.push_back("/vsigzip/" + s);
                             } else if (s.compare(s.length() - 4, 4, ".tar") == 0 || s.compare(s.length() - 4, 4, ".TAR") == 0 ||
                                        s.compare(s.length() - 7, 7, ".tar.gz") == 0 || s.compare(s.length() - 7, 7, ".TAR.GZ") == 0 ||
                                        s.compare(s.length() - 4, 4, ".tgz") == 0 || s.compare(s.length() - 4, 4, ".TGZ") == 0) {
                                 char** y = VSIReadDirRecursive(("/vsitar/" + s).c_str());
                                 char** x = y;
-                                while (*x != NULL) {
-                                    in.push_back("/vsitar/" + (fs::absolute((*i).path()) / *x).string());
-                                    ++x;
+                                if (x != NULL) {
+                                    while (*x != NULL) {
+                                        in.push_back("/vsitar/" + (fs::absolute((*i).path()) / *x).string());
+                                        ++x;
+                                    }
+                                    CSLDestroy(y);
                                 }
-                                CSLDestroy(y);
                             } else {
                                 in.push_back(fs::absolute((*i).path()).string());
                             }
@@ -463,7 +463,6 @@ int main(int argc, char* argv[]) {
                 }
 
                 std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_stream, reducer);
-                // TODO: configure default chunk processor here
                 c_reduce->write_gdal_image(output, outformat, create_options);
             }
 

@@ -10,3 +10,5 @@
 * C++ unit tests
 * R package documentation
 * CI
+* R package: Swarm execution
+* Swarm execution fault tolerance

@@ -243,7 +243,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         if (sqlite3_step(stmt) == SQLITE_DONE) {
             // Empty result --> image has not been added before
 
-            // @TODO: Shall we check that all files óf the same image have the same date / time? Currently we don't do.
+            // @TODO: Shall we check that all files óf the same image have the same date / time? Currently we don't.
 
             // Extract datetime
             boost::cmatch res_datetime;

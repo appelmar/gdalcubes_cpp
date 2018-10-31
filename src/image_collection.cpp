@@ -18,6 +18,7 @@
 
 #include <boost/regex.hpp>
 
+#include "config.h"
 #include "utils.h"
 
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
@@ -170,7 +171,11 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         datetime_format = _format.json()["datetime"]["format"].get<std::string>();
     }
 
+    uint32_t counter = -1;
+    std::shared_ptr<progress> p = config::instance()->get_default_progress_bar();
     for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
+        ++counter;
+        p->set(counter / descriptors.size());
         if (!global_pattern.empty()) {  // prevent unnecessary GDALOpen calls
             if (!boost::regex_match(*it, regex_global_pattern)) {
                 // std::cout << "ignoring " << *it << std::endl;
@@ -315,6 +320,8 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         }
         CPLFree(proj4);
     }
+    p->set(1);
+    p->finalize();
 }
 
 void image_collection::add(std::string descriptor) {

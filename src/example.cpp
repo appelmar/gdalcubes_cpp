@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
 
-        stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "/tmp/teststream.log");
+        stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "stdout");
 
         std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(std::make_shared<stream_cube>(s), "min");
         t0.start();

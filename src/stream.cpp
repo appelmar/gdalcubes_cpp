@@ -39,7 +39,12 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     std::future<std::vector<char>> outdata;
     std::future<std::vector<char>> outerr;
 
-    boost::process::child c(_cmd, boost::process::std_out > outdata, ios, boost::process::std_in<in, boost::process::std_err> outerr, boost::process::env["GDALCUBES_STREAMING"] = "1");
+
+    boost::process::environment e = boost::this_process::environment();
+    e.set("GDALCUBES_STREAMING", "1");
+    //e["GDALCUBES_STREAMING"] = "1"; // this produces buffer overflows according to ASAN
+
+    boost::process::child c(_cmd, boost::process::std_out > outdata, ios, boost::process::std_in<in, boost::process::std_err> outerr, e);
 
     std::string proj = _in_cube->st_reference().proj();
 
@@ -76,16 +81,18 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
 
     std::vector<char> odat = outdata.get();
     if (!_log_output.empty()) {
+        std::vector<char> oerr = outerr.get();
+        std::string str(oerr.begin(),oerr.end());
         if (_log_output == "stdout") {
-            std::cout << outerr.get().data() << std::endl;
+            std::cout << str << std::endl;
         } else if (_log_output == "stderr") {
-            std::cerr << outerr.get().data() << std::endl;
+            std::cerr << str << std::endl;
         } else {
             std::ofstream flog(_log_output, std::ios_base::out | std::ios_base::app);
             if (flog.fail()) {
                 std::cout << "WARNING in tream_cube::stream_chunk_stdin(): cannot open file'" << _log_output << "' for writing output of streaming.";
             } else {
-                flog << outerr.get().data();
+                flog << str;
                 flog.close();
             }
         }

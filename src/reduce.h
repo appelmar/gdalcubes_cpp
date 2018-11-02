@@ -141,7 +141,8 @@ struct count_reducer : public reducer {
 
 struct median_reducer : public reducer {
     void init(std::shared_ptr<chunk_data> a) override {
-        _m_buckets = (std::vector<double> *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(std::vector<double>));
+        //_m_buckets = (std::vector<double> *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(std::vector<double>));
+        _m_buckets.resize(a->size()[0] * a->size()[2] * a->size()[3], std::vector<double>());
     }
 
     void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b) override {
@@ -170,11 +171,10 @@ struct median_reducer : public reducer {
                 ((double *)a->buf())[ibxy] = (list[list.size() / 2] + list[list.size() / 2 - 1]) / ((double)2);
             }
         }
-        free(_m_buckets);
     }
 
    protected:
-    std::vector<double> *_m_buckets;
+    std::vector<std::vector<double>> _m_buckets;
 };
 
 /**

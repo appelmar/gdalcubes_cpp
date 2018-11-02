@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 
         std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "median");
         t0.start();
-        //cr->write_gdal_image("test.tif");
+        cr->write_gdal_image("test.tif");
         std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");

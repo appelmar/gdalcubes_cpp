@@ -143,6 +143,14 @@ struct duration {
     }
 };
 
+/**
+ * @brief Simplistic datetime class
+ *
+ * This class represents date and time with regard to a unit / granularity.
+ * Internally it stores a posixtime object and a numeric month and year.
+ * The unit / granularity is derived automatically from given strings.
+ *
+ */
 class datetime {
    public:
     datetime() : _p(), _unit(DAY) {}
@@ -179,6 +187,10 @@ class datetime {
         return out;
     }
 
+    /**
+     * @brief Convert to a simple datetime string
+     * @return
+     */
     std::string to_string() {
         std::stringstream os;
         std::string format;
@@ -189,11 +201,11 @@ class datetime {
     }
 
     /**
-     * Produce datetime string up to the given unit.
+     * Produce a datetime string up to the given unit.
      * The string will possibly include e.g. seconds although the unit is actually lower e.g. days.
      * This function is implemented to interface tools that require full datetime strings and do not work with
      * e.g. "2001-01".
-     * @param u
+     * @param u datetime unit
      * @return
      */
     std::string to_string(datetime_unit u) {
@@ -239,12 +251,6 @@ class datetime {
                 out._unit = SECOND;
             }
         }
-
-        //        for (uint16_t i = 0; i < res.size(); ++i) {
-        //            std::cout << "Expression " << i << ": " << res[i] << "empty: " << res[i].str().empty() << std::endl;
-        //        };
-        //        std::cout << "--------------------------------" << std::endl;
-
         return out;
     }
 

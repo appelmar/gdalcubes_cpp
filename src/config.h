@@ -42,7 +42,7 @@ struct version_info {
 };
 
 /**
- * A singleton class to manage global configuration options
+ * @brief A singleton class to manage global configuration options
  */
 class config {
    public:

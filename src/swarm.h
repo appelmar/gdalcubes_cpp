@@ -21,10 +21,11 @@
 #include "cube.h"
 
 /**
- * TODO:
- * - add / remove method for workers
+ * @brief Chunk processor implementation for distributed processing by connecting to gdalcubes_server instances
  *
+ * This class connects the several gdalcubes_server instances in order to distribute read_chunk() operations
  *
+ * @todo implement add / remove method for workers
  */
 class gdalcubes_swarm : public chunk_processor {
    public:

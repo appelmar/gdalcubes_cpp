@@ -247,27 +247,28 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     if (size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3] == 0)
         return out;
 
+    // Find intersecting images from collection and iterate over these
+    bounds_st cextent = bounds_from_chunk(id);
+    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, "gdalrefs.descriptor");
+    // In some cases, datasets still contains images at the temporal borders, which are actually not
+    // part of the chunk. If this is the case, the check for the temporal index later in this function
+    // will make sure that it is not read as it would lead to buffer overflows.
+
+    if (datasets.empty()) {
+        return out;  // empty chunk data
+    }
+
     // Fill buffers accordingly
     out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
     double *begin = (double *)out->buf();
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
 
-    // Find intersecting images from collection and iterate over these
-    bounds_st cextent = bounds_from_chunk(id);  // is this->bounds_from_chunk(id) needed?
-    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, "gdalrefs.descriptor");
-
-    if (datasets.empty()) {
-        return std::make_shared<chunk_data>();  // empty chunk data
-    }
-
+    // In case /vsimem/ with GTiff is used, create options might be used to improve the performance
     //    CPLStringList out_co(NULL);
     //    out_co.AddNameValue("TILED", "YES");
     //    out_co.AddNameValue("BLOCKXSIZE", "256");
     //    out_co.AddNameValue("BLOCKYSIZE", "256");
-    GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
-    GDALDriver *vrt_driver = (GDALDriver *)GDALGetDriverByName("VRT");
-    GDALDriver *mem_driver = (GDALDriver *)GDALGetDriverByName("MEM");
 
     double affine[6];
     affine[0] = cextent.s.left;
@@ -279,8 +280,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     OGRSpatialReference proj_out;
     proj_out.SetFromUserInput(_st_ref->proj().c_str());
-    char *out_wkt;
-    proj_out.exportToWkt(&out_wkt);
 
     aggregation_state *agg = nullptr;
     if (view()->aggregation_method() == aggregation::MEAN) {
@@ -324,7 +323,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         CPLStringList warp_args;
         warp_args.AddString("-of");
-        warp_args.AddString("MEM");  // TODO: make this configurable depending on the output size, maybe /vsimem/GTiff is faster?
+        warp_args.AddString("MEM");  // TODO: Check whether /vsimem/GTiff is faster?
 
         warp_args.AddString("-t_srs");
         warp_args.AddString(_st_ref->proj().c_str());
@@ -401,18 +400,26 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         dt.unit() = _st_ref->dt().dt_unit;                              // explicit datetime unit cast
         int it = (dt - cextent.t0) / _st_ref->dt();
 
-        // For each band, call RasterIO to read and copy data to the right position in the buffers
-        for (uint16_t b = 0; b < band_rels.size(); ++b) {
-            uint16_t b_internal = _bands.get_index(std::get<0>(band_rels[b]));
-            void *cbuf = ((double *)out->buf()) + (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
+        // Make sure that it is valid in order to prevent buffer overflows
+        if (it >= 0 && it < out->size()[1]) {
+            // For each band, call RasterIO to read and copy data to the right position in the buffers
+            for (uint16_t b = 0; b < band_rels.size(); ++b) {
+                uint16_t b_internal = _bands.get_index(std::get<0>(band_rels[b]));
 
-            // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
-            if (view()->aggregation_method() == aggregation::NONE) {
-                gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                // Make sure that b_internal is valid in order to prevent buffer overflows
+                if (b_internal < 0 || b_internal >= out->size()[0])
+                    continue;
 
-            } else {
-                gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
-                agg->update(cbuf, img_buf, b_internal, it);
+                void *cbuf = ((double *)out->buf()) + (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
+
+                // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
+                if (view()->aggregation_method() == aggregation::NONE) {
+                    gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+
+                } else {
+                    gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                    agg->update(cbuf, img_buf, b_internal, it);
+                }
             }
         }
 

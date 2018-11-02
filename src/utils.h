@@ -23,6 +23,9 @@
 #include <sstream>
 #include <string>
 
+/**
+ * A utility class for commonly used functions
+ */
 class utils {
    public:
     static std::string generate_unique_filename() {

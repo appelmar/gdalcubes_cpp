@@ -21,12 +21,13 @@
 #include "image_collection_cube.h"
 
 /**
+ * @brief A data cube that streams data from another data cube to stdin of an external program and captures stdout as result
+ *
  * Assumptions for the implementation below:
  * 1. the stream operation will not change the spatial / temporal extent of a chunk
  * 2. except boundary chunks, all result chunks will have the same dimensions
  * 3. the size of the output chunk is a function of the size of an input chunk, the function is linear in each dimension
  */
-
 class stream_cube : public cube {
    public:
     stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") : _in_cube(in_cube), _cmd(cmd), _log_output(log_output), cube(std::make_shared<cube_st_reference>(in_cube->st_reference())) {

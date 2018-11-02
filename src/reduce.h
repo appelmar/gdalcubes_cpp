@@ -176,6 +176,9 @@ struct median_reducer : public reducer {
     std::vector<double> *_m_buckets;
 };
 
+/**
+ * @brief A data cube that applies a reducer function to another data cube over time
+ */
 class reduce_cube : public cube {
    public:
     reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _reducer(reducer), cube(std::make_shared<cube_st_reference>(in->st_reference())) {

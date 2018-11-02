@@ -36,7 +36,7 @@ class cube;
 class chunk_data;
 
 /**
- * Virtual base class for processing a data cube chunk-wise, i.e. applying the same function over all chunks in a cube.
+ * @brief Virtual base class for processing a data cube chunk-wise, i.e. applying the same function over all chunks in a cube.
  */
 class chunk_processor {
    public:
@@ -50,7 +50,7 @@ class chunk_processor {
 };
 
 /**
- * Implementation of the chunk_processor class for single-thread sequential chunk processing
+ * @brief Implementation of the chunk_processor class for single-thread sequential chunk processing
  */
 class chunk_processor_singlethread : public chunk_processor {
    public:
@@ -61,7 +61,7 @@ class chunk_processor_singlethread : public chunk_processor {
 };
 
 /**
- * Implementation of the chunk_processor class for multithreaded parallel chunk processing
+ * @brief Implementation of the chunk_processor class for multithreaded parallel chunk processing
  */
 class chunk_processor_multithread : public chunk_processor {
    public:
@@ -83,7 +83,7 @@ class chunk_processor_multithread : public chunk_processor {
 };
 
 /**
- * A simple structure for band information
+ * @brief A simple structure for band information
  */
 struct band {
     band(std::string name) : name(name), no_data_value(std::to_string(NAN)), offset(0), scale(1), unit(""), type("float64") {}
@@ -96,7 +96,7 @@ struct band {
 };
 
 /**
- * Collection class for image bands, accessible by name or id.
+ * @brief Collection class for image bands, accessible by name or id
  */
 class band_collection {
    public:
@@ -161,8 +161,10 @@ class band_collection {
 };
 
 /**
- * A class for storing actual data of one chunk. This is typally used with smart pointers as
- * std::shared_ptr<chunk_data>.
+ * @brief A class for storing actual data of one chunk
+ *
+ * This class is typically used with smart pointers as
+ * std::shared_ptr<chunk_data>
  */
 class chunk_data {
    public:
@@ -235,7 +237,9 @@ class chunk_data {
 };
 
 /**
- * Base class for all data cube types. This class is virtual but provides a few default methods
+ * @brief Base class for all data cube types.
+ *
+ * This class is virtual but provides a few default methods
  * such as chunk-wise NetCDF export, conversion of chunk-local, cube-local, and spatial coordinates / datetime.
  *
  * Cubes should primarily be used as smart pointers, i.e. std::shared_ptr<xxx_cube>.

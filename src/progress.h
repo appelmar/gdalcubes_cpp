@@ -22,21 +22,47 @@
 #include "utils.h"
 
 /**
- * Virtual base class for progress updates of long running processes
+ * @brief Virtual base class for progress updates of long running processes
 */
 struct progress {
+    /**
+     * Get a new progress object of the same class
+     * @return a new progress object
+     */
     virtual std::shared_ptr<progress> get() = 0;
+
+    /**
+    * Set the progress to a specific value in [0,1]
+    * @param p progress, 1 means 100%
+    */
     virtual void set(double p) = 0;
+
+    /**
+   * Increment progress by a value of db
+   * @param dp progress increment
+   */
     virtual void increment(double dp) = 0;
+
+    /**
+     * Finalize the progress update such as printing "DONE"
+     */
     virtual void finalize(){};
 };
 
+/**
+ * @brief Implementation of progress which ignores any progress updates
+ * @see progress
+*/
 struct progress_none : public progress {
     std::shared_ptr<progress> get() override { return std::make_shared<progress_none>(); }
     void set(double p) override {}
     void increment(double dp) override {}
 };
 
+/**
+ * @brief Implementation of progress that streams updates to stdout
+ * @see progress
+*/
 struct progress_simple_stdout : public progress {
     std::shared_ptr<progress> get() override { return std::make_shared<progress_simple_stdout>(); }
     void set(double p) override {
@@ -68,6 +94,10 @@ struct progress_simple_stdout : public progress {
     double _p;
 };
 
+/**
+ * @brief Implementation of progress that streams updates to stdout and measures execution time
+ * @see progress
+*/
 struct progress_simple_stdout_with_time : public progress {
     std::shared_ptr<progress> get() override {
         return std::make_shared<progress_simple_stdout_with_time>();

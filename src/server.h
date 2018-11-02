@@ -25,6 +25,9 @@
 #include <thread>
 #include "cube.h"
 
+/**
+ * @brief An in-memory cache for sucessfully read / computed chunks
+ */
 class server_chunk_cache {
    public:
     static server_chunk_cache* instance() {
@@ -153,6 +156,11 @@ class server_chunk_cache {
     };
 };
 
+/**
+ * @brief Serve gdalcubes functionality as a REST-like API over HTTP on a provided host, port, and endpoint
+ *
+ * This class enables distributed processing by providing gdalcubes functionality of a simple HTTP REST-like API
+ */
 class gdalcubes_server {
    public:
     gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, boost::filesystem::path workdir = boost::filesystem::temp_directory_path() / "gdalcubes_server", std::set<std::string> whitelist = {}) : _host(host), _worker_cond(), _chunk_read_requests_set(), _mutex_worker_cond(), _mutex_chunk_read_executing(), _mutex_worker_threads(), _cur_id(0), _mutex_id(), _mutex_cubestore(), _port(port), _ssl(ssl), _basepath(basepath), _worker_thread_count(0), _cubestore(), _worker_threads(), _workdir(workdir), _listener(), _whitelist(whitelist) {

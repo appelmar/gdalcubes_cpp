@@ -22,6 +22,10 @@
 #include "external/json.hpp"
 #include "image_collection.h"
 
+/**
+ * A utility structure to work with different aggregation
+ * algorithms
+ */
 struct aggregation {
     enum aggregation_type {
         NONE,
@@ -75,6 +79,10 @@ struct aggregation {
     }
 };
 
+/**
+ * A utility structure to work with different resampling
+ * algorithms and their different types in GDAL
+ */
 struct resampling {
     enum resampling_type {
         NEAR,
@@ -179,71 +187,169 @@ struct resampling {
     }
 };
 
+/**
+ * Spatial and temporal reference for data cubes
+ */
 class cube_st_reference {
    public:
     virtual ~cube_st_reference() {
     }
 
+    /**
+     * Get the number of cells in x dimension
+     * @return number of cells in x dimension
+     */
     inline uint32_t& nx() { return _nx; }
+
+    /**
+    * Get the number of cells in y dimension
+    * @return number of cells in y dimension
+    */
     inline uint32_t& ny() { return _ny; }
 
+    /**
+    * Get the size of cells in x dimension
+    * @return size of cells in x dimension
+    */
     inline double dx() { return (_win.right - _win.left) / _nx; }
+
+    /**
+   * Get the size of cells in y dimension
+   * @return size of cells in y dimension
+   */
     inline double dy() { return (_win.top - _win.bottom) / _ny; }
 
+    /**
+     * Get the lower limit in x dimension / left boundary of the cube's extent
+     * @return left boundary of the cube's extent
+     */
     inline double& left() { return _win.left; }
+
+    /**
+     * Get the upper limit in x dimension / right boundary of the cube's extent
+     * @return right boundary of the cube's extent
+     */
     inline double& right() { return _win.right; }
+
+    /**
+     * Get the lower limit in y dimension / bottom boundary of the cube's extent
+     * @return bottom boundary of the cube's extent
+     */
     inline double& bottom() { return _win.bottom; }
+
+    /**
+     * Get the upper limit in y dimension / top boundary of the cube's extent
+     * @return top boundary of the cube's extent
+     */
     inline double& top() { return _win.top; }
 
+    /**
+     * Return the spatial reference system / projection
+     * @return string with projection / SRS information that is understandable by GDAL / OGR
+     */
     inline std::string proj() { return _proj; }
+
+    /**
+     * Return the spatial reference system / projection
+     * @return OGRSpatialReference object
+     */
     inline OGRSpatialReference proj_ogr() {
         OGRSpatialReference s;
         s.SetFromUserInput(proj().c_str());
         return s;
     }
 
+    /**
+     * Getter / setter for the lower boundary of the cube's temporal extent (start datetime)
+     * @return reference to the object's t0 object
+     */
     inline datetime& t0() { return _t0; }
+
+    /**
+     * Getter / setter for the upper boundary of the cube's temporal extent (end datetime)
+     * @return reference to the object's t1 object
+     */
     inline datetime& t1() { return _t1; }
 
+    /**
+     * Get the numbers of cells in the time dimension
+     * @return integer number of cells
+     */
     uint32_t nt() {
         duration d = (_t1 - _t0) + 1;
         return (d % _dt == 0) ? d / _dt : (1 + (d / _dt));
     }
 
-    uint32_t nt(uint32_t n) {
+    /**
+     * Set the numbers of cells in the time dimension. This method will automatically derive a
+     * datetime duration of cells based on the current unit
+     */
+    void nt(uint32_t n) {
         duration d = (_t1 - _t0) + 1;
         dt().dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
         assert(nt() == n);
     }
 
+    /**
+     * Get the spatial extent / window of a cube view
+     * @return spatial extent, coordinates are expressed in the view's projection / SRS
+     */
     inline bounds_2d<double>& win() { return _win; }
 
+    /**
+     * Get or set the temporal site / duration of one cube cell
+     * @return a reference to the view's dt field
+     */
     inline duration& dt() { return _dt; }
 
+    /**
+     * Set the temporal size of cube cells as n days
+     * @param n duration / temporal size of one cell as number of days
+     */
     void set_daily(uint16_t n = 1) {
         _dt = duration(n, DAY);
     }
+
+    /**
+    * Set the temporal size of cube cells as n months
+    * @param n duration / temporal size of one cell as number of months
+    */
     void set_monthly(uint16_t n = 1) {
         _dt = duration(n, MONTH);
     }
+
+    /**
+    * Set the temporal size of cube cells as n years
+    * @param n duration / temporal size of one cell as number of years
+    */
     void set_yearly(uint16_t n = 1) {
         _dt = duration(n, YEAR);
     }
+
+    /**
+    * Set the temporal size of cube cells as n quarter years
+    * @param n duration / temporal size of one cell as number of quarter years
+    */
     void set_quarterly(uint16_t n = 1) {
         _dt = duration(3 * n, MONTH);
     }
+
+    /**
+    * Set the temporal size of cube cells as n weeks
+    * @param n duration / temporal size of one cell as number of weeks
+    */
     void set_weekly(uint16_t n = 1) {
         _dt = duration(n, WEEK);
     }
 
     /**
-    * Convert integer view-based coordinates to map coordinates
-    * @note view-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
+    * Convert integer cube-based coordinates to spacetime coordinates
+    * @note cube-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
     * lower left pixel.
-    * @note Output map coordinates will have the same projection as the cube view
-    * @see cube_view::view_coords()
-    * @param p
-    * @return
+    * @note Output coordinates will have the projection / SRS as in cube_st_reference::proj()
+    * @see cube_st_reference::view_coords()
+    * @param p cube-based coordinates
+    * @return spacetime coordinates
     */
     coords_st map_coords(coords_nd<uint32_t, 3> p) {
         coords_st s;
@@ -254,13 +360,13 @@ class cube_st_reference {
     }
 
     /**
-     * Convert map coordinates to integer view-based coordinates
-     * @note view-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
+     * Convert spacetime coordinates to integer cube-based coordinates
+     * @note cube-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
      * lower left pixel.
-     * @note the function assumes input map coordinates have the same projection as the cube view
-     * @see cube_view::map_coords()
-     * @param p
-     * @return
+     * @note the function assumes input coordinates have the  projection / SRS as in cube_st_reference::proj()
+     * @see cube_st_reference::map_coords()
+     * @param p spacetime coordinates
+     * @return cube-based coordinates
      */
     coords_nd<uint32_t, 3> cube_coords(coords_st p) {
         coords_nd<uint32_t, 3> s;
@@ -283,22 +389,50 @@ class cube_st_reference {
 };
 
 /**
- * This class defines a view how to look at the data including which resolution, which projection,
- * which spatial / temporal window we are intereseted in following analyses.
- *
- * The class uses "simplified" date calculations, i.e., date differences are based on a
- * given maximum unit / granularity that we are interested in. For instance, the difference between 2018-04-01 and 2016-06-05 can
- * be 2 years, 23 months, or 666 days. Time intervals are currently not implemented.
+ * A data cube view includes the spacetime reference of a cube (extent, resolution, projection) and
+ * optional resampling and aggregation algorithms that are applied when original images are
+ * read from an image_collection_cube. Aggregation refers to how multiple values for the same
+ * cube cell from different images are combined whereas resampling refers to the algorithm used
+ * to warp / reproject images to the cube geometry.
  */
-
 class cube_view : public cube_st_reference {
    public:
+    /**
+     * Deserializes a cube_view object from a JSON file.
+     * @param filename Path to the json file on disk
+     * @return A cube_view object
+     */
     static cube_view read_json(std::string filename);
+
+    /**
+    * Deserializes a cube_view object from a JSON file.
+    * @param str JSON string
+    * @return A cube_view object
+    */
     static cube_view read_json_string(std::string str);
+
+    /**
+    * Serializes a cube_view object as a JSON file.
+    * @param filename output file
+    */
     void write_json(std::string filename);
+
+    /**
+      * Serializes a cube_view object as a JSON string.
+      * @return JSON string
+      */
     std::string write_json_string();
 
+    /**
+     * Getter / setter for aggregation method
+     * @return reference to the object's aggregation field
+     */
     inline aggregation::aggregation_type& aggregation_method() { return _aggregation; }
+
+    /**
+    * Getter / setter for resampling method
+    * @return reference to the object's resampling field
+    */
     inline resampling::resampling_type& resampling_method() { return _resampling; }
 
    protected:

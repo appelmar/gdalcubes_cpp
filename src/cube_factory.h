@@ -21,7 +21,15 @@
 #include <memory>
 #include "cube.h"
 
+/**
+ * @brief Factory to create (nested) cubes from its JSON representation
+ */
 struct cube_factory {
+    /**
+     * Create a cube from its JSON representation
+     * @param j
+     * @return
+     */
     static std::shared_ptr<cube> create_from_json(nlohmann::json j);
 };
 

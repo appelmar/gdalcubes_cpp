@@ -18,6 +18,18 @@
 
 #include "cube.h"
 
+/**
+ * @brief A data cube that reads data from an image collection
+ *
+ * An image collection cube is created from a cube view and reads data from an image collection.
+ * The cube view defines the shape of the cube (size, extent, etc.) and automatically derives
+ * which images of the collection are relevant for which chunks. To transform images to the shape of the cube,
+ * [gdalwarp](https://www.gdal.org/gdalwarp.html) is applied on each image and images that fall into the same temporal slice
+ * are aggregated with an aggregation function.
+ *
+ * @see image_collection
+ * @see cube_view
+ */
 class image_collection_cube : public cube {
    public:
     image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v);

@@ -173,6 +173,8 @@ uint32_t gdalcubes_swarm::post_cube(std::string json, uint16_t server_index) {
         }
         std::string response_body(response_body_bytes.begin(), response_body_bytes.end());
         return std::stoi(response_body);
+    } else {
+        throw std::string("ERROR in gdalcubes_swarm::post_cube(): no connection with given server index available");
     }
 }
 
@@ -242,6 +244,8 @@ std::shared_ptr<chunk_data> gdalcubes_swarm::get_download(uint32_t chunk_id, uin
         }
 
         return out;
+    } else {
+        throw std::string("ERROR in gdalcubes_swarm::get_download(): no connection with given server index available");
     }
 }
 

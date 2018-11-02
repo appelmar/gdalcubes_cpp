@@ -46,6 +46,8 @@ struct duration {
 
     std::string to_string() {
         switch (dt_unit) {
+            case NONE:
+                return "";
             case SECOND:
                 return "PT" + std::to_string(dt_interval) + "S";
             case MINUTE:
@@ -61,6 +63,7 @@ struct duration {
             case YEAR:
                 return "P" + std::to_string(dt_interval) + "Y";
         }
+        return "";
     }
 
     static duration from_string(std::string s) {
@@ -228,7 +231,7 @@ class datetime {
         if (!boost::regex_match(s.c_str(), res, regex1)) {
             throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
         } else {
-            if (!res.size() == 7) throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
+            if (res.size() != 7) throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
             uint16_t i = 2;
             while (!res[i].str().empty() && i < 7) ++i;
             if (i == 2) {
@@ -262,6 +265,8 @@ class datetime {
         duration out;
         out.dt_unit = std::max(l.unit(), r.unit());  // TODO: warning if not the same unit
         switch (out.dt_unit) {
+            case NONE:
+                break;
             case SECOND:
                 out.dt_interval = (l._p - r._p).total_seconds();
                 break;
@@ -294,8 +299,10 @@ class datetime {
     }
 
     friend bool operator==(const datetime& l, const datetime& r) {
-        if (l.unit() != r._unit) return false;  // TODO: exception
+        if (l.unit() != r._unit) return false;  // TODO: warning
         switch (l.unit()) {
+            case NONE:
+                return false;
             case SECOND:
                 return (l._p.date() == r._p.date() &&
                         l._p.time_of_day().hours() == r._p.time_of_day().hours() &&
@@ -319,13 +326,16 @@ class datetime {
             case YEAR:
                 return (l._p.date().year() == r._p.date().year());
         }
+        return false;
     }
 
     inline friend bool operator!=(const datetime& l, const datetime& r) { return !(l == r); }
 
     friend bool operator<(datetime& l, datetime& r) {
-        if (l.unit() != r._unit) return false;  // TODO: exception
+        if (l.unit() != r._unit) return false;
         switch (l.unit()) {
+            case NONE:
+                return false;  // TODO: warning
             case SECOND:
                 if (l._p.date() < r._p.date()) return true;
                 if (l._p.date() > r._p.date()) return false;
@@ -356,6 +366,7 @@ class datetime {
             case YEAR:
                 return l._p.date().year() < r._p.date().year();
         }
+        return false;
     }
     inline friend bool operator>(datetime& l, datetime& r) { return r < l; }
     inline friend bool operator<=(datetime& l, datetime& r) { return !(l > r); }
@@ -364,6 +375,8 @@ class datetime {
     friend datetime operator+(datetime l, const duration& r) {
         datetime out(l._p);
         switch (r.dt_unit) {
+            case NONE:
+                break;
             case SECOND:
                 out._p += boost::posix_time::seconds(r.dt_interval);
                 break;
@@ -395,6 +408,7 @@ class datetime {
 
     static std::string datetime_format_for_unit(datetime_unit u) {
         switch (u) {
+            case NONE:
             case SECOND:
                 return "%Y-%m-%dT%H:%M:%S";
             case MINUTE:
@@ -410,6 +424,7 @@ class datetime {
             case YEAR:
                 return "%Y";
         }
+        return "%Y-%m-%dT%H:%M:%S";
     }
 };
 

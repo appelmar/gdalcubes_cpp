@@ -49,7 +49,7 @@ std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
             return x;
         }));
 
-    if (!j.count("cube_type") > 0) {
+    if (!j.count("cube_type")) {
         throw std::string("ERROR in cube_factory::create_from_json(): invalid object, missing cube_type key.");
     }
 

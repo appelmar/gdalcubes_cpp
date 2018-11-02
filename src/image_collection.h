@@ -91,7 +91,6 @@ struct bounds_2d {
             if (y[k] > ymax) ymax = y[k];
         }
 
-        bounds_2d<Ta> in_extent;
         left = xmin;
         right = xmax;
         top = ymax;

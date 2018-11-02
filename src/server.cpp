@@ -330,7 +330,7 @@ void gdalcubes_server::handle_head(web::http::http_request req) {
             fname = (_workdir / fname).string();
             if (boost::filesystem::exists(fname)) {
                 if (query_pars.find("size") != query_pars.end()) {
-                    if (std::stoi(query_pars["size"]) == boost::filesystem::file_size(fname)) {
+                    if (std::stoi(query_pars["size"]) == (int)boost::filesystem::file_size(fname)) {
                         req.reply(web::http::status_codes::OK);  // File exists and has the same size
                     } else {
                         req.reply(web::http::status_codes::Conflict);  // File exists but has different size

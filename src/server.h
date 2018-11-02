@@ -66,7 +66,6 @@ class server_chunk_cache {
             _m.lock();
             while (_size_bytes + value->total_size_bytes() > config::instance()->get_server_chunkcache_max()) {
                 auto it = _prio_backward.lower_bound(0);  // lowest value greater than or equal to 0
-                uint32_t p = it->first;
 
                 // remove it from the data
                 remove(it->second);
@@ -140,7 +139,7 @@ class server_chunk_cache {
     uint64_t _cur_priority;
 
    private:
-    server_chunk_cache() : _cache(), _size_bytes(0), _m(), _prio_backward(), _prio_forward(), _cur_priority(0) {}
+    server_chunk_cache() : _cache(), _prio_backward(), _prio_forward(), _m(), _size_bytes(0), _cur_priority(0) {}
     ~server_chunk_cache() {}
     server_chunk_cache(const server_chunk_cache&) = delete;
     static server_chunk_cache* _instance;
@@ -163,7 +162,28 @@ class server_chunk_cache {
  */
 class gdalcubes_server {
    public:
-    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, boost::filesystem::path workdir = boost::filesystem::temp_directory_path() / "gdalcubes_server", std::set<std::string> whitelist = {}) : _host(host), _worker_cond(), _chunk_read_requests_set(), _mutex_worker_cond(), _mutex_chunk_read_executing(), _mutex_worker_threads(), _cur_id(0), _mutex_id(), _mutex_cubestore(), _port(port), _ssl(ssl), _basepath(basepath), _worker_thread_count(0), _cubestore(), _worker_threads(), _workdir(workdir), _listener(), _whitelist(whitelist) {
+    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, boost::filesystem::path workdir = boost::filesystem::temp_directory_path() / "gdalcubes_server", std::set<std::string> whitelist = {}) : _listener(),
+                                                                                                                                                                                                                                                                 _port(port),
+                                                                                                                                                                                                                                                                 _host(host),
+                                                                                                                                                                                                                                                                 _basepath(basepath),
+                                                                                                                                                                                                                                                                 _ssl(ssl),
+                                                                                                                                                                                                                                                                 _workdir(workdir),
+                                                                                                                                                                                                                                                                 _cubestore(),
+                                                                                                                                                                                                                                                                 _cur_id(0),
+                                                                                                                                                                                                                                                                 _mutex_id(),
+                                                                                                                                                                                                                                                                 _mutex_cubestore(),
+                                                                                                                                                                                                                                                                 _worker_thread_count(0),
+                                                                                                                                                                                                                                                                 _mutex_chunk_read_requests(),
+                                                                                                                                                                                                                                                                 _chunk_read_requests(),
+                                                                                                                                                                                                                                                                 _chunk_read_requests_set(),
+                                                                                                                                                                                                                                                                 _mutex_chunk_read_executing(),
+                                                                                                                                                                                                                                                                 _chunk_read_executing(),
+                                                                                                                                                                                                                                                                 _worker_threads(),
+                                                                                                                                                                                                                                                                 _mutex_worker_threads(),
+                                                                                                                                                                                                                                                                 _worker_cond(),
+                                                                                                                                                                                                                                                                 _mutex_worker_cond(),
+                                                                                                                                                                                                                                                                 _chunk_cond(),
+                                                                                                                                                                                                                                                                 _whitelist(whitelist) {
         if (boost::filesystem::exists(_workdir) && boost::filesystem::is_directory(_workdir)) {
             // boost::filesystem::remove_all(_workdir); // TODO: uncomment after testing
         } else if (boost::filesystem::exists(_workdir) && !boost::filesystem::is_directory(_workdir)) {
@@ -217,7 +237,6 @@ class gdalcubes_server {
     std::mutex _mutex_cubestore;
 
     uint16_t _worker_thread_count;
-    std::mutex _mutex_worker_thread_count;
 
     std::mutex _mutex_chunk_read_requests;
     std::list<std::pair<uint32_t, uint32_t>> _chunk_read_requests;

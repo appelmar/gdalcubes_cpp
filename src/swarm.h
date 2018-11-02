@@ -29,7 +29,7 @@
  */
 class gdalcubes_swarm : public chunk_processor {
    public:
-    gdalcubes_swarm(std::vector<std::string> urls) : _cube(nullptr), _cube_ids(), _server_uris(urls), _server_handles(), _nthreads(1) {
+    gdalcubes_swarm(std::vector<std::string> urls) : _cube(nullptr), _cube_ids(), _server_handles(), _server_uris(urls), _nthreads(1) {
         for (uint16_t i = 0; i < _server_uris.size(); ++i)
             _server_handles.push_back(curl_easy_init());
     }

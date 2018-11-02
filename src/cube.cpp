@@ -60,7 +60,10 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
                 fs::path out_file = op / (std::to_string(i) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif");
 
                 GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
-                gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
+                CPLErr res = gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
+                if (res != CE_None) {
+                    std::cout << "WARNING in cube::write_gtiff_directory(): RasterIO failed" << std::endl;
+                }
                 gdal_out->GetRasterBand(1)->SetNoDataValue(std::stod(_bands.get(ib).no_data_value));
                 char *wkt_out;
                 OGRSpatialReference srs_out;
@@ -166,8 +169,8 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         v_t.putAtt("standard_name", "time");
 
         if (srs.IsProjected()) {
-            char *unit;
-            double scale = srs.GetLinearUnits(&unit);
+            char *unit = nullptr;
+            srs.GetLinearUnits(&unit);
             v_y.putAtt("units", unit);
             v_x.putAtt("units", unit);
 

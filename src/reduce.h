@@ -20,6 +20,7 @@
 #include "cube.h"
 
 struct reducer {
+    virtual ~reducer() {}
     virtual void init(std::shared_ptr<chunk_data> a) = 0;
     virtual void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b) = 0;
     virtual void finalize(std::shared_ptr<chunk_data> a) = 0;
@@ -181,7 +182,7 @@ struct median_reducer : public reducer {
  */
 class reduce_cube : public cube {
    public:
-    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : _in_cube(in), _reducer(reducer), cube(std::make_shared<cube_st_reference>(in->st_reference())) {
+    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : cube(std::make_shared<cube_st_reference>(in->st_reference())), _in_cube(in), _reducer(reducer) {
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         _size[1] = 1;

@@ -121,9 +121,12 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
             uint32_t xsize = dat->size()[3];
             uint32_t ysize = dat->size()[2];
             m.lock();
-            gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Write, xoff, yoff, xsize,
-                                                     ysize, ((double *)dat->buf()) + b * dat->size()[2] * dat->size()[3], dat->size()[3], dat->size()[2],
-                                                     GDT_Float64, 0, 0, NULL);
+            CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Write, xoff, yoff, xsize,
+                                                                  ysize, ((double *)dat->buf()) + b * dat->size()[2] * dat->size()[3], dat->size()[3], dat->size()[2],
+                                                                  GDT_Float64, 0, 0, NULL);
+            if (res != CE_None) {
+                std::cout << "WARNING in reduce_cube::write_gdal_image(): RasterIO failed" << std::endl;
+            }
             m.unlock();
         }
         m.lock();

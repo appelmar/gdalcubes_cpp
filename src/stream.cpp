@@ -28,7 +28,7 @@ std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
 std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chunk_data> data) {
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
 
-    int size[] = {data->size()[0], data->size()[1], data->size()[2], data->size()[3]};
+    int size[] = {(int)data->size()[0], (int)data->size()[1], (int)data->size()[2], (int)data->size()[3]};
     if (size[0] * size[1] * size[2] * size[3] == 0) {
         return out;
     }
@@ -51,13 +51,13 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         in.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
     double* dims = (double*)calloc(size[1] + size[2] + size[3], sizeof(double));
-    for (uint32_t i = 0; i < size[1]; ++i) {
+    for (int i = 0; i < size[1]; ++i) {
         dims[i] = (_in_cube->st_reference().t0() + _in_cube->st_reference().dt() * i).to_double();
     }
-    for (uint32_t i = size[1]; i < size[1] + size[2]; ++i) {
+    for (int i = size[1]; i < size[1] + size[2]; ++i) {
         dims[i] = _in_cube->st_reference().win().bottom + i * _in_cube->st_reference().dy();
     }
-    for (uint32_t i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
+    for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
         dims[i] = _in_cube->st_reference().win().left + i * _in_cube->st_reference().dx();
     }
     in.write((char*)(dims), sizeof(double) * (size[1] + size[2] + size[3]));

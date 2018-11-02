@@ -30,7 +30,7 @@
  */
 class stream_cube : public cube {
    public:
-    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") : _in_cube(in_cube), _cmd(cmd), _log_output(log_output), cube(std::make_shared<cube_st_reference>(in_cube->st_reference())) {
+    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") : cube(std::make_shared<cube_st_reference>(in_cube->st_reference())), _in_cube(in_cube), _cmd(cmd), _log_output(log_output) {
         // Test CMD and find out what size comes out.
         cube_size_tyx tmp = _in_cube->chunk_size(0);
         cube_size_btyx csize_in = {_in_cube->bands().count(), tmp[0], tmp[1], tmp[2]};

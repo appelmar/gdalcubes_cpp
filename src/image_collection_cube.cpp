@@ -20,10 +20,10 @@
 #include <map>
 #include "utils.h"
 
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : _collection(ic), cube(std::make_shared<cube_view>(v)), _input_bands() { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(v)), _input_bands() { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : _collection(ic), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _input_bands() { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : _collection(std::make_shared<image_collection>(icfile)), cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands() { load_bands(); }
 
 std::string image_collection_cube::to_string() {
     std::stringstream out;
@@ -35,6 +35,7 @@ std::string image_collection_cube::to_string() {
 struct aggregation_state {
    public:
     aggregation_state(coords_nd<uint32_t, 4> size_btyx) : _size_btyx(size_btyx) {}
+    virtual ~aggregation_state() {}
 
     virtual void init() = 0;
     virtual void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) = 0;
@@ -45,7 +46,7 @@ struct aggregation_state {
 };
 
 struct aggregation_state_mean : public aggregation_state {
-    aggregation_state_mean(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx), _val_count(), _img_count() {}
+    aggregation_state_mean(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx), _img_count(), _val_count() {}
 
     ~aggregation_state_mean() {}
 
@@ -270,13 +271,13 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     //    out_co.AddNameValue("BLOCKXSIZE", "256");
     //    out_co.AddNameValue("BLOCKYSIZE", "256");
 
-    double affine[6];
-    affine[0] = cextent.s.left;
-    affine[3] = cextent.s.top;
-    affine[1] = _st_ref->dx();
-    affine[5] = -_st_ref->dy();
-    affine[2] = 0.0;
-    affine[4] = 0.0;
+    //    double affine[6];
+    //    affine[0] = cextent.s.left;
+    //    affine[3] = cextent.s.top;
+    //    affine[1] = _st_ref->dx();
+    //    affine[5] = -_st_ref->dy();
+    //    affine[2] = 0.0;
+    //    affine[4] = 0.0;
 
     OGRSpatialReference proj_out;
     proj_out.SetFromUserInput(_st_ref->proj().c_str());
@@ -401,7 +402,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         int it = (dt - cextent.t0) / _st_ref->dt();
 
         // Make sure that it is valid in order to prevent buffer overflows
-        if (it >= 0 && it < out->size()[1]) {
+        if (it >= 0 && it < (int)(out->size()[1])) {
             // For each band, call RasterIO to read and copy data to the right position in the buffers
             for (uint16_t b = 0; b < band_rels.size(); ++b) {
                 uint16_t b_internal = _bands.get_index(std::get<0>(band_rels[b]));
@@ -414,10 +415,15 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
                 // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
                 if (view()->aggregation_method() == aggregation::NONE) {
-                    gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
-
+                    CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                    if (res != CE_None) {
+                        std::cout << "WARNING in image_collection_cube::read_chunk(): RasterIO failed" << std::endl;
+                    }
                 } else {
-                    gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                    CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                    if (res != CE_None) {
+                        std::cout << "WARNING in image_collection_cube::read_chunk(): RasterIO failed" << std::endl;
+                    }
                     agg->update(cbuf, img_buf, b_internal, it);
                 }
             }

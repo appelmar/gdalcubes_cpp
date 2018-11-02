@@ -67,7 +67,6 @@ struct progress_simple_stdout : public progress {
     std::shared_ptr<progress> get() override { return std::make_shared<progress_simple_stdout>(); }
     void set(double p) override {
         _m.lock();
-        double p_old = _p;
         _p = p;
         for (uint16_t i = 0; i < (((int)(100 * p)) / 10); ++i) {
             std::cout << "=";
@@ -104,7 +103,6 @@ struct progress_simple_stdout_with_time : public progress {
     }
     void set(double p) override {
         _m.lock();
-        double p_old = _p;
         _p = p;
         for (uint16_t i = 0; i < (((int)(100 * p)) / 10); ++i) {
             std::cout << "=";

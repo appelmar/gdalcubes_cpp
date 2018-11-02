@@ -115,6 +115,9 @@ class config {
 
     inline uint16_t get_gdal_num_threads() { return _gdal_num_threads; }
 
+    /**
+     * @brief Global gdalcubes library initialization function
+     */
     void gdalcubes_init() {
         curl_global_init(CURL_GLOBAL_ALL);
         GDALAllRegister();
@@ -126,10 +129,16 @@ class config {
         CPLSetErrorHandler(CPLQuietErrorHandler);
     }
 
+    /**
+   * @brief Global gdalcubes library cleanup function
+   */
     void gdalcubes_cleanup() {
         curl_global_cleanup();
     }
 
+    /**
+   * @brief Global gdalcubes version information function
+   */
     version_info get_version_info();
 
    private:

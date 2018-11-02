@@ -246,7 +246,7 @@ class chunk_data {
  */
 class cube : public std::enable_shared_from_this<cube> {
    public:
-    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _size() {
+    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _size(), _chunk_size(), _bands() {
         _size[0] = 0;
         _size[1] = st_ref->nt();
         _size[2] = st_ref->ny();

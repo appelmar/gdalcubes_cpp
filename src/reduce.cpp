@@ -17,6 +17,7 @@
 #include "reduce.h"
 
 std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
+    GCBS_DEBUG("reduce_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
@@ -99,6 +100,8 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
 
     gdal_out->SetProjection(out_wkt);
     gdal_out->SetGeoTransform(affine);
+    CPLFree(out_wkt);
+
 
     // The following loop seems to be needed for some drivers only
     for (uint16_t b = 0; b < _bands.count(); ++b) {  //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);

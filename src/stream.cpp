@@ -19,6 +19,7 @@
 #include <thread>
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
+    GCBS_DEBUG("reduce_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the cube, we don't need to read anything.
@@ -38,7 +39,6 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     boost::asio::io_service ios;
     std::future<std::vector<char>> outdata;
     std::future<std::vector<char>> outerr;
-
 
     boost::process::environment e = boost::this_process::environment();
     e.set("GDALCUBES_STREAMING", "1");
@@ -82,7 +82,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     std::vector<char> odat = outdata.get();
     if (!_log_output.empty()) {
         std::vector<char> oerr = outerr.get();
-        std::string str(oerr.begin(),oerr.end());
+        std::string str(oerr.begin(), oerr.end());
         if (_log_output == "stdout") {
             std::cout << str << std::endl;
         } else if (_log_output == "stderr") {

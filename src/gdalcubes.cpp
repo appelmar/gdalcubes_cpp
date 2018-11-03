@@ -53,6 +53,7 @@ void print_usage(std::string command = "") {
         std::cout << "  -R, --recursive               If IN is a directory, do a recursive file listing" << std::endl;
         std::cout << "    , --noarchives              If given, do not scan within zip, tar, gz, tar.gz archive files" << std::endl;
         std::cout << "  -s, --strict                  Cancel if a single GDALDataset cannot be added to the collection. If not given, ignore failing datasets in the output collection" << std::endl;
+        std::cout << "  -d, --debug                   Print debug messages" << std::endl;
         std::cout << std::endl;
     } else if (command == "info") {
         std::cout << "Usage: gdalcubes info SOURCE" << std::endl;
@@ -75,6 +76,7 @@ void print_usage(std::string command = "") {
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
         std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
+        std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
     } else if (command == "stream") {
         std::cout << "Usage: gdalcubes stream [options] SOURCE DEST" << std::endl;
@@ -89,8 +91,10 @@ void print_usage(std::string command = "") {
         std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', if not given, no reduction is performed on the result chunks." << std::endl;
         std::cout << "      --gdal-of            GDAL output format for optional reduction, defaults to GTiff, only relevant if -r is given" << std::endl;
         std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings for optional redutction, can be passed multiple times, only relevant if -r is given" << std::endl;
-        std::cout << "  -t  --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
+        std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
         std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
+        std::cout << "  -d, --debug              Print debug messages" << std::endl;
+
         std::cout << std::endl;
 
     } else {
@@ -115,7 +119,7 @@ int main(int argc, char* argv[]) {
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
     po::options_description global_args("Global arguments");
-    global_args.add_options()("help,h", "print usage")("version", "print version information")("debug,d", "debug output, not yet implemented")("command", po::value<std::string>(), "Command to execute")("subargs", po::value<std::vector<std::string>>(), "Arguments for command");
+    global_args.add_options()("help,h", "")("version", "")("debug,d", "")("command", po::value<std::string>(), "")("subargs", po::value<std::vector<std::string>>(), "");
 
     po::positional_options_description pos;
     pos.add("command", 1).add("subargs", -1);
@@ -128,7 +132,6 @@ int main(int argc, char* argv[]) {
         if (vm.count("version")) {
             version_info v = config::instance()->get_version_info();
             std::cout << "gdalcubes " << v.VERSION_MAJOR << "." << v.VERSION_MINOR << "." << v.VERSION_PATCH << " (" << v.GIT_COMMIT << ") built on " << v.BUILD_DATE << " " << v.BUILD_TIME << std::endl;
-            //std::cout << " linked against " << GDALVersionInfo("--version") << std::endl;  // TODO add version info for other linked libraries
             return 0;
         }
         if (vm.count("help") && !vm.count("command")) {
@@ -140,6 +143,10 @@ int main(int argc, char* argv[]) {
         if (vm.count("help") && vm.count("command")) {
             print_usage(vm["command"].as<std::string>());
             return 0;
+        }
+
+        if (vm.count("debug")) {
+            config::instance()->set_error_handler(error_handler::error_handler_debug);
         }
 
         std::string cmd = vm["command"].as<std::string>();

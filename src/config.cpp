@@ -21,6 +21,7 @@ config* config::_instance = nullptr;
 
 config::config() : _chunk_processor(std::make_shared<chunk_processor_singlethread>()),
                    _progress_bar(std::make_shared<progress_none>()),
+                   _error_handler(error_handler::default_error_handler),
                    _gdal_cache_max(1024 * 1024 * 256),         // 256 MiB
                    _server_chunkcache_max(1024 * 1024 * 512),  // 512 MiB
                    _server_worker_threads_max(1),

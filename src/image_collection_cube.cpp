@@ -19,6 +19,7 @@
 #include <gdal_utils.h>
 #include <map>
 #include "utils.h"
+#include "error.h"
 
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands() { load_bands(); }
 image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands() { load_bands(); }
@@ -236,6 +237,7 @@ struct aggregation_state_none : public aggregation_state {
  */
 
 std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
+    GCBS_DEBUG("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
@@ -379,17 +381,19 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
         if (warp_opts == NULL) {
+            GDALWarpAppOptionsFree(warp_opts);
             throw std::string("ERROR in image_collection_cube::read_chunk(): cannot create gdalwarp options.");
         }
 
-        //        if (config::instance()->get_verbose()) {
-        //            std::cout << "Calling gdalwarp ";
-        //            for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
-        //                std::cout << warp_args[iws] << " ";
-        //            }
-        //            std::cout << descriptor_name.c_str() << " "
-        //                      << ("/vsimem/" + std::to_string(id) + "_" + std::to_string(i) + ".tif").c_str() << std::endl;
-        //        }
+
+        if (config::instance()->get_verbose()) {
+            std::stringstream ss;
+            ss << "calling gdalwarp ";
+            for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
+                ss << warp_args[iws] << " ";
+            }
+            GCBS_DEBUG(ss.str());
+        }
 
         GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
 

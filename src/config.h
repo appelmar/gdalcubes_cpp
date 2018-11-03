@@ -21,6 +21,7 @@
 #include <gdal_priv.h>
 #include <memory>
 #include "build_info.h"
+#include "error.h"
 #include "progress.h"
 
 // forward declarations
@@ -141,9 +142,18 @@ class config {
    */
     version_info get_version_info();
 
+    inline void set_error_handler(error_action f) {
+        _error_handler = f;
+    }
+
+    inline error_action get_error_handler() {
+        return _error_handler;
+    }
+
    private:
     std::shared_ptr<chunk_processor> _chunk_processor;
     std::shared_ptr<progress> _progress_bar;
+    error_action _error_handler;
     uint32_t _gdal_cache_max;
     uint32_t _server_chunkcache_max;
     uint16_t _server_worker_threads_max;  // number of threads for parallel chunk reads

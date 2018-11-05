@@ -62,7 +62,7 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
                 GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
                 CPLErr res = gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
                 if (res != CE_None) {
-                    std::cout << "WARNING in cube::write_gtiff_directory(): RasterIO failed" << std::endl;
+                    GCBS_WARN("RasterIO (write) failed for band " + _bands.get(ib).name);
                 }
                 gdal_out->GetRasterBand(1)->SetNoDataValue(std::stod(_bands.get(ib).no_data_value));
                 char *wkt_out;

@@ -187,7 +187,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         GDALDataset* dataset = (GDALDataset*)GDALOpen((*it).c_str(), GA_ReadOnly);
         if (!dataset) {
             if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot open '" + *it + "'.");
-            std::cout << "WARNING in image_collection::add(): GDAL cannot open '" << *it << "'.";
+            GCBS_WARN("GDAL failed to open " + *it);
             continue;
         }
         // if check = false, the following is not really needed if image is already in the database due to another file.
@@ -198,7 +198,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             // No affine transformation, maybe GCPs?
             GDALClose((GDALDatasetH)dataset);
             if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot derive affine transformation for '" + *it + "'. GCPs or unreferenced images are currently not supported.");
-            std::cout << "WARNING in image_collection::add(): GDAL cannot derive affine transformation for  '" << *it << "'.";
+            GCBS_WARN("Failed to derive affine transformation from " + *it);
             continue;
         } else {
             bbox.left = affine_in[0];
@@ -233,7 +233,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         boost::cmatch res_image;
         if (!boost::regex_match(it->c_str(), res_image, regex_images)) {
             if (strict) throw std::string("ERROR in image_collection::add(): image composition rule failed for " + std::string(*it));
-            std::cout << "WARNING: skipping  " << *it << " due to failed image composition rule" << std::endl;
+            GCBS_WARN("Skipping " + *it + " due to failed image composition rule");
             continue;
         }
 
@@ -254,7 +254,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             boost::cmatch res_datetime;
             if (!boost::regex_match(it->c_str(), res_datetime, regex_datetime)) {  // not sure to continue or throw an exception here...
                 if (strict) throw std::string("ERROR in image_collection::add(): datetime rule failed for " + std::string(*it));
-                std::cout << "WARNING: skipping  " << *it << " due to failed datetime rule" << std::endl;
+                GCBS_WARN("Skipping " + *it + " due to failed datetime rule");
                 continue;
             }
 
@@ -264,7 +264,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             is >> pt;
             if (pt.is_not_a_date_time()) {
                 if (strict) throw std::string("ERROR in image_collection::add(): cannot derive datetime from " + *it);
-                std::cout << "WARNING: skipping  " << *it << " due to failed datetime rule" << std::endl;
+                GCBS_WARN("Skipping " + *it + " due to failed datetime rule");
                 continue;
             }
 
@@ -277,7 +277,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                                            std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
             if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                 if (strict) throw std::string("ERROR in image_collection::add(): cannot add image to images table.");
-                std::cout << "WARNING: skipping  " << *it << " due to failed image table insert" << std::endl;
+                GCBS_WARN("Skipping " + *it + " due to failed image table insert");
                 continue;
             }
             image_id = sqlite3_last_insert_rowid(_db);  // take care of race conditions if things run parallel at some point
@@ -304,7 +304,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
 
                     if (sqlite3_exec(_db, sql_band_update.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                         if (strict) throw std::string("ERROR in image_collection::add(): cannot update band table.");
-                        std::cout << "WARNING: skipping  " << *it << " due to failed band table update" << std::endl;
+                        GCBS_WARN("Skipping " + *it + " due to failed band table update");
                         continue;
                     }
                     band_complete[i] = true;
@@ -313,7 +313,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                 std::string sql_insert_gdalref = "INSERT INTO gdalrefs(descriptor, image_id, band_id, band_num) VALUES('" + *it + "'," + std::to_string(image_id) + "," + std::to_string(band_ids[i]) + "," + std::to_string(band_num[i]) + ");";
                 if (sqlite3_exec(_db, sql_insert_gdalref.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                     if (strict) throw std::string("ERROR in image_collection::add(): cannot add dataset to gdalrefs table.");
-                    std::cout << "WARNING: skipping  " << *it << " due to failed gdalrefs insert" << std::endl;
+                    GCBS_WARN("Skipping " + *it + "  due to failed gdalrefs insert");
                     break;  // break only works because there is nothing after the loop.
                 }
             }

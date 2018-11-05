@@ -46,10 +46,15 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
     if (!_whitelist.empty()) {
         std::string remote = req.remote_address();
         if (_whitelist.find(remote) == _whitelist.end()) {
+            GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been blocked according to whitelist rule");
             req.reply(web::http::status_codes::NotFound);
         }
+        GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been accepted according to whitelist rule");
     }
-    std::cout << "request from " << req.remote_address() << std::endl;
+    else {
+        GCBS_DEBUG("Incoming request from " + req.remote_address());
+    }
+
 
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
@@ -57,7 +62,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
     //    std::for_each(query_pars.begin(), query_pars.end(), [](std::pair<std::string, std::string> s) { std::cout << s.first << ":" << s.second << std::endl; });
     if (!path.empty()) {
         if (path[0] == "version") {
-            std::cout << "GET /version" << std::endl;
+            GCBS_DEBUG("GET /version");
             version_info v = config::instance()->get_version_info();
             std::stringstream ss;
             ss << "gdalcubes_server " << v.VERSION_MAJOR << "." << v.VERSION_MINOR << "." << v.VERSION_PATCH << " (" << v.GIT_COMMIT << ") built on " << v.BUILD_DATE << " " << v.BUILD_TIME;
@@ -65,7 +70,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
         } else if (path[0] == "cube") {
             if (path.size() == 2) {
                 uint32_t cube_id = std::stoi(path[1]);
-                std::cout << "GET /cube/" << cube_id << std::endl;
+                GCBS_DEBUG("GET /cube" + std::to_string(cube_id));
 
                 if (_cubestore.find(cube_id) == _cubestore.end()) {
                     req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}: cube with given id is not available.", "text/plain");
@@ -77,15 +82,10 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                 uint32_t cube_id = std::stoi(path[1]);
                 uint32_t chunk_id = std::stoi(path[2]);
 
-                //debug
-                if (chunk_id == 48) {
-                    std::cout << "BREAK";
-                }
 
-                // uint32_t chunk_id = 0; // debug
                 std::string cmd = path[3];
                 if (cmd == "download") {
-                    std::cout << "GET /cube/" << cube_id << "/" << chunk_id << "/download" << std::endl;
+                    GCBS_DEBUG("GET /cube/" + std::to_string(cube_id) + "/" + std::to_string(chunk_id) + "/download");
                     if (_cubestore.find(cube_id) == _cubestore.end()) {
                         req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}/{chunk_id}/download: cube is not available", "text/plain");
                     } else if (chunk_id >= _cubestore[cube_id]->count_chunks()) {
@@ -117,7 +117,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                     }
 
                 } else if (cmd == "status") {
-                    std::cout << "GET /cube/" << cube_id << "/" << chunk_id << "/status" << std::endl;
+                    GCBS_DEBUG("GET /cube/" + std::to_string(cube_id) + "/" + std::to_string(chunk_id) + "/status");
                     if (_cubestore.find(cube_id) == _cubestore.end()) {
                         req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}/{chunk_id}/status: cube is not available", "text/plain");
                     } else if (chunk_id >= _cubestore[cube_id]->count_chunks()) {
@@ -155,10 +155,14 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
     if (!_whitelist.empty()) {
         std::string remote = req.remote_address();
         if (_whitelist.find(remote) == _whitelist.end()) {
+            GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been blocked according to whitelist rule");
             req.reply(web::http::status_codes::NotFound);
         }
+        GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been accepted according to whitelist rule");
     }
-    std::cout << "request from " << req.remote_address() << std::endl;
+    else {
+        GCBS_DEBUG("Incoming request from " + req.remote_address());
+    }
 
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
@@ -167,7 +171,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
 
     if (!path.empty()) {
         if (path[0] == "file") {
-            std::cout << "POST /file" << std::endl;
+            GCBS_DEBUG("POST /file" + req.remote_address());
             std::string fname;
             if (query_pars.find("name") != query_pars.end()) {
                 fname = query_pars["name"];
@@ -203,7 +207,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
             }
         } else if (path[0] == "cube") {
             if (path.size() == 1) {
-                std::cout << "POST /cube" << std::endl;
+                GCBS_DEBUG("POST /cube");
                 // we do not use cpprest JSON library here
                 uint32_t id;
                 req.extract_string(true).then([&id, this](std::string s) {
@@ -221,7 +225,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
 
                 std::string cmd = path[3];
                 if (cmd == "start") {
-                    std::cout << "POST /cube/" << cube_id << "/" << chunk_id << "/start" << std::endl;
+                    GCBS_DEBUG("POST /cube/" + std::to_string(cube_id) + "/" + std::to_string(chunk_id) + "/start");
 
                     if (_cubestore.find(cube_id) == _cubestore.end()) {
                         req.reply(web::http::status_codes::NotFound, "ERROR in /POST /cube/{cube_id}/{chunk_id}/start: cube is not available", "text/plain");
@@ -316,14 +320,19 @@ void gdalcubes_server::handle_head(web::http::http_request req) {
     if (!_whitelist.empty()) {
         std::string remote = req.remote_address();
         if (_whitelist.find(remote) == _whitelist.end()) {
+            GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been blocked according to whitelist rule");
             req.reply(web::http::status_codes::NotFound);
         }
+        GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been accepted according to whitelist rule");
     }
-    std::cout << "request from " << req.remote_address() << std::endl;
+    else {
+        GCBS_DEBUG("Incoming request from " + req.remote_address());
+    }
+
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
     if (!path.empty() && path[0] == "file") {
-        std::cout << "HEAD /file" << std::endl;
+        GCBS_DEBUG("HEAD /file");
         std::string fname;
         if (query_pars.find("name") != query_pars.end()) {
             fname = query_pars["name"];
@@ -363,6 +372,7 @@ void print_usage() {
     std::cout << "  -D, --dir                   Working directory where files are stored, defaults to {TEMPDIR}/gdalcubes" << std::endl;
     std::cout << "      --ssl                   Use HTTPS (currently not implemented)" << std::endl;
     std::cout << "  -w, --whitelist             Optional path to a whitelist text file with a list of acceptable clients" << std::endl;
+    std::cout << "  -d, --debug                 Print debug messages" << std::endl;
     std::cout << std::endl;
 }
 
@@ -374,7 +384,7 @@ int main(int argc, char* argv[]) {
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
     po::options_description global_args("Options");
-    global_args.add_options()("help,h", "")("version", "")("basepath,b", po::value<std::string>()->default_value("/gdalcubes/api"), "")("port,p", po::value<uint16_t>()->default_value(1111), "")("ssl", "")("worker_threads,t", po::value<uint16_t>()->default_value(1), "")("dir,D", po::value<std::string>()->default_value((boost::filesystem::temp_directory_path() / "gdalcubes").string()), "")("whitelist,w", po::value<std::string>(), "");
+    global_args.add_options()("help,h", "")("version", "")("debug,d", "")("basepath,b", po::value<std::string>()->default_value("/gdalcubes/api"), "")("port,p", po::value<uint16_t>()->default_value(1111), "")("ssl", "")("worker_threads,t", po::value<uint16_t>()->default_value(1), "")("dir,D", po::value<std::string>()->default_value((boost::filesystem::temp_directory_path() / "gdalcubes").string()), "")("whitelist,w", po::value<std::string>(), "");
 
     po::variables_map vm;
 
@@ -397,6 +407,9 @@ int main(int argc, char* argv[]) {
             std::ifstream infile(vm["whitelist"].as<std::string>());
             while (std::getline(infile, line))
                 whitelist.insert(line);
+        }
+        if (vm.count("debug")) {
+            config::instance()->set_error_handler(error_handler::error_handler_debug_server);
         }
 
         ssl = vm.count("ssl") > 0;

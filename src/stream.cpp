@@ -90,7 +90,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         } else {
             std::ofstream flog(_log_output, std::ios_base::out | std::ios_base::app);
             if (flog.fail()) {
-                std::cout << "WARNING in tream_cube::stream_chunk_stdin(): cannot open file'" << _log_output << "' for writing output of streaming.";
+                GCBS_WARN("Failed to open file '" + _log_output + "' for writing streaming output");
             } else {
                 flog << str;
                 flog.close();

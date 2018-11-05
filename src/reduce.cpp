@@ -128,7 +128,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
                                                                   ysize, ((double *)dat->buf()) + b * dat->size()[2] * dat->size()[3], dat->size()[3], dat->size()[2],
                                                                   GDT_Float64, 0, 0, NULL);
             if (res != CE_None) {
-                std::cout << "WARNING in reduce_cube::write_gdal_image(): RasterIO failed" << std::endl;
+                GCBS_WARN("RasterIO (write) failed for " + std::string(gdal_out->GetDescription()));
             }
             m.unlock();
         }

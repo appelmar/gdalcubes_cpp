@@ -30,6 +30,9 @@ void logger::debug(std::string msg, std::string where, int error_code) {
 void logger::fatal(std::string msg, std::string where, int error_code) {
     config::instance()->get_error_handler()(FATAL, msg, where, error_code);
 }
+void logger::trace(std::string msg, std::string where, int error_code) {
+    config::instance()->get_error_handler()(TRACE, msg, where, error_code);
+}
 void logger::info(std::string msg, std::string where, int error_code) {
     config::instance()->get_error_handler()(INFO, msg, where, error_code);
 }

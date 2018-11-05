@@ -167,8 +167,6 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
 
-            // TODO: implement debug flags
-
             bool scan_archives = true;
             bool recursive = false;
             bool strict = false;

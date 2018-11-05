@@ -26,8 +26,7 @@ config::config() : _chunk_processor(std::make_shared<chunk_processor_singlethrea
                    _server_chunkcache_max(1024 * 1024 * 512),  // 512 MiB
                    _server_worker_threads_max(1),
                    _swarm_curl_verbose(false),
-                   _gdal_num_threads(1),
-                   _verbose(false) {
+                   _gdal_num_threads(1) {
 }
 
 version_info config::get_version_info() {

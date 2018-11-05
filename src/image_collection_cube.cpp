@@ -357,7 +357,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             warp_args.AddString(("\"" + nodata_value_list + "\"").c_str());
         } else if (hasnodata_count != 0) {
             // What if nodata value is only defined for some of the bands?
-            std::cout << "WARNING in image_collection_cube::read_chunk(): incomplete nodata information, will be ignored" << std::endl;
+            GCBS_WARN("Missing nodata value(s) for " + descriptor_name + ", no nodata value will be used");
         }
 
         warp_args.AddString("-ot");
@@ -386,14 +386,14 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         }
 
 
-        if (config::instance()->get_verbose()) {
-            std::stringstream ss;
-            ss << "calling gdalwarp ";
-            for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
-                ss << warp_args[iws] << " ";
-            }
-            GCBS_DEBUG(ss.str());
+        // log gdalwarp call
+        std::stringstream ss;
+        ss << "Running gdalwarp ";
+        for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
+            ss << warp_args[iws] << " ";
         }
+        GCBS_DEBUG(ss.str());
+
 
         GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
 
@@ -421,12 +421,12 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 if (view()->aggregation_method() == aggregation::NONE) {
                     CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                     if (res != CE_None) {
-                        std::cout << "WARNING in image_collection_cube::read_chunk(): RasterIO failed" << std::endl;
+                        GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                     }
                 } else {
                     CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], img_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                     if (res != CE_None) {
-                        std::cout << "WARNING in image_collection_cube::read_chunk(): RasterIO failed" << std::endl;
+                        GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                     }
                     agg->update(cbuf, img_buf, b_internal, it);
                 }

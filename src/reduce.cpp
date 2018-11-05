@@ -37,7 +37,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
 
-    reducer *r;
+    reducer *r = nullptr;
     if (_reducer == "min") {
         r = new min_reducer();
     } else if (_reducer == "max") {
@@ -62,14 +62,14 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     }
 
     r->finalize(out);
-    delete r;
+    if (r != nullptr) delete r;
 
     return out;
 }
 
 void reduce_cube::write_gdal_image(std::string path, std::string format, std::vector<std::string> co, std::shared_ptr<chunk_processor> p) {
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
-    prg->set(0); // explicitly set to zero to show progress bar immediately
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
     GDALDriver *drv = (GDALDriver *)GDALGetDriverByName(format.c_str());
     if (!drv) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): Cannot find GDAL driver for given format.");
@@ -102,7 +102,6 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
     gdal_out->SetProjection(out_wkt);
     gdal_out->SetGeoTransform(affine);
     CPLFree(out_wkt);
-
 
     // The following loop seems to be needed for some drivers only
     for (uint16_t b = 0; b < _bands.count(); ++b) {  //            gdal_out->GetRasterBand(b+1)->SetNoDataValue(NAN);

@@ -128,9 +128,6 @@ struct bounds_st {
     datetime t1;
 };
 
-
-
-
 /**
  * @note copy construction and assignment are deleted because the sqlite must not be shared (handle will be closed in destructor). Instrad, use
  * std::shared_ptr<image_collection> to share the whole image collection resource if needed.
@@ -247,6 +244,7 @@ class image_collection {
     uint32_t count_gdalrefs();
 
     struct find_range_st_row {
+        find_range_st_row() : image_name(""), descriptor(""), datetime(""), band_name(""), band_num(1) {}
         std::string image_name;
         std::string descriptor;
         std::string datetime;
@@ -292,13 +290,6 @@ class image_collection {
     bounds_st extent();
 
     inline std::string get_filename() { return _filename; }
-
-
-
-
-
-
-
 
    protected:
     collection_format _format;

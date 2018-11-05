@@ -18,8 +18,8 @@
 
 #include <gdal_utils.h>
 #include <map>
-#include "utils.h"
 #include "error.h"
+#include "utils.h"
 
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands() { load_bands(); }
 image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands() { load_bands(); }
@@ -311,7 +311,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         std::string descriptor_name = datasets[i].descriptor;
         std::vector<std::tuple<std::string, uint16_t>> band_rels;
         // std::vector
-        while (datasets[i].descriptor == descriptor_name && i < datasets.size()) {
+        while (i < datasets.size() && datasets[i].descriptor == descriptor_name) {
             band_rels.push_back(std::tuple<std::string, uint16_t>(datasets[i].band_name, datasets[i].band_num));
             ++i;
         }
@@ -343,7 +343,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         warp_args.AddString("-wo");
         warp_args.AddString("INIT_DEST=nan");
 
-        std::string nodata_value_list;
+        std::string nodata_value_list = "";
         uint16_t hasnodata_count = 0;
         for (uint16_t b = 0; b < band_rels.size(); ++b) {
             if (!_input_bands.get(std::get<0>(band_rels[b])).no_data_value.empty()) {
@@ -385,15 +385,13 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             throw std::string("ERROR in image_collection_cube::read_chunk(): cannot create gdalwarp options.");
         }
 
-
         // log gdalwarp call
         std::stringstream ss;
         ss << "Running gdalwarp ";
         for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
             ss << warp_args[iws] << " ";
         }
-        GCBS_DEBUG(ss.str());
-
+        GCBS_TRACE(ss.str());
 
         GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
 

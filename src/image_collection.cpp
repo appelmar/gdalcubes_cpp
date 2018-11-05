@@ -22,7 +22,7 @@
 #include "utils.h"
 
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
-    if (sqlite3_open("", &_db) != SQLITE_OK) {
+    if (sqlite3_open_v2("", &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL) != SQLITE_OK) {
         std::string msg = "ERROR in image_collection::create(): cannot create temporary image collection file.";
         throw msg;
     }
@@ -88,7 +88,7 @@ image_collection::image_collection(std::string filename) : _format(), _filename(
     if (!boost::filesystem::exists(boost::filesystem::path{filename})) {
         throw std::string("ERROR inimage_collection::image_collection(): input collection '" + filename + "' does not exist.");
     }
-    if (sqlite3_open(filename.c_str(), &_db) != SQLITE_OK) {
+    if (sqlite3_open_v2(filename.c_str(), &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL) != SQLITE_OK) {
         std::string msg = "ERROR in image_collection::image_collection(): cannot open existing image collection file.";
         throw msg;
     }
@@ -173,7 +173,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
 
     uint32_t counter = -1;
     std::shared_ptr<progress> p = config::instance()->get_default_progress_bar();
-    p->set(0); // explicitly set to zero to show progress bar immediately
+    p->set(0);  // explicitly set to zero to show progress bar immediately
     for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
         ++counter;
         p->set((double)counter / (double)descriptors.size());
@@ -345,7 +345,7 @@ void image_collection::write(const std::string filename) {
     sqlite3_backup* db_backup;
     sqlite3* out_db;
 
-    if (sqlite3_open(_filename.c_str(), &out_db) != SQLITE_OK) {
+    if (sqlite3_open_v2(_filename.c_str(), &out_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL) != SQLITE_OK) {
         throw std::string("ERROR in image_collection::write(): cannot create output database file.");
     }
     db_backup = sqlite3_backup_init(out_db, "main", _db, "main");

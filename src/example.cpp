@@ -17,9 +17,9 @@
 #include <gdal_priv.h>
 #include <iostream>
 #include "collection_format.h"
+#include "error.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
-#include "error.h"
 #include "reduce.h"
 #include "stream.h"
 #include "swarm.h"
@@ -39,55 +39,51 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
 int main(int argc, char *argv[]) {
     config::instance()->gdalcubes_init();
 
-
     config::instance()->set_error_handler(error_handler::error_handler_debug);
-
 
     //collection_format fmt("../../test/collection_format_test.json");
     //std::vector<std::string> temp;
     try {
         timer t0;
-//        image_collection x = image_collection::create(fmt, string_list_from_text_file("../../test/test_list.txt"));
-//        x.write("test.db");
-//        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
-//        std::cout << x.to_string();
-//
-//        x.temp_copy();
-//        timer t1;
-//        x.filter_datetime_range("20170101T000000", "20180101T000000");
-//        auto b = std::vector<std::string>{"B02", "B03", "B04"};
-//        x.filter_bands(b);
-//        x.write("test2.db");
-//        std::cout << "DONE (" << t1.time() << "s)" << std::endl;
-//        std::cout << x.to_string();
-//
-//        cube_view v = cube_view::read_json("../../test/view.json");
-//        v.write_json("out_view.json");
-//
-//        image_collection x2("test.db");
-//
-//        bounds_st box;
-//        box.t0 = datetime::from_string("20170101");
-//        box.t1 = datetime::from_string("20180101");
-//        box.s.left = 22;
-//        box.s.right = 24;
-//        box.s.top = -18;
-//        box.s.bottom = -20;
-//
-//        //        std::vector<image_collection::find_range_st_row> results = x2.find_range_st(box);
-//        //        for (uint32_t i=0; i<results.size(); ++i) {
-//        //            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
-//        //        }
-//
-//        //
-//        //        std::shared_ptr<cube_st_reference> ref = std::make_shared<cube_view>(cube_view::read_json("../../test/view.json"));
-//        //        std::shared_ptr<cube_view> vvv = std::dynamic_pointer_cast<cube_view>(ref);
-//        //        std::cout << vvv->proj() << std::endl;
-//        //
+        //        image_collection x = image_collection::create(fmt, string_list_from_text_file("../../test/test_list.txt"));
+        //        x.write("test.db");
+        //        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+        //        std::cout << x.to_string();
+        //
+        //        x.temp_copy();
+        //        timer t1;
+        //        x.filter_datetime_range("20170101T000000", "20180101T000000");
+        //        auto b = std::vector<std::string>{"B02", "B03", "B04"};
+        //        x.filter_bands(b);
+        //        x.write("test2.db");
+        //        std::cout << "DONE (" << t1.time() << "s)" << std::endl;
+        //        std::cout << x.to_string();
+        //
+        //        cube_view v = cube_view::read_json("../../test/view.json");
+        //        v.write_json("out_view.json");
+        //
+        //        image_collection x2("test.db");
+        //
+        //        bounds_st box;
+        //        box.t0 = datetime::from_string("20170101");
+        //        box.t1 = datetime::from_string("20180101");
+        //        box.s.left = 22;
+        //        box.s.right = 24;
+        //        box.s.top = -18;
+        //        box.s.bottom = -20;
+        //
+        //        //        std::vector<image_collection::find_range_st_row> results = x2.find_range_st(box);
+        //        //        for (uint32_t i=0; i<results.size(); ++i) {
+        //        //            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
+        //        //        }
+        //
+        //        //
+        //        //        std::shared_ptr<cube_st_reference> ref = std::make_shared<cube_view>(cube_view::read_json("../../test/view.json"));
+        //        //        std::shared_ptr<cube_view> vvv = std::dynamic_pointer_cast<cube_view>(ref);
+        //        //        std::cout << vvv->proj() << std::endl;
+        //        //
 
         image_collection_cube c("test.db", "../../test/view2.json");
-
-
 
         std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "max");
         t0.start();
@@ -96,12 +92,12 @@ int main(int argc, char *argv[]) {
 
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
 
-       // stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "stdout");
+        // stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "stdout");
 
-       // std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(std::make_shared<stream_cube>(s), "min");
-      //  t0.start();
-       // cstream->write_gdal_image("test_stream.tif");
-      //  std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+        // std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(std::make_shared<stream_cube>(s), "min");
+        //  t0.start();
+        // cstream->write_gdal_image("test_stream.tif");
+        //  std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
         //  std::cout << cstream.make_constructible_json().dump(2) << std::endl;
 

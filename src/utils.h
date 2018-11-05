@@ -17,12 +17,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <gdal_priv.h>
 #include <boost/filesystem.hpp>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <gdal_priv.h>
 
 /**
  * A utility class for commonly used functions

@@ -50,11 +50,9 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
             req.reply(web::http::status_codes::NotFound);
         }
         GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been accepted according to whitelist rule");
-    }
-    else {
+    } else {
         GCBS_DEBUG("Incoming request from " + req.remote_address());
     }
-
 
     std::vector<std::string> path = web::uri::split_path(web::uri::decode(req.relative_uri().path()));
     std::map<std::string, std::string> query_pars = web::uri::split_query(web::uri::decode(req.relative_uri().query()));
@@ -81,7 +79,6 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
             } else if (path.size() == 4) {
                 uint32_t cube_id = std::stoi(path[1]);
                 uint32_t chunk_id = std::stoi(path[2]);
-
 
                 std::string cmd = path[3];
                 if (cmd == "download") {
@@ -159,8 +156,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
             req.reply(web::http::status_codes::NotFound);
         }
         GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been accepted according to whitelist rule");
-    }
-    else {
+    } else {
         GCBS_DEBUG("Incoming request from " + req.remote_address());
     }
 
@@ -324,8 +320,7 @@ void gdalcubes_server::handle_head(web::http::http_request req) {
             req.reply(web::http::status_codes::NotFound);
         }
         GCBS_DEBUG("Incoming request from " + req.remote_address() + " has been accepted according to whitelist rule");
-    }
-    else {
+    } else {
         GCBS_DEBUG("Incoming request from " + req.remote_address());
     }
 

@@ -67,6 +67,28 @@ struct progress_simple_stdout : public progress {
     std::shared_ptr<progress> get() override { return std::make_shared<progress_simple_stdout>(); }
     void set(double p) override {
         _m.lock();
+        _set(p);
+        _m.unlock();
+    };
+    void increment(double dp) override {
+        _m.lock();
+        _set(_p + dp);
+        _m.unlock();
+    }
+    virtual void finalize() override {
+        _m.lock();
+        for (uint16_t i = 0; i < (((int)(100 * _p)) / 10); ++i) {
+            std::cout << "=";
+        }
+        std::cout << ">| DONE." << std::endl;
+        _m.unlock();
+    }
+
+    progress_simple_stdout() : _p(0) {}
+
+   private:
+    void _set(double p) {  // not synchronized
+        _m.lock();
         _p = p;
         for (uint16_t i = 0; i < (((int)(100 * p)) / 10); ++i) {
             std::cout << "=";
@@ -76,19 +98,7 @@ struct progress_simple_stdout : public progress {
         std::cout.flush();
         _m.unlock();
     };
-    void increment(double dp) override {
-        set(_p + dp);
-    }
-    virtual void finalize() override {
-        for (uint16_t i = 0; i < (((int)(100 * _p)) / 10); ++i) {
-            std::cout << "=";
-        }
-        std::cout << ">| DONE." << std::endl;
-    }
 
-    progress_simple_stdout() : _p(0) {}
-
-   private:
     std::mutex _m;
     double _p;
 };
@@ -103,24 +113,22 @@ struct progress_simple_stdout_with_time : public progress {
     }
     void set(double p) override {
         _m.lock();
-        _p = p;
-        for (uint16_t i = 0; i < (((int)(100 * p)) / 10); ++i) {
-            std::cout << "=";
-        }
-        std::cout << "> (" << std::round(100 * p) << "%)";
-        std::cout << "\r";
-        std::cout.flush();
+        _set(p);
         _m.unlock();
     };
 
     void increment(double dp) override {
-        set(_p + dp);
+        _m.lock();
+        _set(_p + dp);
+        _m.unlock();
     }
     virtual void finalize() override {
+        _m.lock();
         for (uint16_t i = 0; i < (((int)(100 * _p)) / 10); ++i) {
             std::cout << "=";
         }
         std::cout << ">| DONE (" << _t->time() << "s)." << std::endl;
+        _m.unlock();
     }
 
     progress_simple_stdout_with_time() : _t(nullptr), _p(0) {
@@ -131,6 +139,16 @@ struct progress_simple_stdout_with_time : public progress {
     }
 
    private:
+    void _set(double p) {  // not synchronized
+        _p = p;
+        for (uint16_t i = 0; i < (((int)(100 * p)) / 10); ++i) {
+            std::cout << "=";
+        }
+        std::cout << "> (" << std::round(100 * p) << "%)";
+        std::cout << "\r";
+        std::cout.flush();
+    };
+
     timer* _t;
     std::mutex _m;
     double _p;

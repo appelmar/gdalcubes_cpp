@@ -111,7 +111,6 @@ class config {
         CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
     }
 
-
     inline uint16_t get_gdal_num_threads() { return _gdal_num_threads; }
 
     /**

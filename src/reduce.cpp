@@ -69,6 +69,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
 
 void reduce_cube::write_gdal_image(std::string path, std::string format, std::vector<std::string> co, std::shared_ptr<chunk_processor> p) {
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0); // explicitly set to zero to show progress bar immediately
     GDALDriver *drv = (GDALDriver *)GDALGetDriverByName(format.c_str());
     if (!drv) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): Cannot find GDAL driver for given format.");

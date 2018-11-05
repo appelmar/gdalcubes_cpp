@@ -96,6 +96,7 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
     }
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0); // explicitly set to zero to show progress bar immediately
 
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         fs::path out_file = op / (std::to_string(id) + ".nc");
@@ -241,7 +242,7 @@ void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
     std::mutex mutex;
     std::vector<std::thread> workers;
     for (uint16_t it = 0; it < _nthreads; ++it) {
-        workers.push_back(std::thread([this, &c, &f, it, &mutex](void) {
+        workers.push_back(std::thread([this, &c, f, it, &mutex](void) {
             for (uint32_t i = it; i < c->count_chunks(); i += _nthreads) {
                 std::shared_ptr<chunk_data> dat = c->read_chunk(i);
                 f(i, dat, mutex);

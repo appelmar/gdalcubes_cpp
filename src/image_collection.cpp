@@ -173,6 +173,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
 
     uint32_t counter = -1;
     std::shared_ptr<progress> p = config::instance()->get_default_progress_bar();
+    p->set(0); // explicitly set to zero to show progress bar immediately
     for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
         ++counter;
         p->set((double)counter / (double)descriptors.size());

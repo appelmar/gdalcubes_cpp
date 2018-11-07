@@ -69,6 +69,8 @@ class image_collection_cube : public cube {
     void load_bands();
 
     band_collection _input_bands;
+
+    static cube_view default_view(std::shared_ptr<image_collection> ic);
 };
 
 #endif  //IMAGE_COLLECTION_CUBE_H

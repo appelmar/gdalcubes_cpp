@@ -413,6 +413,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
                 // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
                 if (view()->aggregation_method() == aggregation::NONE) {
+                    // TODO optimize such that only one image per it is read if aggregation==NONE
                     CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                     if (res != CE_None) {
                         GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
@@ -462,4 +463,30 @@ void image_collection_cube::load_bands() {
         _input_bands.add(bin);
     }
     _size[0] = _bands.count();
+}
+
+cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> ic) {
+    bounds_st extent = ic->extent();
+
+    cube_view out;
+    out.left() = extent.s.left;
+    out.right() = extent.s.right;
+    out.top() = extent.s.top;
+    out.bottom() = extent.s.bottom;
+
+    uint32_t ncells_space = 512 * 512;
+    double asp_ratio = (out.right() - out.left()) / (out.top() - out.bottom());
+    out.nx() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0);
+    out.nx() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0);
+
+    out.t0() = extent.t0;
+    out.t1() = extent.t1;
+
+    duration d = out.t1() - out.t0();
+
+    // TODO: set projection
+    // TODO: set dt
+    // TODO: set agg and res
+
+    return out;
 }

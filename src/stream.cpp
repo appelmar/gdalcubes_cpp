@@ -98,12 +98,17 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         }
     }
 
-    chunk_size_btyx out_size = {(uint32_t)(((int*)odat.data())[0]), (uint32_t)(((int*)odat.data())[1]), (uint32_t)(((int*)odat.data())[2]), (uint32_t)(((int*)odat.data())[3])};
-    out->size(out_size);
+    if (odat.size() >= 4 * sizeof(int)) {
+        chunk_size_btyx out_size = {(uint32_t)(((int*)odat.data())[0]), (uint32_t)(((int*)odat.data())[1]), (uint32_t)(((int*)odat.data())[2]), (uint32_t)(((int*)odat.data())[3])};
+        out->size(out_size);
+        // Fill buffers accordingly
+        // TODO: check size again
+        out->buf(calloc(out_size[0] * out_size[1] * out_size[2] * out_size[3], sizeof(double)));
+        memcpy(out->buf(), odat.data() + (4 * sizeof(int)), sizeof(double) * out_size[0] * out_size[1] * out_size[2] * out_size[3]);
 
-    // Fill buffers accordingly
-    out->buf(calloc(out_size[0] * out_size[1] * out_size[2] * out_size[3], sizeof(double)));
-    memcpy(out->buf(), odat.data() + (4 * sizeof(int)), sizeof(double) * out_size[0] * out_size[1] * out_size[2] * out_size[3]);
+    } else {
+        GCBS_WARN("Cannot read streaming result");
+    }
 
     return out;
 }

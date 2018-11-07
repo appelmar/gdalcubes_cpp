@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
     config::instance()->set_error_handler(error_handler::error_handler_debug);
 
-    //collection_format fmt("../../test/collection_format_test.json");
+    collection_format fmt("../../test/collection_format_test.json");
     //std::vector<std::string> temp;
     try {
         timer t0;
@@ -85,19 +85,19 @@ int main(int argc, char *argv[]) {
 
         image_collection_cube c("test.db", "../../test/view2.json");
 
-        std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "max");
-        t0.start();
-        cr->write_gdal_image("test.tif");
-        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+        //std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "max");
+        // t0.start();
+        // cr->write_gdal_image("test.tif");
+        //std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
 
-        // stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "stdout");
+        std::shared_ptr<stream_cube> s = std::make_shared<stream_cube>(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "");
 
-        // std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(std::make_shared<stream_cube>(s), "min");
-        //  t0.start();
-        // cstream->write_gdal_image("test_stream.tif");
-        //  std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+        std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(s, "min");
+        t0.start();
+        cstream->write_gdal_image("test_stream.tif");
+        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
         //  std::cout << cstream.make_constructible_json().dump(2) << std::endl;
 

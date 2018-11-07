@@ -9,19 +9,19 @@ project(gdalcubes LANGUAGES CXX VERSION 0.0.1)
 #string(TIMESTAMP build_time "%H%M%S")
 
 if (NOT CMAKE_BUILD_TYPE)
-    message(STATUS "No build type specified, using Debug")
+    message(STATUS "No build type specified, using Release")
     set(CMAKE_BUILD_TYPE Release)
 endif (NOT CMAKE_BUILD_TYPE)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 # TODO: replace with target_compile_options
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") # enable profiling and coverage reports (gcc specific, only for debug)
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg --coverage")
     #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg --coverage" )
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
     #set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg --coverage")
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+   # set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+   # set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
 endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
 set(CMAKE_CXX_STANDARD 11)

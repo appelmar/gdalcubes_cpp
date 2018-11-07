@@ -33,12 +33,39 @@ class chunk_processor_singlethread;
  * version information of the library
  */
 struct version_info {
+    /**
+     * @brief Major version number
+     */
     uint16_t VERSION_MAJOR;
+
+    /**
+     * @brief Minor version number
+     */
     uint16_t VERSION_MINOR;
+
+    /**
+     * @brief Patch version number
+     */
     uint16_t VERSION_PATCH;
+
+    /**
+     * @brief Build data (from __DATE__ macro)
+     */
     std::string BUILD_DATE;
+
+    /**
+    * @brief Build data (from __TIME__ macro)
+    */
     std::string BUILD_TIME;
+
+    /**
+    * @brief git description (from git describe), i.e., tag and commit
+    */
     std::string GIT_DESC;
+
+    /**
+    * @brief Last git commit (build might contain local changes anyway)
+    */
     std::string GIT_COMMIT;
 };
 

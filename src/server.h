@@ -26,10 +26,16 @@
 #include "cube.h"
 
 /**
- * @brief An in-memory cache for sucessfully read / computed chunks
+ * @brief An in-memory singleton cache for successfully read / computed chunks
+ *
+ * Chunks are identified by std::pair<cube_id, chunk_id>
  */
 class server_chunk_cache {
    public:
+    /**
+     * @brief Get the singleton instance
+     * @return pointer to the singleton instance
+     */
     static server_chunk_cache* instance() {
         static GC g;
         _singleton_mutex.lock();
@@ -40,6 +46,10 @@ class server_chunk_cache {
         return _instance;
     }
 
+    /**
+     * @brief Remove a chunk from the cache
+     * @param key
+     */
     void remove(std::pair<uint32_t, uint32_t> key) {
         _m.lock();
         auto it = _cache.find(key);
@@ -61,6 +71,11 @@ class server_chunk_cache {
         _m.unlock();
     }
 
+    /**
+     * Add chunk data to the cache
+     * @param key chunk identifier (cube_id, chunk_id)
+     * @param value chunk data to add
+     */
     void add(std::pair<uint32_t, uint32_t> key, std::shared_ptr<chunk_data> value) {
         if (!has(key)) {
             _m.lock();
@@ -84,11 +99,21 @@ class server_chunk_cache {
         }
     }
 
+    /**
+     * Check whether a chunk is cached
+     * @param key chunk key (cube_id, chunk_id)
+     * @return true, if the chunk is cached
+     */
     inline bool has(std::pair<uint32_t, uint32_t> key) {
         return _cache.find(key) != _cache.end();
     }
 
-    inline std::shared_ptr<chunk_data> get(std::pair<uint32_t, uint32_t> key) {
+    /**
+     * Get chunk data from the cache
+     * @param key chunk key (cube_id, chunk_id)
+     * @return chunk data as shared_ptr
+     */
+    std::shared_ptr<chunk_data> get(std::pair<uint32_t, uint32_t> key) {
         if (!has(key)) {
             throw std::string("ERROR: in server_chunk_cache::get(): requested chunk is not available");
         }
@@ -109,6 +134,10 @@ class server_chunk_cache {
         return _cache[key];
     }
 
+    /**
+     * @brief Get the total amount of memory currently consumed by the cache
+     * @return Size of the cache in bytes
+     */
     inline uint32_t total_size_bytes() {
         return _size_bytes;
     }
@@ -210,7 +239,7 @@ class gdalcubes_server {
 
     inline std::string get_service_url() { return _listener.uri().to_string(); }
 
-   protected:
+   private:
     void handle_get(web::http::http_request req);
     void handle_post(web::http::http_request req);
     void handle_head(web::http::http_request req);

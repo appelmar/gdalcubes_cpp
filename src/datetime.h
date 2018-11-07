@@ -402,7 +402,7 @@ class datetime {
         return out;
     }
 
-   protected:
+   private:
     boost::posix_time::ptime _p;
     datetime_unit _unit;
 

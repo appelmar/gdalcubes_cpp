@@ -58,8 +58,8 @@ class collection_format {
     }
 
     /**
-    * Construct a collection format from a JSON string
-    * @param filename
+    * @brief Construct a collection format from a JSON string
+    * @param jsonstr JSON string
     */
     void load_string(std::string jsonstr) {
         _j.clear();

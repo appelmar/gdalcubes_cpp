@@ -80,10 +80,13 @@ struct aggregation {
 };
 
 /**
- * A utility structure to work with different resampling
+ * @brief Utility structure to work with different resampling
  * algorithms and their different types in GDAL
  */
 struct resampling {
+    /**
+     * @brief An enumeration listing all available resampling types
+     */
     enum resampling_type {
         NEAR,
         BILINEAR,
@@ -99,6 +102,11 @@ struct resampling {
         Q3
     };
 
+    /**
+     * @brief Get the resampling type from its name
+     * @param s string representation of a resampling algorithm
+     * @return the corresponding resampling type entry
+     */
     static resampling_type from_string(std::string s) {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
         if (s == "near" || s == "nearest") {
@@ -129,6 +137,11 @@ struct resampling {
         return NEAR;
     }
 
+    /**
+     * @brief Get the name of a resampling method
+     * @param r resampling type
+     * @return name string of the resampling method
+     */
     static std::string to_string(resampling_type r) {
         switch (r) {
             case NEAR:
@@ -160,6 +173,12 @@ struct resampling {
         }
     }
 
+    /**
+     * @brief Convert a resampling type to the corresponding GDAL type to be used in RasterIO
+     * @note RasterIO does not support all available resampling types
+     * @param r resampling type
+     * @return GDALRIOResampleAlg
+     */
     static GDALRIOResampleAlg to_gdal_rasterio(resampling_type r) {
         switch (r) {
             case NEAR:
@@ -188,7 +207,7 @@ struct resampling {
 };
 
 /**
- * Spatial and temporal reference for data cubes
+ * @brief Spatial and temporal reference for data cubes
  */
 class cube_st_reference {
    public:
@@ -377,7 +396,18 @@ class cube_st_reference {
     }
 
    protected:
+    /**
+     * @brief Spatial reference system / projection
+     *
+     * The string must be readable for OGRSpatialReference::SetFromUserInput, i.e.,
+     * it can be "EPSG:xxx", WKT, or PROJ.4
+     *
+     */
     std::string _proj;
+
+    /**
+     * @brief Spatial window
+     */
     bounds_2d<double> _win;
 
     datetime _t0;
@@ -435,7 +465,7 @@ class cube_view : public cube_st_reference {
     */
     inline resampling::resampling_type& resampling_method() { return _resampling; }
 
-   protected:
+   private:
     static cube_view read(nlohmann::json j);
     resampling::resampling_type _resampling;
     aggregation::aggregation_type _aggregation;

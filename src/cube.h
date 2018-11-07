@@ -65,6 +65,10 @@ class chunk_processor_singlethread : public chunk_processor {
  */
 class chunk_processor_multithread : public chunk_processor {
    public:
+    /**
+     * @brief Construct a multithreaded chunk processor
+     * @param nthreads number of threads
+     */
     chunk_processor_multithread(uint16_t nthreads) : _nthreads(nthreads) {}
 
     /**
@@ -155,7 +159,7 @@ class band_collection {
         return _bands.size();
     }
 
-   protected:
+   private:
     std::map<std::string, uint32_t> _band_idx;
     std::vector<band> _bands;
 };
@@ -168,6 +172,9 @@ class band_collection {
  */
 class chunk_data {
    public:
+    /**
+     * @brief Default constructor that creates an empty chunk
+     */
     chunk_data() : _buf(nullptr), _size({{0, 0, 0, 0}}) {}
 
     ~chunk_data() {
@@ -175,23 +182,28 @@ class chunk_data {
     }
 
     /**
-     * Count the number of bands in the chunk
+     * @brief Count the number of bands in the chunk
      * @return number of bands
      */
     inline uint16_t count_bands() { return _size[0]; }
 
     /**
-     * Count the number of pixels in the chunk
-     * @return number of pixels (nx \times ny \times nt)
+     * @brief Count the number of pixels in the chunk
+     * @return number of pixels \f$(nx \times ny \times nt)\f$
      */
     inline uint32_t count_values() { return _size[1] * _size[2] * _size[3]; }
+
+    /**
+     * @brief Returns the total memory size in bytes that is consumed by the chunk
+     * @return size of the chunk in bytes
+     */
     uint64_t total_size_bytes() {
         return empty() ? 0 : sizeof(double) * _size[0] * _size[1] * _size[2] * _size[3];
     }
 
     /**
-     * Checks whether there is data in the buffer
-     * @return
+     * @brief Check whether there is data in the buffer
+     * @return true, if there is no data in the buffer (either size == 0, or buf == nullptr)
      */
     inline bool empty() {
         if (_size[0] * _size[1] * _size[2] * _size[3] == 0) return true;
@@ -200,7 +212,7 @@ class chunk_data {
     }
 
     /**
-     * Access the raw buffer where the data is stored in memory.
+     * @brief Access the raw buffer where the data is stored in memory
      *
      * This method is dangerous and provides direct access to the data buffer. Use with caution and never free any memory /
      * remove / add vector elements if you don't know exactly what you do.
@@ -209,7 +221,7 @@ class chunk_data {
     inline void* buf() { return _buf; }
 
     /**
-     * (Re)set the raw buffer where the data is stored in memory.
+     * @brief (Re)set the raw buffer where the data is stored in memory
      *
      * This method is dangerous and provides direct access to the data buffer. Use with caution and never free any memory /
      * remove / add vector elements if you don't know exactly what you do.
@@ -222,16 +234,23 @@ class chunk_data {
     }
 
     /**
-     * Query the size of the contained data.
+     * @brief Query the size of the contained data
      *
      * The result is an array of size 4 representing the size of dimensions in the order (bands, time, y, x).
      * @return std::array<uint32, 4> with number of cells with regard to bands, time, y, and x
      */
     inline coords_nd<uint32_t, 4> size() { return _size; }
 
+    /**
+     * @brief Set the size of the chunk data
+     *
+     * This method is dangerous, use with caution and never change the size without changing the buffer accordingly.
+     *
+     * @param s new size
+     */
     inline void size(coords_nd<uint32_t, 4> s) { _size = s; }
 
-   protected:
+   private:
     void* _buf;
     chunk_size_btyx _size;
 };
@@ -246,6 +265,10 @@ class chunk_data {
  */
 class cube : public std::enable_shared_from_this<cube> {
    public:
+    /**
+     * @brief Create a data cube
+     * @param st_ref space time reference (extent, size, SRS) of the cube
+     */
     cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _size(), _chunk_size(), _bands() {
         _size[0] = 0;
         _size[1] = st_ref->nt();
@@ -259,6 +282,11 @@ class cube : public std::enable_shared_from_this<cube> {
 
     virtual ~cube() {}
 
+    /**
+     * @brief Find the chunk that contains a given point
+     * @param p point in spacetime coordinates
+     * @return a unique chunk identifier (uint32_t)
+     */
     chunkid_t find_chunk_that_contains(coords_st p) const {
         uint32_t cumprod = 1;
         chunkid_t id = 0;
@@ -277,6 +305,11 @@ class cube : public std::enable_shared_from_this<cube> {
         return id;
     }
 
+    /**
+     * @brief Calculate the limits of a given chunk
+     * @param c chunk coordinates
+     * @return the limits in t,y, and x, as integer data cube coordinates
+     */
     bounds_nd<uint32_t, 3> chunk_limits(chunk_coordinate_tyx c) const {
         cube_coordinate_tyx out_vcoords_low;
         cube_coordinate_tyx out_vcoords_high;
@@ -322,6 +355,11 @@ class cube : public std::enable_shared_from_this<cube> {
         return out;
     };
 
+    /**
+     * @brief Calculate the limits of a given chunk
+     * @param id chunk id
+     * @return the limits in t,y, and x, as integer data cube coordinates
+     */
     bounds_nd<uint32_t, 3> chunk_limits(chunkid_t id) const {
         coords_nd<uint32_t, 3> out_vcoords_low;
         coords_nd<uint32_t, 3> out_vcoords_high;
@@ -382,26 +420,53 @@ class cube : public std::enable_shared_from_this<cube> {
         return out;
     };
 
+    /**
+     * @brief Default string description method for data cubes
+     * @return std::string with a human-readable description of the data cube
+     */
     virtual std::string to_string() {
         // TODO: implement default to_string method here
 
         return std::string("cube::to_string() has no default method yet.");
     }
 
+    /**
+     * @brief Count the total number of chunks of the cube
+     * @return Total number of chunks
+     */
     inline uint32_t count_chunks() const {
         return count_chunks_x() * count_chunks_y() * count_chunks_t();
     }
 
+    /**
+    * @brief Count the number of chunks of the cube in x direction
+    * @return Total number of chunk in x direction
+    */
     inline uint32_t count_chunks_x() const {
         return std::ceil((double)_st_ref->nx() / (double)_chunk_size[2]);
     }
+
+    /**
+    * @brief Count the number of chunks of the cube in y direction
+    * @return Total number of chunk in y direction
+    */
     inline uint32_t count_chunks_y() const {
         return std::ceil((double)_st_ref->ny() / (double)_chunk_size[1]);
     }
+
+    /**
+    * @brief Count the number of chunks of the cube in t direction
+    * @return Total number of chunk in t direction
+    */
     inline uint32_t count_chunks_t() const {
         return std::ceil((double)_st_ref->nt() / (double)_chunk_size[0]);
     }
 
+    /**
+     * @brief Convert a given one-dimensional chunk id to chunk coordinates
+     * @param id chunk id
+     * @return chunk coordinates in t,y, and x directions
+     */
     chunk_coordinate_tyx chunk_coords_from_id(chunkid_t id) {
         chunk_coordinate_tyx out;
 
@@ -421,20 +486,19 @@ class cube : public std::enable_shared_from_this<cube> {
         return out;
     }
 
+    /**
+     * @brief Convert chunk coordinates to a one-dimensional chunk id
+     * @param c chunk coordinates in t,y, and x directions
+     * @return chunk id
+     */
     chunkid_t chunk_id_from_coords(chunk_coordinate_tyx c) {
         return c[0] * count_chunks_y() * count_chunks_x() + c[1] * count_chunks_x() + c[2];
     }
 
-    cube_coordinate_btyx low() const {
-        return {0, 0, 0, 0};
-    }
-    cube_coordinate_btyx high() const {
-        return {_size[0] - 1, _size[1] - 1, _size[2] - 1, _size[3] - 1};
-    }
-
     /**
-     * Derive the true size of a specific chunk. The size may be different
-     * at the boundary regions of the view.
+     * @brief Derive the true size of a specific chunk
+     *
+     * The size may be different to the _chunk_size setting at the boundary regions.
      * @return
      */
     coords_nd<uint32_t, 3> chunk_size(chunkid_t id) const {
@@ -446,6 +510,11 @@ class cube : public std::enable_shared_from_this<cube> {
         return out;
     };
 
+    /**
+     * @brief Derive the spatiotemporal extend / bounds of a given chunk
+     * @param id Chunk identifier
+     * @return Spatiotemporal extent
+     */
     bounds_st bounds_from_chunk(chunkid_t id) const {
         bounds_st out_st;
 
@@ -467,9 +536,26 @@ class cube : public std::enable_shared_from_this<cube> {
         return out_st;
     }
 
+    /**
+     * @brief Get the chunk size of the cube
+     *
+     * @note This function returns the global chunk size setting of a cube. Specific chunks at the boundary of a cube
+     * may be smaller and store less cells.
+     * @see cube::chunk_size(chunkid_t id) to calculate the size of a specific chunk
+     * @return chunk size in the order (datetime, y, x)
+     */
     inline cube_size_tyx chunk_size() { return _chunk_size; }
-    inline void chunk_size(cube_size_tyx size) { _chunk_size = size; }
+
+    /**
+     * @brief Get the spatiotemporal reference (extent, size, projection) of a cube
+     * @return a cube_st_reference object
+     */
     inline cube_st_reference st_reference() { return *_st_ref; }
+
+    /**
+    * @brief Set the spatiotemporal reference (extent, size, projection) of a cube
+     * @param st_ref new cube_st_reference object (or from a derived class)
+    */
     inline void st_reference(cube_st_reference* st_ref) {
         _st_ref = std::make_shared<cube_st_reference>(*st_ref);
         _size[1] = st_ref->nt();
@@ -477,16 +563,40 @@ class cube : public std::enable_shared_from_this<cube> {
         _size[3] = st_ref->nx();
     }
 
+    /**
+     * @brief Get size of a cube
+     * @return cube size / number of cells in the order (bands, datetime, y, x)
+     */
     inline cube_size_btyx size() { return _size; }
 
+    /**
+     * @brief Get the number of bands of the cube
+     * @return  Integer number of cells
+     */
     inline uint32_t size_bands() { return _size[0]; }
+
+    /**
+     * @brief Get the number of cells in the temporal dimension
+     * @return  Integer number of cells
+     */
     inline uint32_t size_t() { return _size[1]; }
+
+    /**
+    * @brief Get the number of cells in the y dimension
+    * @return  Integer number of cells
+    */
     inline uint32_t size_y() { return _size[2]; }
+
+    /**
+    * @brief Get the number of cells in the x dimension
+    * @return  Integer number of cells
+    */
     inline uint32_t size_x() { return _size[3]; }
 
     /**
+     * @brief Read chunk data
      * Virtual function that is called to read actual data of a given chunk.
-     * Please make sure that this function is called only when the data is needed (lazy evaluation).
+     * Please make sure that this function is called only when the data is really needed (lazy evaluation).
      *
      * @param id the id of the requested chunk
      * @return a smart pointer to chunk data
@@ -494,9 +604,9 @@ class cube : public std::enable_shared_from_this<cube> {
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) = 0;
 
     /**
-     * Writes a cube as a set of GeoTIFF files under a given directory.
+     * @brief Write a cube as a set of GeoTIFF files under a given directory
      *
-     * This method must be reimplemented.
+     * @note This method should be reimplemented using chunk_processor::apply.
      *
      * @deprecated
      * @param dir directory where to store the files
@@ -507,6 +617,8 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * Writes a cube as a set of NetCDF files (one per chunk) under a given directory.
      * The resulting files will be names by chunk id.
+     *
+     * @todo Check compliance with CF conventions (http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#_abstract)
      *
      * @param dir output directory
      * @param p chunk processor instance
@@ -529,10 +641,27 @@ class cube : public std::enable_shared_from_this<cube> {
     virtual nlohmann::json make_constructible_json() = 0;
 
    protected:
+    /**
+     * Spacetime reference of a cube, including extent, size, and projection
+     */
     std::shared_ptr<cube_st_reference> _st_ref;
+
+    /**
+     * @brief Size of the cube in the order (bands, datetime, y, x)
+     *
+     * @note This is actually redundant and can be derived from _st_ref and _bands.
+     * @todo Make this field deprecated and eventually remove from the class
+     */
     cube_size_btyx _size;
+
+    /**
+     * @brief Size of chunks / number of cells per chunk in the order (datetime, y, x)
+     */
     cube_size_tyx _chunk_size;
 
+    /**
+     * @brief The collection's bands
+     */
     band_collection _bands;
 };
 

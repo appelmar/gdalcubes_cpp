@@ -79,10 +79,6 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
     }
 }
 
-/**
- * TODO: Use CF conventions (http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#_abstract)
- * @param dir
- */
 void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
     namespace fs = boost::filesystem;
     fs::path op(dir);

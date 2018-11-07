@@ -63,7 +63,7 @@ class image_collection_cube : public cube {
         return out;
     }
 
-   protected:
+   private:
     const std::shared_ptr<image_collection> _collection;
 
     void load_bands();

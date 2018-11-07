@@ -25,10 +25,14 @@
 #include <string>
 
 /**
- * A utility class for commonly used functions
+ * @brief A utility class for commonly used functions
  */
 class utils {
    public:
+    /**
+    * @brief Generate a unique random filename
+    * @return filename string
+    */
     static std::string generate_unique_filename() {
         std::stringstream ss;
         const std::string LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -39,7 +43,11 @@ class utils {
         return out;
     }
 
-    // see http://stackoverflow.com/questions/997946/how-to-get-current-time-and-date-in-c
+    /**
+     * @brief Get the current datetime
+     * @see  http://stackoverflow.com/questions/997946/how-to-get-current-time-and-date-in-c
+     * @return datetime string
+     */
     static std::string get_curdatetime() {
         // Current date/time based on current system
         time_t now = time(0);
@@ -57,6 +65,10 @@ class utils {
         return out.str();
     }
 
+    /**
+     * @brief Get the current date
+     * @return date string
+     */
     static std::string get_curdate() {
         // Current date/time based on current system
         time_t now = time(0);
@@ -71,10 +83,21 @@ class utils {
         return out.str();
     }
 
+    /**
+     * @brief Platform-independent concatenation of paths using boost::filesystem
+     * @param a path a
+     * @param b path b
+     * @return string representation of the path a/b
+     */
     static std::string join_path(std::string a, std::string b) {
         return (boost::filesystem::path{a} / boost::filesystem::path{b}).string();
     }
 
+    /**
+     * Convert a type name to the corresponding GDAL data type
+     * @param s type name
+     * @return GDAL data type
+     */
     static GDALDataType gdal_type_from_string(std::string s) {
         if (s == "int16") return GDALDataType::GDT_Int16;
         if (s == "int32") return GDALDataType::GDT_Int32;
@@ -86,6 +109,11 @@ class utils {
         return GDALDataType::GDT_Unknown;
     }
 
+    /**
+     * @brief Convert a GDAL data type to a string typename used in gdalcubes
+     * @param t GDAL data type
+     * @return type name string
+     */
     static std::string string_from_gdal_type(GDALDataType t) {
         switch (t) {
             case GDT_Float64:

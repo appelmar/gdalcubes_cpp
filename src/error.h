@@ -14,8 +14,8 @@
    limitations under the License.
 */
 
-#ifndef LOG_H
-#define LOG_H
+#ifndef ERROR_H
+#define ERROR_H
 
 #include <iostream>
 #include <string>
@@ -36,20 +36,63 @@ enum error_level {
     ERROR = 2,
     FATAL = 1
 };
+/**
+ * @brief Function pointer prototype for custom error handlers
+ */
 typedef void (*error_action)(error_level, std::string, std::string, int);
 
+/**
+ * @brief Error reporting and logging
+ */
 class logger {
    public:
+    /**
+     * @brief Report or log error messages of different types according
+     * @param msg message string
+     * @param where optional message source
+     * @param error_code optional error code number
+     * @see config::set_error_handler for customizing log ouptut
+     */
     static void error(std::string msg, std::string where = "", int error_code = 0);
+
+    /**
+     * @copydoc error
+     */
     static void warn(std::string msg, std::string where = "", int error_code = 0);
+
+    /**
+    * @copydoc error
+    */
     static void debug(std::string msg, std::string where = "", int error_code = 0);
+
+    /**
+    * @copydoc error
+    */
     static void fatal(std::string msg, std::string where = "", int error_code = 0);
+
+    /**
+    * @copydoc error
+    */
     static void info(std::string msg, std::string where = "", int error_code = 0);
+
+    /**
+    * @copydoc error
+    */
     static void trace(std::string msg, std::string where = "", int error_code = 0);
 };
 
+/**
+ * @brief A few implementations of static error handler functions
+ */
 class error_handler {
    public:
+    /**
+     * @brief Default error handler that prints error and warning messages to stderr and stdout respectively
+     * @param type error level
+     * @param msg message string
+     * @param where location where the error / message comes from
+     * @param error_code integer error code
+     */
     static void default_error_handler(error_level type, std::string msg, std::string where, int error_code) {
         std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
         std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
@@ -60,6 +103,13 @@ class error_handler {
         }
     }
 
+    /**
+     * @brief Default error handler for debugging that prints messages up to the debug level to stderr and stdout
+     * @param type error level
+     * @param msg message string
+     * @param where location where the error / message comes from
+     * @param error_code integer error code
+     */
     static void error_handler_debug(error_level type, std::string msg, std::string where, int error_code) {
         std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
         std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
@@ -74,6 +124,13 @@ class error_handler {
         }
     }
 
+    /**
+     * @brief Error handler for debugging gdalcubes_server including system time in messages
+     * @param type error level
+     * @param msg message string
+     * @param where location where the error / message comes from
+     * @param error_code integer error code
+     */
     static void error_handler_debug_server(error_level type, std::string msg, std::string where, int error_code) {
         std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
         std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
@@ -90,4 +147,4 @@ class error_handler {
     }
 };
 
-#endif  //LOG_H
+#endif  // ERROR_H

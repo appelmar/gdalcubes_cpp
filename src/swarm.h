@@ -56,7 +56,7 @@ class gdalcubes_swarm : public chunk_processor {
     inline uint16_t get_threads() { return _nthreads; }
     inline void set_threads(uint16_t threads) { _nthreads = threads; }
 
-   protected:
+   private:
     void post_file(std::string path, uint16_t server_index);
 
     void post_start(uint32_t chunk_id, uint16_t server_index);

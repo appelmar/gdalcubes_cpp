@@ -89,7 +89,7 @@ class stream_cube : public cube {
         return out;
     }
 
-   protected:
+   private:
     std::shared_ptr<image_collection_cube> _in_cube;
     std::string _cmd;
     std::string _log_output;

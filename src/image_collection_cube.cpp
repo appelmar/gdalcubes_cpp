@@ -97,7 +97,7 @@ struct aggregation_state_mean : public aggregation_state {
         _img_count.clear();
     }
 
-   protected:
+   private:
     std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t>> _img_count;
     std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t *>> _val_count;
 };
@@ -135,7 +135,7 @@ struct aggregation_state_median : public aggregation_state {
         free(_m_buckets);
     }
 
-   protected:
+   private:
     std::vector<double> *_m_buckets;
 };
 
@@ -225,17 +225,13 @@ struct aggregation_state_none : public aggregation_state {
     void finalize(void *buf) {}
 };
 
-/**
- *
+/*
  * The procedure to read data for a chunk is the following:
  * 1. Exclude images that are completely ouside the spatiotemporal chunk boundaries
  * 2. create a temporary in-memory VRT dataset which crops images at the boundary of the corresponding chunks and selects its bands
  * 3. use gdal warp to reproject the VRT dataset to an in-memory GDAL dataset (this will take most of the time)
  * 4. use RasterIO to read from the dataset
- * @param id
- * @return
  */
-
 std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     GCBS_DEBUG("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();

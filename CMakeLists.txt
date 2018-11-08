@@ -29,15 +29,16 @@ set(CMAKE_CXX_STANDARD 11)
 add_subdirectory(src)
 
 # cppcheck
-#find_program (CPPCHECK NAMES cppcheck)
-#if(${CPPCHECK-NOTFOUND})
-#    message(WARNING "could not find cppcheck, skipping static code analysis.")
-#else (${CPPCHECK-NOTFOUND})
-#    add_custom_target(cppcheck ALL
-#            COMMAND ${CPPCHECK} --enable=warning,performance  --language=c++ src 2> cppcheck.log
-#            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-#            COMMENT "Running Cppcheck" VERBATIM)
-#endif()
+find_program (CPPCHECK NAMES cppcheck)
+if(${CPPCHECK-NOTFOUND})
+    message(WARNING "could not find cppcheck, skipping static code analysis.")
+else (${CPPCHECK-NOTFOUND})
+    add_custom_target(cppcheck ALL
+            COMMAND ${CPPCHECK} --enable=warning,performance  --language=c++ src 2> cppcheck.log
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Running Cppcheck" VERBATIM)
+    set_target_properties(cppcheck PROPERTIES EXCLUDE_FROM_ALL true)
+endif()
 
 # code formatting
 find_program (CLANG_FORMAT NAMES clang-format)
@@ -50,6 +51,7 @@ else (NOT CLANG_FORMAT)
                       COMMAND ${CLANG_FORMAT} -i -style=file ${ALL_SOURCE_FILES}
                       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                       COMMENT "Auto-formatting source code" VERBATIM)
+    set_target_properties(clangformat PROPERTIES EXCLUDE_FROM_ALL true)
 endif()
 
 
@@ -79,6 +81,7 @@ if (DOXYGEN AND MKDOCS)
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
             DEPENDS ${DOC_FILES}
             COMMENT "Building documentation" VERBATIM)
+    set_target_properties(docs PROPERTIES EXCLUDE_FROM_ALL true)
 endif()
 
 

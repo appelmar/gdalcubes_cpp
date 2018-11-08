@@ -504,9 +504,9 @@ bounds_st image_collection::extent() {
     return out;
 }
 
-std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range,std::string srs,
+std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range, std::string srs,
                                                                                  std::vector<std::string> bands, std::string order_by) {
-    bounds_2d<double> range_trans = (srs == "EPSG:4326")? range.s : range.s.transform(srs, "EPSG:4326");
+    bounds_2d<double> range_trans = (srs == "EPSG:4326") ? range.s : range.s.transform(srs, "EPSG:4326");
     std::string sql =
         "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
@@ -615,7 +615,7 @@ bool image_collection::is_aligned() {
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         aligned = true;
         if (sqlite3_step(stmt) == SQLITE_ROW) {
-            // if more than one roq in the results, return false
+            // if more than one row in the results, return false
             aligned = false;
         }
     }

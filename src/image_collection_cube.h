@@ -73,8 +73,6 @@ class image_collection_cube : public cube {
     void load_bands();
 
     band_collection _input_bands;
-
-
 };
 
 #endif  //IMAGE_COLLECTION_CUBE_H

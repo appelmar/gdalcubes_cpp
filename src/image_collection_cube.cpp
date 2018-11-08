@@ -250,10 +250,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         return out;
     }
 
-
     // Find intersecting images from collection and iterate over these
     bounds_st cextent = bounds_from_chunk(id);
-    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent,_st_ref->proj(), "gdalrefs.descriptor");
+    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, _st_ref->proj(), "gdalrefs.descriptor");
     // In some cases, datasets still contains images at the temporal borders, which are actually not
     // part of the chunk. If this is the case, the check for the temporal index later in this function
     // will make sure that it is not read as it would lead to buffer overflows.
@@ -488,9 +487,8 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
         out.proj() = "EPSG:3857";
     }
 
-
     // Transform WGS84 boundaries to target srs
-    bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326",out.proj().c_str());
+    bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326", out.proj().c_str());
     out.left() = ext_transformed.left;
     out.right() = ext_transformed.right;
     out.top() = ext_transformed.top;
@@ -529,8 +527,6 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
         out.t1().unit() = out.dt().dt_unit;
         out.nt(4);
     }
-
-
 
     out.aggregation_method() = aggregation::aggregation_type::NONE;
     out.resampling_method() = resampling::resampling_type::NEAR;

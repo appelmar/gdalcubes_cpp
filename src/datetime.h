@@ -160,6 +160,12 @@ struct duration {
         while (out.dt_unit != u) {
             if (out.dt_unit < u) {
                 switch (out.dt_unit) {
+                    case NONE:
+                    case YEAR:
+                        GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
+                        out.dt_unit = dt_unit;
+                        out.dt_interval = dt_interval;
+                        return out;
                     case SECOND:
                         out.dt_unit = MINUTE;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval / 60.0);
@@ -187,6 +193,12 @@ struct duration {
                 }
             } else {
                 switch (out.dt_unit) {
+                    case NONE:
+                    case SECOND:
+                        GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
+                        out.dt_unit = dt_unit;
+                        out.dt_interval = dt_interval;
+                        return out;
                     case MINUTE:
                         out.dt_unit = SECOND;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 60.0);

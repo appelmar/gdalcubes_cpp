@@ -266,7 +266,21 @@ class chunk_data {
 class cube : public std::enable_shared_from_this<cube> {
    public:
     /**
-     * @brief Create a data cube
+     * @brief Create an empty data cube
+     */
+    cube() : _st_ref(nullptr), _size(), _chunk_size(), _bands() {
+        _size[0] = 0;
+        _size[1] = 0;
+        _size[2] = 0;
+        _size[3] = 0;
+
+        _chunk_size = {16, 256, 256};
+
+        // TODO: add bands
+    }
+
+    /**
+     * @brief Create an empty data cube with given spacetime reference
      * @param st_ref space time reference (extent, size, SRS) of the cube
      */
     cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _size(), _chunk_size(), _bands() {
@@ -556,8 +570,8 @@ class cube : public std::enable_shared_from_this<cube> {
     * @brief Set the spatiotemporal reference (extent, size, projection) of a cube
      * @param st_ref new cube_st_reference object (or from a derived class)
     */
-    inline void st_reference(cube_st_reference* st_ref) {
-        _st_ref = std::make_shared<cube_st_reference>(*st_ref);
+    inline void st_reference(std::shared_ptr<cube_st_reference> st_ref) {
+        _st_ref = st_ref;
         _size[1] = st_ref->nt();
         _size[2] = st_ref->ny();
         _size[3] = st_ref->nx();

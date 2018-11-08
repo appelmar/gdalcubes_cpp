@@ -113,6 +113,11 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
 
     GDALClose(gdal_out);
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, &path, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+        if (dat->empty()) {
+            GCBS_WARN("Output GDAL image contains empty chunk " + std::to_string(id));
+            prg->increment((double)1 / (double)this->count_chunks());
+            return;
+        }
         m.lock();
         GDALDataset *gdal_out = (GDALDataset *)GDALOpen(path.c_str(), GA_Update);
         m.unlock();

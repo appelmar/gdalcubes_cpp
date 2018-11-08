@@ -263,10 +263,10 @@ class cube_st_reference {
     inline double& top() { return _win.top; }
 
     /**
-     * Return the spatial reference system / projection
-     * @return string with projection / SRS information that is understandable by GDAL / OGR
+     * Get or set the spatial reference system / projection
+     * @return string (reference) with projection / SRS information that is understandable by GDAL / OGR
      */
-    inline std::string proj() { return _proj; }
+    inline std::string& proj() { return _proj; }
 
     /**
      * Return the spatial reference system / projection

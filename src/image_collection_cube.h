@@ -36,6 +36,8 @@ class image_collection_cube : public cube {
     image_collection_cube(std::string icfile, cube_view v);
     image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile);
     image_collection_cube(std::string icfile, std::string vfile);
+    image_collection_cube(std::shared_ptr<image_collection> ic);
+    image_collection_cube(std::string icfile);
     ~image_collection_cube() {}
 
     inline const std::shared_ptr<image_collection> collection() { return _collection; }
@@ -63,6 +65,8 @@ class image_collection_cube : public cube {
         return out;
     }
 
+    static cube_view default_view(std::shared_ptr<image_collection> ic);
+
    private:
     const std::shared_ptr<image_collection> _collection;
 
@@ -70,7 +74,7 @@ class image_collection_cube : public cube {
 
     band_collection _input_bands;
 
-    static cube_view default_view(std::shared_ptr<image_collection> ic);
+
 };
 
 #endif  //IMAGE_COLLECTION_CUBE_H

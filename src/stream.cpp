@@ -15,15 +15,21 @@
 */
 
 #include "stream.h"
-#include <iostream>
-#include <thread>
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
-    GCBS_DEBUG("reduce_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_DEBUG("stream_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
-    if (id < 0 || id >= count_chunks())
-        return out;  // chunk is outside of the cube, we don't need to read anything.
-    return stream_chunk_stdin(_in_cube->read_chunk(id));
+    if (id < 0 || id >= count_chunks()) {
+        // chunk is outside of the cube, we don't need to read anything.
+        GCBS_WARN("Chunk id " + std::to_string(id) + " is out of range");
+        return out;
+    }
+
+    out = stream_chunk_stdin(_in_cube->read_chunk(id));
+    if (out->empty()) {
+        GCBS_DEBUG("Streaming returned empty chunk " + std::to_string(id));
+    }
+    return out;
 }
 
 std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chunk_data> data) {
@@ -107,8 +113,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         memcpy(out->buf(), odat.data() + (4 * sizeof(int)), sizeof(double) * out_size[0] * out_size[1] * out_size[2] * out_size[3]);
 
     } else {
-        GCBS_WARN("Cannot read streaming result");
+        GCBS_WARN("Cannot read streaming result, returning empty chunk");
     }
-
     return out;
 }

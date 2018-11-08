@@ -25,6 +25,15 @@ image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> i
 image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands() { load_bands(); }
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands() { load_bands(); }
 image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands() { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands() {
+    st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
+    load_bands();
+}
+
+image_collection_cube::image_collection_cube(std::string icfile) : cube(), _collection(std::make_shared<image_collection>(icfile)), _input_bands() {
+    st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
+    load_bands();
+}
 
 std::string image_collection_cube::to_string() {
     std::stringstream out;
@@ -235,8 +244,24 @@ struct aggregation_state_none : public aggregation_state {
 std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     GCBS_DEBUG("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
-    if (id < 0 || id >= count_chunks())
-        return out;  // chunk is outside of the view, we don't need to read anything.
+    if (id < 0 || id >= count_chunks()) {
+        // chunk is outside of the cube, we don't need to read anything.
+        GCBS_WARN("Chunk id " + std::to_string(id) + " is out of range");
+        return out;
+    }
+
+
+    // Find intersecting images from collection and iterate over these
+    bounds_st cextent = bounds_from_chunk(id);
+    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent,_st_ref->proj(), "gdalrefs.descriptor");
+    // In some cases, datasets still contains images at the temporal borders, which are actually not
+    // part of the chunk. If this is the case, the check for the temporal index later in this function
+    // will make sure that it is not read as it would lead to buffer overflows.
+
+    if (datasets.empty()) {
+        GCBS_DEBUG("Chunk " + std::to_string(id) + " does not intersect with any image from the image_collection_cube");
+        return out;  // empty chunk data
+    }
 
     // Derive how many pixels the chunk has (this varies for chunks at the boundary of the view)
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
@@ -245,17 +270,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     if (size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3] == 0)
         return out;
-
-    // Find intersecting images from collection and iterate over these
-    bounds_st cextent = bounds_from_chunk(id);
-    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, "gdalrefs.descriptor");
-    // In some cases, datasets still contains images at the temporal borders, which are actually not
-    // part of the chunk. If this is the case, the check for the temporal index later in this function
-    // will make sure that it is not read as it would lead to buffer overflows.
-
-    if (datasets.empty()) {
-        return out;  // empty chunk data
-    }
 
     // Fill buffers accordingly
     out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
@@ -413,7 +427,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
                 // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
                 if (view()->aggregation_method() == aggregation::NONE) {
-                    // TODO optimize such that only one image per it is read if aggregation==NONE
                     CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                     if (res != CE_None) {
                         GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
@@ -469,24 +482,58 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
     bounds_st extent = ic->extent();
 
     cube_view out;
-    out.left() = extent.s.left;
-    out.right() = extent.s.right;
-    out.top() = extent.s.top;
-    out.bottom() = extent.s.bottom;
+
+    std::string srs = ic->distinct_srs();
+    if (srs.empty()) {
+        out.proj() = "EPSG:3857";
+    }
+
+
+    // Transform WGS84 boundaries to target srs
+    bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326",out.proj().c_str());
+    out.left() = ext_transformed.left;
+    out.right() = ext_transformed.right;
+    out.top() = ext_transformed.top;
+    out.bottom() = ext_transformed.bottom;
 
     uint32_t ncells_space = 512 * 512;
     double asp_ratio = (out.right() - out.left()) / (out.top() - out.bottom());
     out.nx() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0);
-    out.nx() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0);
+    out.ny() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0);
 
     out.t0() = extent.t0;
     out.t1() = extent.t1;
 
     duration d = out.t1() - out.t0();
 
-    // TODO: set projection
-    // TODO: set dt
-    // TODO: set agg and res
+    if (out.t0() == out.t1()) {
+        out.dt().dt_unit = DAY;
+        out.dt().dt_interval = 1;
+    } else {
+        if (d.convert(YEAR).dt_interval > 4) {
+            out.dt().dt_unit = YEAR;
+        } else if (d.convert(MONTH).dt_interval > 4) {
+            out.dt().dt_unit = MONTH;
+        } else if (d.convert(DAY).dt_interval > 4) {
+            out.dt().dt_unit = DAY;
+        } else if (d.convert(HOUR).dt_interval > 4) {
+            out.dt().dt_unit = HOUR;
+        } else if (d.convert(MINUTE).dt_interval > 4) {
+            out.dt().dt_unit = MINUTE;
+        } else if (d.convert(SECOND).dt_interval > 4) {
+            out.dt().dt_unit = SECOND;
+        } else {
+            out.dt().dt_unit = DAY;
+        }
+        out.t0().unit() = out.dt().dt_unit;
+        out.t1().unit() = out.dt().dt_unit;
+        out.nt(4);
+    }
+
+
+
+    out.aggregation_method() = aggregation::aggregation_type::NONE;
+    out.resampling_method() = resampling::resampling_type::NEAR;
 
     return out;
 }

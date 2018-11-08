@@ -83,7 +83,18 @@ int main(int argc, char *argv[]) {
         //        //        std::cout << vvv->proj() << std::endl;
         //        //
 
-        image_collection_cube c("test.db", "../../test/view2.json");
+        cube_view v = cube_view::read_json("../../test/view2.json");
+        v.proj() = "EPSG:3857";
+        v.win() = v.win().transform("EPSG:4326","EPSG:3857");
+        std::cout << v.write_json_string() << std::endl;
+
+        image_collection_cube c("test.db", v);
+
+
+
+        //image_collection_cube c("test.db");
+
+        //std::cout << image_collection_cube::default_view(c.collection()).write_json_string() << std::endl;
 
         //std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "max");
         // t0.start();

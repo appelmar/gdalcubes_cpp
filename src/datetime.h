@@ -25,6 +25,7 @@
 
 #include <boost/date_time.hpp>
 #include <boost/regex.hpp>
+#include "error.h"
 
 enum datetime_unit {
     SECOND = 0,
@@ -142,6 +143,77 @@ struct duration {
         duration out;
         out.dt_unit = l.dt_unit;
         out.dt_interval = l.dt_interval - r;
+        return out;
+    }
+
+    duration convert(datetime_unit u) {
+        duration out;
+        if (u == NONE || dt_unit == NONE) {
+            GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
+            return out;
+        }
+        out.dt_unit = dt_unit;
+        out.dt_interval = dt_interval;
+        if (u == dt_unit) {
+            return out;
+        }
+        while (out.dt_unit != u) {
+            if (out.dt_unit < u) {
+                switch (out.dt_unit) {
+                    case SECOND:
+                        out.dt_unit = MINUTE;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 60.0);
+                        break;
+                    case MINUTE:
+                        out.dt_unit = HOUR;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 60.0);
+                        break;
+                    case HOUR:
+                        out.dt_unit = DAY;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 24.0);
+                        break;
+                    case DAY:
+                        out.dt_unit = MONTH;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 30.0);
+                        break;
+                    case WEEK:
+                        out.dt_unit = MONTH;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 7 / 30.0);
+                        break;
+                    case MONTH:
+                        out.dt_unit = YEAR;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 12.0);
+                        break;
+                }
+            } else {
+                switch (out.dt_unit) {
+                    case MINUTE:
+                        out.dt_unit = SECOND;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 60.0);
+                        break;
+                    case HOUR:
+                        out.dt_unit = MINUTE;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 60.0);
+                        break;
+                    case DAY:
+                        out.dt_unit = HOUR;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 24.0);
+                        break;
+                    case WEEK:
+                        out.dt_unit = DAY;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 7.0);
+                        break;
+                    case MONTH:
+                        out.dt_unit = DAY;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 30.0);
+                        break;
+                    case YEAR:
+                        out.dt_unit = MONTH;
+                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 12.0);
+                        break;
+                }
+            }
+        }
         return out;
     }
 };
@@ -393,7 +465,7 @@ class datetime {
                 out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval * 7));  // ignore time
                 break;
             case MONTH:
-                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + (long)(r.dt_interval / 12), out._p.date().month() + r.dt_interval % 12, 1));  // ignore time and day
+                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + (long)(r.dt_interval / 12), 1 + (out._p.date().month() + r.dt_interval) % 12, 1));  // ignore time and day
                 break;
             case YEAR:
                 out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval, 1, 1));  // ignore time, day, and month

@@ -251,10 +251,10 @@ class image_collection {
         std::string band_name;
         uint16_t band_num;
     };
-    std::vector<find_range_st_row> find_range_st(bounds_st range,
+    std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs,
                                                  std::vector<std::string> bands, std::string order_by = "");
-    inline std::vector<find_range_st_row> find_range_st(bounds_st range, std::string order_by = "") {
-        return find_range_st(range, std::vector<std::string>(), order_by);
+    inline std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs, std::string order_by = "") {
+        return find_range_st(range, srs, std::vector<std::string>(), order_by);
     };
 
     struct band_info_row {
@@ -290,6 +290,18 @@ class image_collection {
     bounds_st extent();
 
     inline std::string get_filename() { return _filename; }
+
+    /**
+     * @brief Check whether all images in a collection have the same SRS and spatial extent
+     * @return true, if the image collection is aligned
+     */
+    bool is_aligned();
+
+    /**
+     * Check whether all images in a collection have the same SRS and if yes, return the SRS
+     * @return SRS (usually proj4 string) if all images have the same SRS, empty string otherwise
+     */
+    std::string distinct_srs();
 
    protected:
     collection_format _format;

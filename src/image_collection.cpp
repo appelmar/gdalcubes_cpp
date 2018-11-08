@@ -504,8 +504,9 @@ bounds_st image_collection::extent() {
     return out;
 }
 
-std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range,
+std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range,std::string srs,
                                                                                  std::vector<std::string> bands, std::string order_by) {
+    bounds_2d<double> range_trans = (srs == "EPSG:4326")? range.s : range.s.transform(srs, "EPSG:4326");
     std::string sql =
         "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
@@ -513,7 +514,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
         range.t0.to_string(datetime_unit::SECOND) + "' AND images.datetime <= '" + range.t1.to_string(datetime_unit::SECOND) +
         "' AND NOT "
         "(images.right < " +
-        std::to_string(range.s.left) + " OR images.left > " + std::to_string(range.s.right) + " OR images.bottom > " + std::to_string(range.s.top) + " OR images.top < " + std::to_string(range.s.bottom) + ")";
+        std::to_string(range_trans.left) + " OR images.left > " + std::to_string(range_trans.right) + " OR images.bottom > " + std::to_string(range_trans.top) + " OR images.top < " + std::to_string(range_trans.bottom) + ")";
 
     if (!bands.empty()) {
         std::string bandlist = "";
@@ -580,4 +581,44 @@ std::vector<image_collection::band_info_row> image_collection::get_bands() {
     }
     sqlite3_finalize(stmt);
     return out;
+}
+
+std::string image_collection::distinct_srs() {
+    std::string out = "";
+    std::string sql = "SELECT DISTINCT proj from images;";
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in mage_collection::distinct_srs(): cannot prepare query statement");
+    }
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        out = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            // if more than one roq in the results, return empty string
+            out = "";
+        }
+    }
+    sqlite3_finalize(stmt);
+    return out;
+}
+
+bool image_collection::is_aligned() {
+    bool aligned = false;
+    std::string sql = "SELECT DISTINCT \"left\", \"top\", \"bottom\", \"right\", \"proj\" from images;";
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in mage_collection::distinct_srs(): cannot prepare query statement");
+    }
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        aligned = true;
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            // if more than one roq in the results, return false
+            aligned = false;
+        }
+    }
+    sqlite3_finalize(stmt);
+    return aligned;
 }

@@ -62,6 +62,9 @@ struct bounds_2d {
     }
 
     bounds_2d<Ta> transform(std::string srs_from, std::string srs_to) {
+        if (srs_from == srs_to) {
+            return *this;
+        }
         OGRSpatialReference srs_in;
         OGRSpatialReference srs_out;
         srs_in.SetFromUserInput(srs_from.c_str());
@@ -77,7 +80,7 @@ struct bounds_2d {
         Ta y[4] = {top, bottom, top, bottom};
 
         if (coord_transform == NULL || !coord_transform->Transform(4, x, y)) {
-            throw std::string("ERROR: coordinate transformation failed.");
+            throw std::string("ERROR: coordinate transformation failed (from " + srs_from + " to " + srs_to + ").");
         }
 
         Ta xmin = std::numeric_limits<Ta>::is_integer ? std::numeric_limits<Ta>::max() : std::numeric_limits<Ta>::max();

@@ -52,7 +52,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
 
     boost::process::child c(_cmd, boost::process::std_out > outdata, ios, boost::process::std_in<in, boost::process::std_err> outerr, e);
 
-    std::string proj = _in_cube->st_reference().proj();
+    std::string proj = _in_cube->st_reference()->proj();
 
     in.write((char*)(size), sizeof(int) * 4);
 
@@ -63,13 +63,13 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     }
     double* dims = (double*)calloc(size[1] + size[2] + size[3], sizeof(double));
     for (int i = 0; i < size[1]; ++i) {
-        dims[i] = (_in_cube->st_reference().t0() + _in_cube->st_reference().dt() * i).to_double();
+        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
     }
     for (int i = size[1]; i < size[1] + size[2]; ++i) {
-        dims[i] = _in_cube->st_reference().win().bottom + i * _in_cube->st_reference().dy();
+        dims[i] = _in_cube->st_reference()->win().bottom + i * _in_cube->st_reference()->dy();
     }
     for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
-        dims[i] = _in_cube->st_reference().win().left + i * _in_cube->st_reference().dx();
+        dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
     }
     in.write((char*)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
     free(dims);

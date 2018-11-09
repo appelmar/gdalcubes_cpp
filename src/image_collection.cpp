@@ -589,13 +589,13 @@ std::string image_collection::distinct_srs() {
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {
-        throw std::string("ERROR in mage_collection::distinct_srs(): cannot prepare query statement");
+        throw std::string("ERROR in image_collection::distinct_srs(): cannot prepare query statement");
     }
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         out = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
         if (sqlite3_step(stmt) == SQLITE_ROW) {
-            // if more than one roq in the results, return empty string
+            // if more than one row in the results, return empty string
             out = "";
         }
     }

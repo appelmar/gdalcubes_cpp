@@ -113,16 +113,16 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
             _st_ref->dt().dt_interval *= 7;  // UDUNIT does not support week
         }
         for (uint32_t i = 0; i < csize[1]; ++i) {
-            dim_t[i] = climits.low[0] + (i * st_reference().dt().dt_interval);
+            dim_t[i] = climits.low[0] + (i * st_reference()->dt().dt_interval);
         }
         for (uint32_t i = 0; i < csize[2]; ++i) {
-            dim_y[i] = st_reference().win().bottom + climits.high[1] * st_reference().dy() - (i)*st_reference().dy();  // or i +1 ?
+            dim_y[i] = st_reference()->win().bottom + climits.high[1] * st_reference()->dy() - (i)*st_reference()->dy();  // or i +1 ?
         }
         for (uint32_t i = 0; i < csize[3]; ++i) {
-            dim_x[i] = st_reference().win().left + (i + climits.low[2]) * st_reference().dx();
+            dim_x[i] = st_reference()->win().left + (i + climits.low[2]) * st_reference()->dx();
         }
 
-        OGRSpatialReference srs = st_reference().proj_ogr();
+        OGRSpatialReference srs = st_reference()->proj_ogr();
         std::string yname = srs.IsProjected() ? "y" : "latitude";
         std::string xname = srs.IsProjected() ? "x" : "longitude";
 

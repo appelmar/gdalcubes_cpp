@@ -81,7 +81,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
         out_co.AddString(co[i].c_str());
     }
 
-    GDALDataset *gdal_out = drv->Create(path.c_str(), _size[3], _size[2], bands().count(), GDT_Float64, out_co.List());
+    GDALDataset *gdal_out = drv->Create(path.c_str(), size_x(), size_y(), bands().count(), GDT_Float64, out_co.List());
     if (!gdal_out) {
         throw std::string("ERROR in reduce_cube::write_gdal_image(): cannot create output image");
     }

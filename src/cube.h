@@ -268,12 +268,7 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * @brief Create an empty data cube
      */
-    cube() : _st_ref(nullptr), _size(), _chunk_size(), _bands() {
-        _size[0] = 0;
-        _size[1] = 0;
-        _size[2] = 0;
-        _size[3] = 0;
-
+    cube() : _st_ref(nullptr), _chunk_size(), _bands() {
         _chunk_size = {16, 256, 256};
 
         // TODO: add bands
@@ -283,12 +278,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Create an empty data cube with given spacetime reference
      * @param st_ref space time reference (extent, size, SRS) of the cube
      */
-    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _size(), _chunk_size(), _bands() {
-        _size[0] = 0;
-        _size[1] = st_ref->nt();
-        _size[2] = st_ref->ny();
-        _size[3] = st_ref->nx();
-
+    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _bands() {
         _chunk_size = {16, 256, 256};
 
         // TODO: add bands
@@ -564,48 +554,48 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Get the spatiotemporal reference (extent, size, projection) of a cube
      * @return a cube_st_reference object
      */
-    inline cube_st_reference st_reference() { return *_st_ref; }
+    inline std::shared_ptr<cube_st_reference> st_reference() { return _st_ref; }
 
     /**
     * @brief Set the spatiotemporal reference (extent, size, projection) of a cube
+     *
+     * @note This is dangerous, as it will not update the reference of derived cubes automatically, use only before constructing derived cubes
+     *
      * @param st_ref new cube_st_reference object (or from a derived class)
     */
     inline void st_reference(std::shared_ptr<cube_st_reference> st_ref) {
         _st_ref = st_ref;
-        _size[1] = st_ref->nt();
-        _size[2] = st_ref->ny();
-        _size[3] = st_ref->nx();
     }
 
     /**
      * @brief Get size of a cube
      * @return cube size / number of cells in the order (bands, datetime, y, x)
      */
-    inline cube_size_btyx size() { return _size; }
+    inline cube_size_btyx size() { return {_bands.count(), size_t(), size_y(), size_x()}; }
 
     /**
      * @brief Get the number of bands of the cube
      * @return  Integer number of cells
      */
-    inline uint32_t size_bands() { return _size[0]; }
+    inline uint32_t size_bands() { return _bands.count(); }
 
     /**
      * @brief Get the number of cells in the temporal dimension
      * @return  Integer number of cells
      */
-    inline uint32_t size_t() { return _size[1]; }
+    inline uint32_t size_t() { return (_st_ref != nullptr) ? _st_ref->nt() : 0; }
 
     /**
     * @brief Get the number of cells in the y dimension
     * @return  Integer number of cells
     */
-    inline uint32_t size_y() { return _size[2]; }
+    inline uint32_t size_y() { return (_st_ref != nullptr) ? _st_ref->ny() : 0; }
 
     /**
     * @brief Get the number of cells in the x dimension
     * @return  Integer number of cells
     */
-    inline uint32_t size_x() { return _size[3]; }
+    inline uint32_t size_x() { return (_st_ref != nullptr) ? _st_ref->nx() : 0; }
 
     /**
      * @brief Read chunk data
@@ -658,15 +648,7 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * Spacetime reference of a cube, including extent, size, and projection
      */
-    std::shared_ptr<cube_st_reference> _st_ref;
-
-    /**
-     * @brief Size of the cube in the order (bands, datetime, y, x)
-     *
-     * @note This is actually redundant and can be derived from _st_ref and _bands.
-     * @todo Make this field deprecated and eventually remove from the class
-     */
-    cube_size_btyx _size;
+    std::shared_ptr<cube_st_reference> _st_ref;  // TODO: replace with unique_ptr
 
     /**
      * @brief Size of chunks / number of cells per chunk in the order (datetime, y, x)

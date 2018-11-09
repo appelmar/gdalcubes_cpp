@@ -233,10 +233,34 @@ class cube_st_reference {
     inline double dx() { return (_win.right - _win.left) / _nx; }
 
     /**
+    * Set the size of cells in x dimension
+    * @note if the width of the spatial window is not a multiple of the new dx, the window will be widened at both ends
+    * @param x size of cells in x dimension
+    */
+    inline void dx(double x) {
+        _nx = (uint32_t)std::ceil((_win.right - _win.left) / x);
+        double exp_x = _nx * x - (_win.right - _win.left);
+        _win.right += exp_x / 2;
+        _win.left -= exp_x / 2;
+    }
+
+    /**
    * Get the size of cells in y dimension
    * @return size of cells in y dimension
    */
     inline double dy() { return (_win.top - _win.bottom) / _ny; }
+
+    /**
+    * Set the size of cells in y dimension
+     *@note if the height of the spatial window is not a multiple of the new dy, the window will be widened at both ends
+    * @param x size of cells in y dimension
+    */
+    inline void dy(double x) {
+        _ny = (uint32_t)std::ceil((_win.top - _win.bottom) / x);
+        double exp_y = _ny * x - (_win.top - _win.bottom);
+        _win.top += exp_y / 2;
+        _win.bottom -= exp_y / 2;
+    }
 
     /**
      * Get the lower limit in x dimension / left boundary of the cube's extent

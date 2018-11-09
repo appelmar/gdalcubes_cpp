@@ -474,7 +474,6 @@ void image_collection_cube::load_bands() {
         _bands.add(bout);
         _input_bands.add(bin);
     }
-    _size[0] = _bands.count();
 }
 
 cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> ic) {
@@ -485,6 +484,8 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
     std::string srs = ic->distinct_srs();
     if (srs.empty()) {
         out.proj() = "EPSG:3857";
+    } else {
+        out.proj() = srs;
     }
 
     // Transform WGS84 boundaries to target srs

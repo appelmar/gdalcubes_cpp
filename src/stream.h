@@ -30,7 +30,7 @@
  */
 class stream_cube : public cube {
    public:
-    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") : cube(std::make_shared<cube_st_reference>(in_cube->st_reference())), _in_cube(in_cube), _cmd(cmd), _log_output(log_output) {
+    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") : cube(std::make_shared<cube_st_reference>(*(in_cube->st_reference()))), _in_cube(in_cube), _cmd(cmd), _log_output(log_output) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         // Test CMD and find out what size comes out.
         cube_size_tyx tmp = _in_cube->chunk_size(0);
         cube_size_btyx csize_in = {_in_cube->bands().count(), tmp[0], tmp[1], tmp[2]};
@@ -51,30 +51,25 @@ class stream_cube : public cube {
 
         _chunk_size = {c0->size()[1], c0->size()[2], c0->size()[3]};
 
-        _size[0] = c0->size()[0];
-
         // Make an optimistic guess
         if (c0->size()[1] == 1) {
-            _size[1] = in_cube->count_chunks_t();
-            _st_ref->nt(_size[1]);
+            _st_ref->nt(in_cube->count_chunks_t());
         } else if (c0->size()[1] == csize_in[1]) {
-            _size[1] = in_cube->size()[1];
+            _st_ref->nt(in_cube->size()[1]);
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
 
         if (c0->size()[2] == 1) {
-            _size[2] = in_cube->count_chunks_t();
-            _st_ref->ny() = _size[2];
+            _st_ref->ny() = in_cube->count_chunks_y();
         } else if (c0->size()[2] == csize_in[2]) {
-            _size[2] = in_cube->size()[2];
+            _st_ref->ny() = in_cube->size()[2];
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
 
         if (c0->size()[3] == 1) {
-            _size[3] = in_cube->count_chunks_t();
-            _st_ref->ny() = _size[3];
+            _st_ref->nx() = in_cube->count_chunks_x();
         } else if (c0->size()[3] == csize_in[3]) {
-            _size[3] = in_cube->size()[3];
+            _st_ref->nx() = in_cube->size()[3];
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
     }

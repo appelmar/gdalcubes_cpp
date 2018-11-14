@@ -12,6 +12,9 @@ sample_array <- function() {
 #' Test
 #' @export
 read_stream_as_array <-function(with.dimnames=TRUE) {
+  if(!.is_streaming()) {
+    
+  }
   f <-file('stdin', 'rb')
   on.exit(close(f))
   s <- readBin(f, integer(), n=4)

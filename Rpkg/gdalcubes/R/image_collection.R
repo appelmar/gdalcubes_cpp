@@ -38,3 +38,31 @@ is.gcbs_image_collection <- function(obj) {
 summary.gcbs_image_collection <- function(obj) {
   print("xxxx")
 }
+
+# 
+# get_image_id <- function(path) {
+#   p <- unlist(strsplit(path, "/"))
+#   p[length(p)-4]
+#   return(gsub(".SAFE", "",p[length(p)-4]))
+# }
+# 
+# get_datetime <- function(path) {
+#   return(substr(get_image_id(path), 12, 26))
+# }
+# 
+# get_band <- function(path) {
+#   return(substr(get_image_id(path), 12, 26))
+# }
+
+#' @export
+gcbs_create_image_collection <-function(files, get_band, get_datetime, get_image_id, ignore_pattern=NULL)
+{
+  files <- list.files("/home/marius/eodata/Sentinel2/", pattern="*.jp2", recursive = TRUE, full.names = TRUE)
+  sapply(files, function(f) {
+    
+  })
+  
+}
+
+
+

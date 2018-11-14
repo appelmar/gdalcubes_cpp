@@ -15,7 +15,8 @@
   }
 }
 
-.is_streaming <-function() {
+
+.is_streaming <- function() {
   return(Sys.getenv("GDALCUBES_STREAMING") == "1")
 }
 

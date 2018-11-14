@@ -2,8 +2,8 @@
 gcbs_reduce <- function(cube, reducer=c("mean","median","min","max")) {
   stopifnot(is.gcbs_cube(cube))
 
-  x = libgdalcubes_create_reduce_cube(cube, reducer) # TODO: add output
-  class(x) <- c("gcbs_reduce_cube", "gcbs_cube", "list")
+  x = libgdalcubes_create_reduce_cube(cube, reducer)
+  class(x) <- c("gcbs_reduce_cube", "gcbs_cube", "xptr")
   return(x)
 }
 
@@ -13,7 +13,14 @@ gcbs_reduce <- function(cube, reducer=c("mean","median","min","max")) {
 
 #' @export
 is.gcbs_reduce_cube  <- function(obj) {
-  return("gcbs_reduce_cube" %in% class(obj))
+  if(!("gcbs_reduce_cube" %in% class(obj))) {
+    return(FALSE)
+  }
+  if (libgdalcubes_is_null(obj)) {
+    warning("GDAL data cube proxy object is invalid")
+    return(FALSE)
+  }
+  return(TRUE)
 }
 
 #' @export

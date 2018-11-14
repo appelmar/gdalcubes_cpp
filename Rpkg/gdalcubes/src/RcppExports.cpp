@@ -5,6 +5,17 @@
 
 using namespace Rcpp;
 
+// libgdalcubes_is_null
+Rcpp::LogicalVector libgdalcubes_is_null(SEXP pointer);
+RcppExport SEXP _gdalcubes_libgdalcubes_is_null(SEXP pointerSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pointer(pointerSEXP);
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_is_null(pointer));
+    return rcpp_result_gen;
+END_RCPP
+}
 // libgdalcubes_version
 Rcpp::List libgdalcubes_version();
 RcppExport SEXP _gdalcubes_libgdalcubes_version() {
@@ -33,6 +44,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// libgdalcubes_cube_info
+Rcpp::List libgdalcubes_cube_info(SEXP pin);
+RcppExport SEXP _gdalcubes_libgdalcubes_cube_info(SEXP pinSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pin(pinSEXP);
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_cube_info(pin));
+    return rcpp_result_gen;
+END_RCPP
+}
 // libgdalcubes_open_image_collection
 SEXP libgdalcubes_open_image_collection(std::string filename);
 RcppExport SEXP _gdalcubes_libgdalcubes_open_image_collection(SEXP filenameSEXP) {
@@ -45,51 +67,51 @@ BEGIN_RCPP
 END_RCPP
 }
 // libgdalcubes_create_image_collection_cube
-SEXP libgdalcubes_create_image_collection_cube(std::string filename, std::string view);
-RcppExport SEXP _gdalcubes_libgdalcubes_create_image_collection_cube(SEXP filenameSEXP, SEXP viewSEXP) {
+SEXP libgdalcubes_create_image_collection_cube(std::string filename, SEXP v);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_image_collection_cube(SEXP filenameSEXP, SEXP vSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
-    Rcpp::traits::input_parameter< std::string >::type view(viewSEXP);
-    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_image_collection_cube(filename, view));
+    Rcpp::traits::input_parameter< SEXP >::type v(vSEXP);
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_image_collection_cube(filename, v));
     return rcpp_result_gen;
 END_RCPP
 }
 // libgdalcubes_create_reduce_cube
-SEXP libgdalcubes_create_reduce_cube(Rcpp::List incube, std::string reducer);
-RcppExport SEXP _gdalcubes_libgdalcubes_create_reduce_cube(SEXP incubeSEXP, SEXP reducerSEXP) {
+SEXP libgdalcubes_create_reduce_cube(SEXP pin, std::string reducer);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_reduce_cube(SEXP pinSEXP, SEXP reducerSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type incube(incubeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type pin(pinSEXP);
     Rcpp::traits::input_parameter< std::string >::type reducer(reducerSEXP);
-    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_reduce_cube(incube, reducer));
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_reduce_cube(pin, reducer));
     return rcpp_result_gen;
 END_RCPP
 }
 // libgdalcubes_eval_reduce_cube
-void libgdalcubes_eval_reduce_cube(Rcpp::List incube, std::string outfile, std::string of);
-RcppExport SEXP _gdalcubes_libgdalcubes_eval_reduce_cube(SEXP incubeSEXP, SEXP outfileSEXP, SEXP ofSEXP) {
+void libgdalcubes_eval_reduce_cube(SEXP pin, std::string outfile, std::string of);
+RcppExport SEXP _gdalcubes_libgdalcubes_eval_reduce_cube(SEXP pinSEXP, SEXP outfileSEXP, SEXP ofSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type incube(incubeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type pin(pinSEXP);
     Rcpp::traits::input_parameter< std::string >::type outfile(outfileSEXP);
     Rcpp::traits::input_parameter< std::string >::type of(ofSEXP);
-    libgdalcubes_eval_reduce_cube(incube, outfile, of);
+    libgdalcubes_eval_reduce_cube(pin, outfile, of);
     return R_NilValue;
 END_RCPP
 }
 // libgdalcubes_create_stream_cube
-SEXP libgdalcubes_create_stream_cube(Rcpp::List incube, std::string cmd, std::vector<int> chunk_size);
-RcppExport SEXP _gdalcubes_libgdalcubes_create_stream_cube(SEXP incubeSEXP, SEXP cmdSEXP, SEXP chunk_sizeSEXP) {
+SEXP libgdalcubes_create_stream_cube(SEXP pin, std::string cmd, std::vector<int> chunk_size);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_stream_cube(SEXP pinSEXP, SEXP cmdSEXP, SEXP chunk_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type incube(incubeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type pin(pinSEXP);
     Rcpp::traits::input_parameter< std::string >::type cmd(cmdSEXP);
     Rcpp::traits::input_parameter< std::vector<int> >::type chunk_size(chunk_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_stream_cube(incube, cmd, chunk_size));
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_stream_cube(pin, cmd, chunk_size));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -105,9 +127,11 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_gdalcubes_libgdalcubes_is_null", (DL_FUNC) &_gdalcubes_libgdalcubes_is_null, 1},
     {"_gdalcubes_libgdalcubes_version", (DL_FUNC) &_gdalcubes_libgdalcubes_version, 0},
     {"_gdalcubes_libgdalcubes_init", (DL_FUNC) &_gdalcubes_libgdalcubes_init, 0},
     {"_gdalcubes_libgdalcubes_cleanup", (DL_FUNC) &_gdalcubes_libgdalcubes_cleanup, 0},
+    {"_gdalcubes_libgdalcubes_cube_info", (DL_FUNC) &_gdalcubes_libgdalcubes_cube_info, 1},
     {"_gdalcubes_libgdalcubes_open_image_collection", (DL_FUNC) &_gdalcubes_libgdalcubes_open_image_collection, 1},
     {"_gdalcubes_libgdalcubes_create_image_collection_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_image_collection_cube, 2},
     {"_gdalcubes_libgdalcubes_create_reduce_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_reduce_cube, 2},

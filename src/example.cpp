@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         v.win() = v.win().transform("EPSG:4326", "EPSG:3857");
         std::cout << v.write_json_string() << std::endl;
 
-        image_collection_cube c("test.db", v);
+        //   image_collection_cube c("test.db", v);
 
         //image_collection_cube c("test.db");
 
@@ -101,12 +101,12 @@ int main(int argc, char *argv[]) {
 
         //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
 
-        std::shared_ptr<stream_cube> s = std::make_shared<stream_cube>(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "");
-
-        std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(s, "min");
-        t0.start();
-        cstream->write_gdal_image("test_stream.tif");
-        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+        //        std::shared_ptr<stream_cube> s = std::make_shared<stream_cube>(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "");
+        //
+        //        std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(s, "min");
+        //        t0.start();
+        //        cstream->write_gdal_image("test_stream.tif");
+        //        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
 
         //  std::cout << cstream.make_constructible_json().dump(2) << std::endl;
 
@@ -115,6 +115,13 @@ int main(int argc, char *argv[]) {
         //        std::shared_ptr<gdalcubes_swarm> swarm = std::make_shared<gdalcubes_swarm>(servers);
         //        config::instance()->set_default_chunk_processor(swarm);
         //        cstream->write_gdal_image("test_swarm.tif");
+
+        chdir("/home/marius/Desktop/CHIRPS/");
+        config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
+        std::shared_ptr<image_collection_cube> x = std::make_shared<image_collection_cube>("/home/marius/Desktop/CHIRPS/CHIRPS.db", "/home/marius/Desktop/CHIRPS/view_debug.json");
+        std::cout << x->view()->write_json_string() << std::endl;
+        std::shared_ptr<reduce_cube> xmax = std::make_shared<reduce_cube>(x, "max");
+        xmax->write_gdal_image("test_max");
 
     } catch (std::string e) {
         std::cout << e << std::endl;

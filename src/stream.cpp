@@ -80,28 +80,30 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     in.write(((char*)(data->buf())), sizeof(double) * data->size()[0] * data->size()[1] * data->size()[2] * data->size()[3]);
     in.flush();
 
-    boost::system::error_code result;
-    ios.run(result);
-    if (result.value() != 0)
-        throw std::string("ERROR in stream_cube::read_chunk(): external program returned status (" + std::to_string(result.value()) + ") --> " + result.message());
+    ios.run();
+    c.wait();
 
     std::vector<char> odat = outdata.get();
-    if (!_log_output.empty()) {
-        std::vector<char> oerr = outerr.get();
-        std::string str(oerr.begin(), oerr.end());
-        if (_log_output == "stdout") {
-            std::cout << str << std::endl;
-        } else if (_log_output == "stderr") {
-            std::cerr << str << std::endl;
+
+    std::vector<char> oerr = outerr.get();
+    std::string errstr(oerr.begin(), oerr.end());
+    if (_log_output == "stdout") {
+        std::cout << errstr << std::endl;
+    } else if (_log_output == "stderr") {
+        std::cerr << errstr << std::endl;
+    } else if (!_log_output.empty()) {
+        std::ofstream flog(_log_output, std::ios_base::out | std::ios_base::app);
+        if (flog.fail()) {
+            GCBS_WARN("Failed to open file '" + _log_output + "' for writing streaming output");
         } else {
-            std::ofstream flog(_log_output, std::ios_base::out | std::ios_base::app);
-            if (flog.fail()) {
-                GCBS_WARN("Failed to open file '" + _log_output + "' for writing streaming output");
-            } else {
-                flog << str;
-                flog.close();
-            }
+            flog << errstr;
+            flog.close();
         }
+    }
+    if (c.exit_code() != 0) {
+        GCBS_ERROR("Child process failed with exit code " + std::to_string(c.exit_code()));
+        GCBS_ERROR("Child process output: " + errstr);
+        throw std::string("ERROR in stream_cube::read_chunk(): external program returned exit code " + std::to_string(c.exit_code()));
     }
 
     if (odat.size() >= 4 * sizeof(int)) {

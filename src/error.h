@@ -18,6 +18,7 @@
 #define ERROR_H
 
 #include <iostream>
+#include <mutex>
 #include <string>
 #include "utils.h"
 
@@ -79,6 +80,9 @@ class logger {
     * @copydoc error
     */
     static void trace(std::string msg, std::string where = "", int error_code = 0);
+
+   private:
+    static std::mutex _m;
 };
 
 /**

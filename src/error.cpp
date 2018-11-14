@@ -18,21 +18,35 @@
 
 #include "config.h"
 
+std::mutex logger::_m;
+// TODO: move mutex to specific error handler implementations
 void logger::error(std::string msg, std::string where, int error_code) {
+    _m.lock();
     config::instance()->get_error_handler()(ERROR, msg, where, error_code);
+    _m.unlock();
 }
 void logger::warn(std::string msg, std::string where, int error_code) {
+    _m.lock();
     config::instance()->get_error_handler()(WARNING, msg, where, error_code);
+    _m.unlock();
 }
 void logger::debug(std::string msg, std::string where, int error_code) {
+    _m.lock();
     config::instance()->get_error_handler()(DEBUG, msg, where, error_code);
+    _m.unlock();
 }
 void logger::fatal(std::string msg, std::string where, int error_code) {
+    _m.lock();
     config::instance()->get_error_handler()(FATAL, msg, where, error_code);
+    _m.unlock();
 }
 void logger::trace(std::string msg, std::string where, int error_code) {
+    _m.lock();
     config::instance()->get_error_handler()(TRACE, msg, where, error_code);
+    _m.unlock();
 }
 void logger::info(std::string msg, std::string where, int error_code) {
+    _m.lock();
     config::instance()->get_error_handler()(INFO, msg, where, error_code);
+    _m.unlock();
 }

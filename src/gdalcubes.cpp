@@ -479,9 +479,13 @@ int main(int argc, char* argv[]) {
         std::cout << s << std::endl;
         config::instance()->gdalcubes_cleanup();
         return 1;
+    } catch (std::exception& e) {
+        std::cout << "ERROR in gdalcubes: unexpected exception" << std::endl;
+        std::cout << "what():" << e.what() << std::endl;
+        config::instance()->gdalcubes_cleanup();
+        return 1;
     } catch (...) {
-        std::cout << "ERROR in gdalcubes: invalid arguments." << std::endl;
-        print_usage();
+        std::cout << "ERROR in gdalcubes: unexpected exception" << std::endl;
         config::instance()->gdalcubes_cleanup();
         return 1;
     }

@@ -313,7 +313,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     void *img_buf = calloc(size_btyx[3] * size_btyx[2], sizeof(double));
 
-    // For each image, call gdal_warp if projection is different than view or gdaltranslate if possible otherwise
     uint32_t i = 0;
     while (i < datasets.size()) {
         // ASSUMPTION: datasets is ordered by gdal_refs.descriptor, i.e., the GDAL dataset identifier.
@@ -400,6 +399,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
             ss << warp_args[iws] << " ";
         }
+        ss << descriptor_name;
         GCBS_TRACE(ss.str());
 
         GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);

@@ -99,7 +99,7 @@ struct bounds_2d {
         top = ymax;
         bottom = ymin;
 
-        delete coord_transform;
+        OCTDestroyCoordinateTransformation(coord_transform);
 
         return *this;
     }

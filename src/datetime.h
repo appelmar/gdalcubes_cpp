@@ -477,7 +477,7 @@ class datetime {
                 out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval * 7));  // ignore time
                 break;
             case MONTH:
-                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + (long)(r.dt_interval / 12), 1 + (out._p.date().month() + r.dt_interval) % 12, 1));  // ignore time and day
+                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + (long)(r.dt_interval / 12), 1 + (out._p.date().month() - 1 + r.dt_interval) % 12, 1));  // ignore time and day
                 break;
             case YEAR:
                 out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval, 1, 1));  // ignore time, day, and month

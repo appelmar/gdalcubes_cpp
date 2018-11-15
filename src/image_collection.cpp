@@ -180,6 +180,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         if (!global_pattern.empty()) {  // prevent unnecessary GDALOpen calls
             if (!boost::regex_match(*it, regex_global_pattern)) {
                 // std::cout << "ignoring " << *it << std::endl;
+                GCBS_DEBUG("Dataset " + *it + " doesn't match the global collection pattern and will be ignored");
                 continue;
             }
         }
@@ -225,6 +226,11 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             if (hasnodata)
                 b.nodata = std::to_string(nd);
             bands.push_back(b);
+        }
+        if (bands.empty()) {
+            if (strict) throw std::string("ERROR in image_collection::add(): " + *it + " doesn't contain any band data and will be ignored");
+            GCBS_WARN("Dataset " + *it + " doesn't contain any band data and will be ignored");
+            continue;
         }
         GDALClose((GDALDatasetH)dataset);
 

@@ -30,7 +30,23 @@
  */
 class stream_cube : public cube {
    public:
-    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") : cube(std::make_shared<cube_st_reference>(*(in_cube->st_reference()))), _in_cube(in_cube), _cmd(cmd), _log_output(log_output) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    /**
+     * @brief Create a data cube that streams chunk of a given input data cube to an external program
+     * @note This static creation method should preferably be used instead of the constructors as
+     * the constructors will not set connections between cubes properly.
+     * @param in_cube input data cube
+     * @param cmd external program call
+     * @param log_output what to to with the output of the external program, either empty, "stdout", "stderr", or a filename
+     * @return a shared pointer to the created data cube instance
+     */
+    static std::shared_ptr<stream_cube> create(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") {
+        std::shared_ptr<stream_cube> out = std::make_shared<stream_cube>(in_cube, cmd, log_output);
+        in_cube->add_child_cube(out);
+        out->add_parent_cube(in_cube);
+        return out;
+    }
+
+    stream_cube(std::shared_ptr<image_collection_cube> in_cube, std::string cmd, std::string log_output = "") : cube(std::make_shared<cube_st_reference>(*(in_cube->st_reference()))), _in_cube(in_cube), _cmd(cmd), _log_output(log_output), _keep_input_nt(false), _keep_input_ny(false), _keep_input_nx(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         // Test CMD and find out what size comes out.
         cube_size_tyx tmp = _in_cube->chunk_size(0);
         cube_size_btyx csize_in = {_in_cube->bands().count(), tmp[0], tmp[1], tmp[2]};
@@ -55,6 +71,7 @@ class stream_cube : public cube {
         if (c0->size()[1] == 1) {
             _st_ref->nt(in_cube->count_chunks_t());
         } else if (c0->size()[1] == csize_in[1]) {
+            _keep_input_nt = true;
             _st_ref->nt(in_cube->size()[1]);
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
@@ -62,6 +79,7 @@ class stream_cube : public cube {
         if (c0->size()[2] == 1) {
             _st_ref->ny() = in_cube->count_chunks_y();
         } else if (c0->size()[2] == csize_in[2]) {
+            _keep_input_ny = true;
             _st_ref->ny() = in_cube->size()[2];
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
@@ -69,6 +87,7 @@ class stream_cube : public cube {
         if (c0->size()[3] == 1) {
             _st_ref->nx() = in_cube->count_chunks_x();
         } else if (c0->size()[3] == csize_in[3]) {
+            _keep_input_nx = true;
             _st_ref->nx() = in_cube->size()[3];
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
@@ -89,8 +108,32 @@ class stream_cube : public cube {
     std::string _cmd;
     std::string _log_output;
 
+    // Variables to help deriving the size when view changes without testing with a dummy chunk
+    bool _keep_input_nt;
+    bool _keep_input_ny;
+    bool _keep_input_nx;
+
    private:
     std::shared_ptr<chunk_data> stream_chunk_stdin(std::shared_ptr<chunk_data> data);
+
+    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+        std::cout << "ENTERING stream_cube::set_st_reference()" << std::endl;
+        // assumption here is that input cube is image_collection_cube
+        _st_ref->win() = stref->win();
+        _st_ref->proj() = stref->proj();
+        _st_ref->ny() = stref->ny();
+        _st_ref->nx() = stref->nx();
+        _st_ref->t0() = stref->t0();
+        _st_ref->t1() = stref->t1();
+        _st_ref->dt() = stref->dt();
+
+        std::cout << "RUNNING stream_cube::set_st_reference()" << std::endl;
+
+        if (!_keep_input_nt) _st_ref->nt(count_chunks_t());
+        if (!_keep_input_ny) _st_ref->ny() = count_chunks_y();
+        if (!_keep_input_nx) _st_ref->nx() = count_chunks_x();
+        std::cout << "EXITING stream_cube::set_st_reference()" << std::endl;
+    }
 };
 
 #endif  //STREAM_H

@@ -32,19 +32,16 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
         throw std::string("ERROR in chunking::write_gtiff_directory(): output is not a directory.");
     }
 
-    uint32_t nchunks = count_chunks();
-    for (uint32_t i = 0; i < nchunks; ++i) {
-        GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
-        if (gtiff_driver == NULL) {
-            throw std::string("ERROR: cannot find GDAL driver for GTiff.");
-        }
+    GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
+    if (gtiff_driver == NULL) {
+        throw std::string("ERROR: cannot find GDAL driver for GTiff.");
+    }
 
-        CPLStringList out_co;
-        //out_co.AddNameValue("TILED", "YES");
-        //out_co.AddNameValue("BLOCKXSIZE", "256");
-        // out_co.AddNameValue("BLOCKYSIZE", "256");
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-        bounds_st cextent = this->bounds_from_chunk(i);  // implemented in derived classes
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, gtiff_driver](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+        bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
         double affine[6];
         affine[0] = cextent.s.left;
         affine[3] = cextent.s.top;
@@ -53,11 +50,14 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
         affine[2] = 0.0;
         affine[4] = 0.0;
 
-        std::shared_ptr<chunk_data> dat = read_chunk(i);
+        CPLStringList out_co;
+        //out_co.AddNameValue("TILED", "YES");
+        //out_co.AddNameValue("BLOCKXSIZE", "256");
+        // out_co.AddNameValue("BLOCKYSIZE", "256");
 
         for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
             for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-                fs::path out_file = op / (std::to_string(i) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif");
+                fs::path out_file = op / (std::to_string(id) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif");
 
                 GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
                 CPLErr res = gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
@@ -72,11 +72,16 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
 
                 GDALSetProjection(gdal_out, wkt_out);
                 GDALSetGeoTransform(gdal_out, affine);
+                CPLFree(wkt_out);
 
                 GDALClose(gdal_out);
             }
         }
-    }
+        prg->increment((double)1 / (double)this->count_chunks());
+    };
+
+    p->apply(shared_from_this(), f);
+    prg->finalize();
 }
 
 void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
@@ -176,6 +181,7 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
             netCDF::NcVar v_crs = ncout.addVar("crs", netCDF::ncInt);
             v_crs.putAtt("grid_mapping_name", "easting_northing");
             v_crs.putAtt("crs_wkt", wkt);
+            CPLFree(wkt);
         } else {
             // char* unit;
             // double scale = srs.GetAngularUnits(&unit);
@@ -191,6 +197,7 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
             netCDF::NcVar v_crs = ncout.addVar("crs", netCDF::ncInt);
             v_crs.putAtt("grid_mapping_name", "latitude_longitude");
             v_crs.putAtt("crs_wkt", wkt);
+            CPLFree(wkt);
         }
 
         std::vector<netCDF::NcVar> v_bands;

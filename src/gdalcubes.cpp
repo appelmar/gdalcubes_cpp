@@ -370,9 +370,8 @@ int main(int argc, char* argv[]) {
             }
 
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
-            std::shared_ptr<cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
-            std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_in, reducer);
-
+            auto c_in = image_collection_cube::create(ic, json_view_path);
+            auto c_reduce = reduce_cube::create(c_in, reducer);
             c_reduce->write_gdal_image(output, outformat, create_options);
 
         } else if (cmd == "stream") {
@@ -416,7 +415,8 @@ int main(int argc, char* argv[]) {
             }
 
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
-            std::shared_ptr<image_collection_cube> c_in = std::make_shared<image_collection_cube>(ic, json_view_path);
+
+            auto c_in = image_collection_cube::create(ic, json_view_path);
 
             std::vector<uint32_t> chunk_sizes;
             std::string chunkstr = vm["chunking"].as<std::string>();
@@ -451,7 +451,7 @@ int main(int argc, char* argv[]) {
 
             c_in->set_chunk_size(chunk_sizes[0], chunk_sizes[1], chunk_sizes[2]);
 
-            std::shared_ptr<cube> c_stream = std::make_shared<stream_cube>(c_in, exec);
+            auto c_stream = stream_cube::create(c_in, exec);
 
             // TODO: do something even if no reducer is given
 
@@ -466,7 +466,7 @@ int main(int argc, char* argv[]) {
                     outformat = vm["gdal-of"].as<std::string>();
                 }
 
-                std::shared_ptr<reduce_cube> c_reduce = std::make_shared<reduce_cube>(c_stream, reducer);
+                auto c_reduce = reduce_cube::create(c_stream, reducer);
                 c_reduce->write_gdal_image(output, outformat, create_options);
             }
 

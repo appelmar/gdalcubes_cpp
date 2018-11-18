@@ -261,7 +261,12 @@ class chunk_data {
  * This class is virtual but provides a few default methods
  * such as chunk-wise NetCDF export, conversion of chunk-local, cube-local, and spatial coordinates / datetime.
  *
- * Cubes should primarily be used as smart pointers, i.e. std::shared_ptr<xxx_cube>.
+ *
+ * @note Specific subclass instances should be created by using static create() methods instead uf using the constructors of
+ * directly. This makes sure that we always work with smart pointers and that connections between cubes are maintained
+ * consistently.
+ *
+ * @note Cubes should primarily be used as smart pointers, i.e. std::shared_ptr<xxx_cube>.
  */
 class cube : public std::enable_shared_from_this<cube> {
    public:
@@ -278,7 +283,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Create an empty data cube with given spacetime reference
      * @param st_ref space time reference (extent, size, SRS) of the cube
      */
-    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _bands() {
+    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _bands(), _pre(), _succ() {
         _chunk_size = {16, 256, 256};
 
         // TODO: add bands
@@ -608,11 +613,17 @@ class cube : public std::enable_shared_from_this<cube> {
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) = 0;
 
     /**
+     * @brief Update the spatiotemporal reference of this and all connected cubes
+     * @param stref new spatiotemporal reference / data cube view
+     */
+    void update_st_reference(std::shared_ptr<cube_st_reference> stref) {
+        std::set<std::shared_ptr<cube>> cset;
+        update_st_reference_recursion(stref, cset);
+    }
+
+    /**
      * @brief Write a cube as a set of GeoTIFF files under a given directory
      *
-     * @note This method should be reimplemented using chunk_processor::apply.
-     *
-     * @deprecated
      * @param dir directory where to store the files
      * @param p chunk processor instance
      */
@@ -638,6 +649,22 @@ class cube : public std::enable_shared_from_this<cube> {
     }
 
     /**
+     * @brief Add a data cube as a parent cube to keep track of cube connections
+     * @param c the data cube this cube depends on
+     */
+    inline void add_parent_cube(std::shared_ptr<cube> c) {
+        _pre.push_back(c);
+    }
+
+    /**
+     * @brief Add a child data cube to keep track of cubes connections
+     * @param c derived data cube
+     */
+    inline void add_child_cube(std::shared_ptr<cube> c) {
+        _succ.push_back(c);
+    }
+
+    /**
      * Abstract function to create a JSON representation of a cube object
      * @return a JSON object which can be used to recreate it with cube_factory
      * @see cube_factory
@@ -659,6 +686,44 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief The collection's bands
      */
     band_collection _bands;
+
+    /**
+     * @brief List of cube instances this cube takes as input (predecessor)
+     */
+    std::vector<std::shared_ptr<cube>> _pre;
+
+    /**
+     * @brief List of cube instances that take this object as input (successors)
+     */
+    std::vector<std::shared_ptr<cube>> _succ;
+
+    /**
+     * @brief Set the spatiotemporal reference for this instance only (but not for connected cubes)
+     * @param stref new spatiotemporal reference / data cube view
+     */
+    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) = 0;
+
+    /**
+    * @brief Recursively update the st reference of connected cubes
+    *
+    *
+    * @param stref new spatiotemporal reference / data cube view
+    * @param scet set of cubes instances which have already been processed to avoid cyclic calls
+    */
+    void update_st_reference_recursion(std::shared_ptr<cube_st_reference> stref, std::set<std::shared_ptr<cube>>& cset) {
+        if (cset.count(shared_from_this()) > 0) return;
+        this->set_st_reference(stref);
+        cset.insert(shared_from_this());
+
+        for (uint16_t i = 0; i < _pre.size(); ++i) {
+            if (_pre[i])
+                _pre[i]->update_st_reference_recursion(stref, cset);
+        }
+        for (uint16_t i = 0; i < _succ.size(); ++i) {
+            if (_succ[i])
+                _succ[i]->update_st_reference_recursion(stref, cset);
+        }
+    }
 };
 
 #endif  //CUBE_H

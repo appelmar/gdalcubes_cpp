@@ -330,6 +330,9 @@ class cube_st_reference {
     void nt(uint32_t n) {
         duration d = (_t1 - _t0) + 1;
         dt().dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
+        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
+            _t1 = _t1 + dt();
+        }
         assert(nt() == n);
     }
 

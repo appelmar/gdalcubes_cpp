@@ -116,12 +116,22 @@ int main(int argc, char *argv[]) {
         //        config::instance()->set_default_chunk_processor(swarm);
         //        cstream->write_gdal_image("test_swarm.tif");
 
+        //        chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
+        //        std::shared_ptr<image_collection_cube> x = std::make_shared<image_collection_cube>("MOD13A3.db");
+        //        std::cout << x->view()->write_json_string() << std::endl;
+
         chdir("/home/marius/Desktop/CHIRPS/");
         config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
-        std::shared_ptr<image_collection_cube> x = std::make_shared<image_collection_cube>("/home/marius/Desktop/CHIRPS/CHIRPS.db", "/home/marius/Desktop/CHIRPS/view_debug.json");
+
+        auto x = image_collection_cube::create("/home/marius/Desktop/CHIRPS/CHIRPS.db", "/home/marius/Desktop/CHIRPS/view_debug.json");
         std::cout << x->view()->write_json_string() << std::endl;
-        std::shared_ptr<reduce_cube> xmax = std::make_shared<reduce_cube>(x, "max");
-        xmax->write_gdal_image("test_max");
+        auto xmax = reduce_cube::create(x, "max");
+        std::shared_ptr<cube_st_reference> vv = x->st_reference();
+        vv->nt(1);
+        vv->nx() = 100;
+        vv->ny() = 100;
+        xmax->update_st_reference(vv);
+        xmax->write_gdal_image("test_max.tif");
 
     } catch (std::string e) {
         std::cout << e << std::endl;

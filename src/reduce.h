@@ -211,6 +211,22 @@ struct median_reducer : public reducer {
  */
 class reduce_cube : public cube {
    public:
+    /**
+     * @brief Create a data cube that applies a reducer function on a given input data cube over time
+     * @note This static creation method should preferably be used instead of the constructors as
+     * the constructors will not set connections between cubes properly.
+     * @param in input data cube
+     * @param reducer reducer function
+     * @return a shared pointer to the created data cube instance
+     */
+    static std::shared_ptr<reduce_cube> create(std::shared_ptr<cube> in, std::string reducer = "mean") {
+        std::shared_ptr<reduce_cube> out = std::make_shared<reduce_cube>(in, reducer);
+        in->add_child_cube(out);
+        out->add_parent_cube(in);
+        return out;
+    }
+
+   public:
     reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer(reducer) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
@@ -235,6 +251,7 @@ class reduce_cube : public cube {
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }
 
+   public:
     ~reduce_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
@@ -259,6 +276,23 @@ class reduce_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::string _reducer;
+
+    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+        std::cout << "ENTERING reduce_cube::set_st_reference()" << std::endl;
+        // copy fields from st_reference type
+        _st_ref->win() = stref->win();
+        _st_ref->proj() = stref->proj();
+        _st_ref->ny() = stref->ny();
+        _st_ref->nx() = stref->nx();
+        _st_ref->t0() = stref->t0();
+        _st_ref->t1() = stref->t1();
+        _st_ref->dt() = stref->dt();
+
+        _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
+        _st_ref->t1() = _st_ref->t0();  // set nt=1
+        //assert(_st_ref->nt() == 1);
+        std::cout << "EXITING reduce_cube::set_st_reference()" << std::endl;
+    }
 };
 
 #endif  //REDUCE_H

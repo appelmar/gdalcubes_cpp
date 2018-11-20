@@ -161,4 +161,37 @@ gcbs_graph <- function(obj) {
   return(x$graph)
 }
 
+#' @export
+"gcbs_view<-" <-function(x,value) {
+  stopifnot(is.gcbs_cube(x))
+  stopifnot(is.gcbs_view(value))
+  if (!is.gcbs_image_collection_cube)
+    stop("x is no image_collection_cube, updating the data cube view is currently only implemented for image_collection_cube")
+  libgdalcubes_update_cube_view(x,value)
+  return(x)
+}
+
+
+
+#' @export
+gcbs_eval <- function(x, fname = tempfile()) {
+  stopifnot(is.gcbs_cube(x))
+  libgdalcubes_eval_cube(x, fname)
+}
+
+
+
+
+
+## export
+head.gcbs_cube <- function(x,...) {
+  
+}
+
+
+## export
+tail.gcbs_cube <- function(x, ...) {
+  
+}
+
 

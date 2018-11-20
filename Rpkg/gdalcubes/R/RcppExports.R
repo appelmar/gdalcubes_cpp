@@ -21,6 +21,14 @@ libgdalcubes_cube_info <- function(pin) {
     .Call('_gdalcubes_libgdalcubes_cube_info', PACKAGE = 'gdalcubes', pin)
 }
 
+libgdalcubes_get_cube_view <- function(pin) {
+    .Call('_gdalcubes_libgdalcubes_get_cube_view', PACKAGE = 'gdalcubes', pin)
+}
+
+libgdalcubes_update_cube_view <- function(pin, v) {
+    invisible(.Call('_gdalcubes_libgdalcubes_update_cube_view', PACKAGE = 'gdalcubes', pin, v))
+}
+
 libgdalcubes_open_image_collection <- function(filename) {
     .Call('_gdalcubes_libgdalcubes_open_image_collection', PACKAGE = 'gdalcubes', filename)
 }
@@ -33,8 +41,12 @@ libgdalcubes_create_reduce_cube <- function(pin, reducer) {
     .Call('_gdalcubes_libgdalcubes_create_reduce_cube', PACKAGE = 'gdalcubes', pin, reducer)
 }
 
-libgdalcubes_eval_reduce_cube <- function(pin, outfile, of) {
-    invisible(.Call('_gdalcubes_libgdalcubes_eval_reduce_cube', PACKAGE = 'gdalcubes', pin, outfile, of))
+libgdalcubes_debug_output <- function(debug) {
+    invisible(.Call('_gdalcubes_libgdalcubes_debug_output', PACKAGE = 'gdalcubes', debug))
+}
+
+libgdalcubes_eval_cube <- function(pin, outfile) {
+    invisible(.Call('_gdalcubes_libgdalcubes_eval_cube', PACKAGE = 'gdalcubes', pin, outfile))
 }
 
 libgdalcubes_create_stream_cube <- function(pin, cmd, chunk_size) {

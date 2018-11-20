@@ -1,14 +1,24 @@
 library(gdalcubes)
 
 x = gcbs_open_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/src/test.db")
-v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=22, r=24,t=-18,b=-20, aggregation = "min")
-xcube <- gcbs_cube(x,v)
+#v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=22, r=24,t=-18,b=-20, proj="EPSG:4326", aggregation = "min")
+v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=23, r=24,t=-19,b=-20, proj="EPSG:4326", aggregation = "min")
+
+xcube <- gcbs_cube(x, v)
 xcube
 
-x_red_cube <- gcbs_reduce(xcube,"median")
-x_red_cube
+plot_cube(xcube, rgb=4:2, t=c(1,4,8))
 
-gcbs_eval(x_red_cube, "test1.tif", "GTiff")
+plot_cube(xcube, rgb=4:2, t=8)
+plot_cube(xcube, key.pos=1, t=c(1,4,8))
+
+
+plot_cube(xcube)
+
+x_red_cube <- gcbs_reduce(xcube,"median")
+plot_cube(x_red_cube, key.pos = 1, bands=1)
+
+#gcbs_eval(x_red_cube, "/home/marius/Desktop/test2.tif", "GTiff")
 
 
 
@@ -23,9 +33,107 @@ f <- function() {
   write_stream_from_array(out)
 }
 
-gcbs_stream(xcube, f,c(16,256,256))
+cr <- gcbs_stream(xcube, f,c(16,256,256))
+plot(cr)
+
+xstrm_red <- gcbs_reduce(gcbs_stream(xcube, f,c(16,256,256)),reducer = "min")
+gcbs_view(xstrm_red) <- gcbs_view(l=23, r=24)
+cat(gcbs_graph(xstrm_red))
+gcbs_eval(xstrm_red, "/home/marius/Desktop/xxx.tif", "GTiff")
 
 
 
-x=eval(parse(".stream3566643baf42.R"))
-)
+
+
+
+
+
+
+
+#####
+library(gdalcubes)
+setwd("/home/marius/Desktop/CHIRPS/")
+x = gcbs_open_image_collection("/home/marius/Desktop/CHIRPS/CHIRPS.db")
+x
+v <- gcbs_view(nx = 360*2, ny=2*100, t0 = "1981-01-01", t1="1981-05-31", dt="P1D", l=-180, r=180,t=50,b=-50)
+xcube <- gcbs_cube(x, v)
+xcube
+
+
+x_red_cube <- gcbs_reduce(xcube,"max")
+x_red_cube
+ 
+plot_cube(x_red_cube)
+
+
+gcbs_eval(x_red_cube, "/home/marius/Desktop/test_chirps.nc")
+gcbs_set_threads(8)
+
+# minimum 30 day precipitation sum
+f <- function() {
+  require(zoo)
+  x = read_stream_as_array()
+  out <- reduce_time_multiband(x, function(x) {
+    min(rollsum(x[1,], 30), na.rm = TRUE)
+  })
+  write_stream_from_array(out)
+}
+
+xstrm <- gcbs_stream(xcube, f,c(gcbs_nt(xcube),128,128))
+xstrm
+cat(gcbs_graph(xstrm))
+xstrm_red <- gcbs_reduce(xstrm,reducer = "min")
+cat(gcbs_graph(xstrm_red))
+gcbs_eval(xstrm_red, "/home/marius/Desktop/chirps_min30day_1981.tif", "GTiff")
+
+
+
+
+
+
+#####
+library(gdalcubes)
+gcbs_set_threads(8)
+setwd("/home/marius/Desktop/MODIS/MOD13A3.A2018/")
+x = gcbs_open_image_collection("MOD13A3.db")
+x
+
+v <- gcbs_view(proj="EPSG:4326", nx = 500, ny=500, t0 = "2018-01-01", t1="2018-09-30", dt="P3M", l=-20, r=20,t=60,b=40, aggregation = "first")
+xcube <- gcbs_cube(x, v)
+xcube
+
+plot_cube(xcube, col=heat.colors, key.pos = 1, t = 1:3)
+
+
+plot_cube(gcbs_reduce(xcube, reducer="median"), key.pos=1)
+
+f <- function() {
+  x = read_stream_as_array()
+  out <- reduce_time_multiband(x, function(x) {
+    y = x[1,]
+    #max(abs(y[2:(length(y))] - y[1:(length(y)-1)]), na.rm=TRUE)
+    mean(y, na.rm=T)
+  })
+  write_stream_from_array(out)
+}
+
+xstrm <- gcbs_stream(xcube, f,c(gcbs_nt(xcube),128,128))
+plot_cube(xstrm,key.pos=1, breaks=seq(0, 3000, length.out=11), col=heat.colors)
+cat(gcbs_graph(xstrm))
+xstrm_red <- gcbs_reduce(xstrm,reducer = "min")
+cat(gcbs_graph(xstrm_red))
+
+# TODO: return stars object if no file is provided
+gcbs_eval(xstrm_red, "/home/marius/Desktop/change_ndvi_mod.tif", "GTiff")
+
+
+
+
+
+
+
+
+
+
+
+

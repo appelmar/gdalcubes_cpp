@@ -49,6 +49,24 @@ struct error_handling_r {
     }
     _m_errhandl.unlock();
   }
+  
+  static void standard(error_level type, std::string msg, std::string where, int error_code) {
+    _m_errhandl.lock();
+    std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
+    std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
+    if (type == 2 || type == 1) {
+      _err_stream << "ERROR" << code << ": " << msg << where_str << std::endl;
+    } else if (type == 3) {
+      _err_stream << "WARNING" << code << ": " << msg << where_str << std::endl;
+    } else if (type == 4) {
+      _err_stream << "INFO" << code << ": " << msg << where_str << std::endl;
+    }
+    if (!_defer) {
+      Rcpp::Rcout << _err_stream.str() << std::endl;
+      _err_stream.str(""); 
+    }
+    _m_errhandl.unlock();
+  }
 };
 std::mutex error_handling_r::_m_errhandl;
 std::stringstream error_handling_r::_err_stream;
@@ -140,7 +158,7 @@ void libgdalcubes_init() {
   config::instance()->set_default_progress_bar(std::make_shared<progress_simple_R>());
   //config::instance()->set_default_progress_bar(std::make_shared<progress_none>());
   
-  config::instance()->set_error_handler(error_handling_r::debug); // TODO: make configurable
+  config::instance()->set_error_handler(error_handling_r::standard); 
 }
 
 // [[Rcpp::export]]
@@ -218,9 +236,133 @@ Rcpp::List libgdalcubes_cube_info( SEXP pin) {
 
 }
 
+// [[Rcpp::export]]
+Rcpp::List libgdalcubes_get_cube_view( SEXP pin) {
+  
+  Rcpp::XPtr<std::shared_ptr<cube>> aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pin);
+  
+  std::shared_ptr<cube> x = *aa;
+  
+  std::shared_ptr<cube_view> v = std::dynamic_pointer_cast<cube_view>(x->st_reference());
+  
+  Rcpp::List view = Rcpp::List::create(
+    Rcpp::Named("space") = Rcpp::List::create(
+      Rcpp::Named("right") = x->st_reference()->right(),
+      Rcpp::Named("left") = x->st_reference()->left(),
+      Rcpp::Named("top") = x->st_reference()->top(),
+      Rcpp::Named("bottom") = x->st_reference()->bottom(),
+      Rcpp::Named("nx") = x->st_reference()->nx(),
+      Rcpp::Named("ny") = x->st_reference()->ny(),
+      Rcpp::Named("proj") = x->st_reference()->proj(),
+      Rcpp::Named("dx") = R_NilValue,
+      Rcpp::Named("dy") = R_NilValue
+    ),
+    Rcpp::Named("time") = Rcpp::List::create(
+      Rcpp::Named("t0") = x->st_reference()->t0().to_string(),
+      Rcpp::Named("t1") = x->st_reference()->t1().to_string(),
+      Rcpp::Named("dt") = x->st_reference()->dt().to_string(),
+      Rcpp::Named("nt") = R_NilValue
+    ),
+    Rcpp::Named("aggregation") = v ? aggregation::to_string(v->aggregation_method()) : "none",
+    Rcpp::Named("resampling") = v ? resampling::to_string(v->resampling_method()) : "near"
+  );
+  return view;
+}
+ 
+
+// TODO: do not update the view of pin directly
+// but update view for all image_collection_cubes that are somehow connected....
+// [[Rcpp::export]]
+void libgdalcubes_update_cube_view( SEXP pin, SEXP v) {
+  
+  Rcpp::XPtr<std::shared_ptr<cube>> aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pin);
+  
+  std::shared_ptr<cube> x = *aa;
+  
+  std::shared_ptr<cube_view> vv = std::dynamic_pointer_cast<cube_view>(x->st_reference());
+  
+  // 1. Create cube view shared_ptr that is default from pin and update in place...
+  std::shared_ptr<cube_view> s = std::make_shared<cube_view>();
+  s->win() = x->st_reference()->win(); 
+  s->proj() = x->st_reference()->proj();
+  s->nx() = x->st_reference()->nx();
+  s->ny() = x->st_reference()->ny();
+  s->t0() =  x->st_reference()->t0();
+  s->t1() =  x->st_reference()->t1();
+  s->dt() =  x->st_reference()->dt();
+  
+  Rcpp::List view = Rcpp::as<Rcpp::List>(v);
+  if (Rcpp::as<Rcpp::List>(view["space"])["right"] != R_NilValue) {
+    s->right() = Rcpp::as<Rcpp::List>(view["space"])["right"];
+  }
+  if (Rcpp::as<Rcpp::List>(view["space"])["left"] != R_NilValue) {
+    s->left() = Rcpp::as<Rcpp::List>(view["space"])["left"];
+  }
+  if (Rcpp::as<Rcpp::List>(view["space"])["top"] != R_NilValue) {
+    s->top() = Rcpp::as<Rcpp::List>(view["space"])["top"];
+  }
+  if (Rcpp::as<Rcpp::List>(view["space"])["bottom"] != R_NilValue) {
+   s->bottom() = Rcpp::as<Rcpp::List>(view["space"])["bottom"];
+  }
+  // nx overwrites dx
+  if (Rcpp::as<Rcpp::List>(view["space"])["dx"] != R_NilValue) {
+   s->dx(Rcpp::as<Rcpp::List>(view["space"])["dx"]);
+  }
+  if (Rcpp::as<Rcpp::List>(view["space"])["nx"] != R_NilValue) {
+    s->nx() = Rcpp::as<Rcpp::List>(view["space"])["nx"];
+  }
+  // ny overwrites dy
+  if (Rcpp::as<Rcpp::List>(view["space"])["dy"] != R_NilValue) {
+   s->dy(Rcpp::as<Rcpp::List>(view["space"])["dy"]);
+  }
+  if (Rcpp::as<Rcpp::List>(view["space"])["ny"] != R_NilValue) {
+    s->ny() = Rcpp::as<Rcpp::List>(view["space"])["ny"];
+  }
+  if (Rcpp::as<Rcpp::List>(view["space"])["proj"] != R_NilValue) {
+    s->proj() = Rcpp::as<Rcpp::CharacterVector>(Rcpp::as<Rcpp::List>(view["space"])["proj"])[0];
+  }
+  if (Rcpp::as<Rcpp::List>(view["time"])["t0"] != R_NilValue) {
+    std::string tmp = Rcpp::as<Rcpp::String>(Rcpp::as<Rcpp::List>(view["time"])["t0"]);
+    s->t0() = datetime::from_string(tmp);
+  }
+  if (Rcpp::as<Rcpp::List>(view["time"])["t1"] != R_NilValue) {
+    std::string tmp = Rcpp::as<Rcpp::String>(Rcpp::as<Rcpp::List>(view["time"])["t1"]);
+    s->t1() = datetime::from_string(tmp);
+  }
+  
+  // dt overwrites nt
+  if (Rcpp::as<Rcpp::List>(view["time"])["nt"] != R_NilValue) {
+    s->nt(Rcpp::as<Rcpp::List>(view["time"])["nt"]);
+  }
+  if (Rcpp::as<Rcpp::List>(view["time"])["dt"] != R_NilValue) {
+    std::string tmp = Rcpp::as<Rcpp::String>(Rcpp::as<Rcpp::List>(view["time"])["dt"]);
+    s->dt() = duration::from_string(tmp);
+    s->t0().unit() = x->st_reference()->dt().dt_unit; 
+    s->t1().unit() = x->st_reference()->dt().dt_unit; 
+  }
+  
+  if (vv) {
+    if (view["aggregation"] != R_NilValue) {
+      std::string tmp = Rcpp::as<Rcpp::String>(view["aggregation"]);
+     s->aggregation_method() = aggregation::from_string(tmp);
+    }
+    if (view["resampling"] != R_NilValue) {
+      std::string tmp = Rcpp::as<Rcpp::String>(view["resampling"]);
+      s->resampling_method() = resampling::from_string(tmp);
+    }
+  }
+  
+  // 2. Call x->update_st_reference()...
+  x->update_st_reference(s);
+  
+}
+
 
 // [[Rcpp::export]]
 SEXP libgdalcubes_open_image_collection(std::string filename) {
+  
+  
+  
   std::shared_ptr<image_collection>* x = new std::shared_ptr<image_collection>( std::make_shared<image_collection>(filename));
   Rcout << (*x)->to_string() << std::endl;
 
@@ -232,9 +374,9 @@ SEXP libgdalcubes_open_image_collection(std::string filename) {
 SEXP libgdalcubes_create_image_collection_cube(std::string filename, SEXP v = R_NilValue) {
 
   try {
-    std::shared_ptr<image_collection_cube>* x = new  std::shared_ptr<image_collection_cube>(std::make_shared<image_collection_cube>(filename));
     
-    
+    std::shared_ptr<image_collection_cube>* x = new std::shared_ptr<image_collection_cube>(image_collection_cube::create(filename));
+
     if (v != R_NilValue) {
       Rcpp::List view = Rcpp::as<Rcpp::List>(v);
       if (Rcpp::as<Rcpp::List>(view["space"])["right"] != R_NilValue) {
@@ -318,7 +460,7 @@ SEXP libgdalcubes_create_reduce_cube(SEXP pin, std::string reducer) {
   try {
     Rcpp::XPtr< std::shared_ptr<cube> > aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pin);
     
-    std::shared_ptr<reduce_cube>* x = new std::shared_ptr<reduce_cube>( std::make_shared<reduce_cube>(*aa, reducer));
+    std::shared_ptr<reduce_cube>* x = new std::shared_ptr<reduce_cube>(reduce_cube::create(*aa, reducer));
     Rcpp::XPtr< std::shared_ptr<reduce_cube> > p(x, true) ;
     
     return p;
@@ -331,11 +473,30 @@ SEXP libgdalcubes_create_reduce_cube(SEXP pin, std::string reducer) {
 
 
 
+
 // [[Rcpp::export]]
-void libgdalcubes_eval_reduce_cube( SEXP pin, std::string outfile, std::string of) {
+void libgdalcubes_debug_output( bool debug) {
   try {
-    Rcpp::XPtr< std::shared_ptr<reduce_cube> > aa = Rcpp::as<Rcpp::XPtr< std::shared_ptr<reduce_cube> >>(pin);
-    (*aa)->write_gdal_image(outfile, of);
+    if (debug) {
+      config::instance()->set_error_handler(error_handling_r::debug); 
+    }
+    else {
+      config::instance()->set_error_handler(error_handling_r::standard); 
+    }
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
+}
+
+
+
+
+// [[Rcpp::export]]
+void libgdalcubes_eval_cube( SEXP pin, std::string outfile) {
+  try {
+    Rcpp::XPtr< std::shared_ptr<cube> > aa = Rcpp::as<Rcpp::XPtr< std::shared_ptr<cube> >>(pin);
+    (*aa)->write_netcdf_file(outfile);
   }
   catch (std::string s) {
     Rcpp::stop(s);
@@ -349,7 +510,7 @@ SEXP libgdalcubes_create_stream_cube(SEXP pin, std::string cmd, std::vector<int>
     Rcpp::XPtr< std::shared_ptr<image_collection_cube> > aa = Rcpp::as<Rcpp::XPtr< std::shared_ptr<image_collection_cube> >>(pin);
     (*aa)->set_chunk_size(chunk_size[0], chunk_size[1], chunk_size[2]); // important: change chunk size before creating the cube
     
-    std::shared_ptr<stream_cube>* x = new std::shared_ptr<stream_cube>( std::make_shared<stream_cube>(*aa, cmd));
+    std::shared_ptr<stream_cube>* x = new std::shared_ptr<stream_cube>( stream_cube::create(*aa, cmd));
     
     Rcpp::XPtr< std::shared_ptr<stream_cube> > p(x, true) ;
   

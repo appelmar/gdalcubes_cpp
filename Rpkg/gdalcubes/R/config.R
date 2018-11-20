@@ -12,3 +12,16 @@ gcbs_set_threads <- function(n=1) {
 gcbs_version <- function() {
   return(libgdalcubes_version())
 }
+
+
+#' @export
+gcbs_enable_debug_output <- function() {
+  libgdalcubes_debug_output(TRUE)
+  invisible()
+}
+
+#' @export
+gcbs_disable_debug_output <- function() {
+  libgdalcubes_debug_output(TRUE)
+  invisible()
+}

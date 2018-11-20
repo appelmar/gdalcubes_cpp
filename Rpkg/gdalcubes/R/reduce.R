@@ -23,10 +23,6 @@ is.gcbs_reduce_cube  <- function(obj) {
   return(TRUE)
 }
 
-#' @export
-gcbs_eval.gcbs_reduce_cube <- function(x, outfile="reduce.tif", of="GTiff") {
-  stopifnot(is.gcbs_reduce_cube(x))
-  libgdalcubes_eval_reduce_cube(x, outfile, of)
-}
+
 
 

@@ -1,3 +1,6 @@
+
+
+
 #' 
 #' Create a spatiotemporal data cube view, i.e. the spatiotemporal extent, size and projection
 #' 
@@ -12,7 +15,16 @@
 #' 
 #' @example gcbs_view(l=-180,r=180,b = -50, t=50, t0="2018-01-01", t1="2018-12-31", dt="P1D")
 #' @export
-gcbs_view <- function(view, proj, nx, ny, dx, dy, l, r, t, b, dt, nt, t0, t1, aggregation,resampling)  {
+gcbs_view <- function(cube, view, proj, nx, ny, dx, dy, l, r, t, b, dt, nt, t0, t1, aggregation,resampling)  {
+  if (!missing(cube)) {
+    if (length(as.list(match.call())) > 2) {
+      warning("Provided arguments except cube will be ignored")
+    }
+    stopifnot(is.gcbs_cube(cube))
+    x = libgdalcubes_get_cube_view(cube)
+    class(x) <- c("gcbs_view", class(x))
+    return(x)
+  }
   xx = NULL
   if (missing(view)) {
     xx = list(space =
@@ -40,6 +52,11 @@ gcbs_view <- function(view, proj, nx, ny, dx, dy, l, r, t, b, dt, nt, t0, t1, ag
     xx = view
   }
 
+  if (!(missing(l) && missing(r) && missing(t) && missing(b)) && missing(proj)) {
+    warning("Spatial extent without coordinate system given, assuming WGS84")
+    proj = "EPSG:4326"
+  }
+  
   if (!missing(proj)) xx$space$proj = proj
   if (!missing(nx)) xx$space$nx = as.integer(nx)
   if (!missing(ny)) xx$space$ny = as.integer(ny)

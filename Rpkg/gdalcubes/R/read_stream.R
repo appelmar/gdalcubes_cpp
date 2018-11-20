@@ -13,7 +13,7 @@ sample_array <- function() {
 #' @export
 read_stream_as_array <-function(with.dimnames=TRUE) {
   if(!.is_streaming()) {
-    
+    stop("This function only in streaming mode")
   }
   f <-file('stdin', 'rb')
   on.exit(close(f))
@@ -67,6 +67,9 @@ read_stream_as_df <- function() {
 #' Test
 #' @export
 write_stream_from_array <- function(v) {
+  if(!.is_streaming()) {
+    stop("This function only in streaming mode")
+  }
   v = aperm(v,c(4,3,2,1))
   dim(v) <- rev(dim(v))
   stopifnot(length(dim(v)) == 4)

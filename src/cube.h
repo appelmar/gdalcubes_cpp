@@ -625,7 +625,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Write a cube as a set of GeoTIFF files under a given directory
      *
      * @param dir directory where to store the files
-     * @param p chunk processor instance
+     * @param p chunk processor instance, defaults to the global configuration
      */
     void write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
@@ -636,9 +636,16 @@ class cube : public std::enable_shared_from_this<cube> {
      * @todo Check compliance with CF conventions (http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#_abstract)
      *
      * @param dir output directory
-     * @param p chunk processor instance
+     * @param p chunk processor instance, defaults to the global configuration
      */
     void write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+
+    /**
+     * Export a cube to a single NetCDF file
+     * @param path path of the target file
+     * @param p chunk processor instance, defaults to the global configuration
+     */
+    void write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Get the cube's bands

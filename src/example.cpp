@@ -84,15 +84,18 @@ int main(int argc, char *argv[]) {
         //        //
 
         cube_view v = cube_view::read_json("../../test/view2.json");
-        v.proj() = "EPSG:3857";
-        v.win() = v.win().transform("EPSG:4326", "EPSG:3857");
-        std::cout << v.write_json_string() << std::endl;
+        //v.proj() = "EPSG:3857";
+        //v.win() = v.win().transform("EPSG:4326", "EPSG:3857");
+        // std::cout << v.write_json_string() << std::endl;
 
         //   image_collection_cube c("test.db", v);
 
-        //image_collection_cube c("test.db");
-
-        //std::cout << image_collection_cube::default_view(c.collection()).write_json_string() << std::endl;
+        /**************************************************************************/
+        //auto c = image_collection_cube::create("test.db", v);
+        //c->write_netcdf_file("full.nc");
+        // auto cr = reduce_cube::create(c, "max");
+        // cr->write_gdal_image("test.tif");
+        /**************************************************************************/
 
         //std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "max");
         // t0.start();
@@ -120,18 +123,24 @@ int main(int argc, char *argv[]) {
         //        std::shared_ptr<image_collection_cube> x = std::make_shared<image_collection_cube>("MOD13A3.db");
         //        std::cout << x->view()->write_json_string() << std::endl;
 
-        chdir("/home/marius/Desktop/CHIRPS/");
-        config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
+        /******************************************/
+        //        chdir("/home/marius/Desktop/CHIRPS/");
+        //        config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
+        //        auto x = image_collection_cube::create("/home/marius/Desktop/CHIRPS/CHIRPS.db", "/home/marius/Desktop/CHIRPS/view_debug.json");
+        //        std::cout << x->view()->write_json_string() << std::endl;
+        //        auto xmax = reduce_cube::create(x, "max");
+        //        std::shared_ptr<cube_st_reference> vv = x->st_reference();
+        //        vv->nt(1);
+        //        vv->nx() = 100;
+        //        vv->ny() = 100;
+        //        xmax->update_st_reference(vv);
+        //        xmax->write_gdal_image("test_max.tif");
+        /******************************************/
 
-        auto x = image_collection_cube::create("/home/marius/Desktop/CHIRPS/CHIRPS.db", "/home/marius/Desktop/CHIRPS/view_debug.json");
-        std::cout << x->view()->write_json_string() << std::endl;
-        auto xmax = reduce_cube::create(x, "max");
-        std::shared_ptr<cube_st_reference> vv = x->st_reference();
-        vv->nt(1);
-        vv->nx() = 100;
-        vv->ny() = 100;
-        xmax->update_st_reference(vv);
-        xmax->write_gdal_image("test_max.tif");
+        chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
+        auto c = image_collection_cube::create("MOD13A3.db");
+        c->view()->aggregation_method() = aggregation::MEDIAN;
+        c->write_netcdf_file("full.nc");
 
     } catch (std::string e) {
         std::cout << e << std::endl;

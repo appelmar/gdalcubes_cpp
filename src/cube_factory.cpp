@@ -19,6 +19,7 @@
 #include "external/json.hpp"
 #include "image_collection_cube.h"
 #include "reduce.h"
+#include "select_bands.h"
 #include "stream.h"
 
 std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
@@ -27,6 +28,11 @@ std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "reduce", [](nlohmann::json& j) {
             auto x = reduce_cube::create(create_from_json(j["in_cube"]), j["reducer"].get<std::string>());
+            return x;
+        }));
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "select_bands", [](nlohmann::json& j) {
+            auto x = select_bands_cube::create(create_from_json(j["in_cube"]), j["bands"].get<std::vector<std::string>>());
             return x;
         }));
 

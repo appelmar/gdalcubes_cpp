@@ -120,6 +120,18 @@ class image_collection_cube : public cube {
 
     std::string to_string() override;
 
+    /**
+     * @brief Select bands by names
+     * @param bands vector of bands to be considered in the cube, if empty, all bands will be selected
+     */
+    void select_bands(std::vector<std::string> bands);
+
+    /**
+     * @brief Select bands by indexes
+     * @param bands vector of bands to be considered in the cube, if empty, all bands will be selected
+     */
+    void select_bands(std::vector<uint16_t> bands);
+
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     // image_collection_cube is the only class that supports changing chunk sizes from outside!

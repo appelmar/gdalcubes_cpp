@@ -320,9 +320,13 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         std::vector<std::tuple<std::string, uint16_t>> band_rels;
         // std::vector
         while (i < datasets.size() && datasets[i].descriptor == descriptor_name) {
-            band_rels.push_back(std::tuple<std::string, uint16_t>(datasets[i].band_name, datasets[i].band_num));
+            if (_bands.has(datasets[i].band_name)) {
+                band_rels.push_back(std::tuple<std::string, uint16_t>(datasets[i].band_name, datasets[i].band_num));
+            }
             ++i;
         }
+        if (band_rels.empty())
+            continue;
 
         GDALDataset *g = (GDALDataset *)GDALOpen(descriptor_name.c_str(), GA_ReadOnly);
         if (!g) {
@@ -533,4 +537,44 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
     out.resampling_method() = resampling::resampling_type::NEAR;
 
     return out;
+}
+
+void image_collection_cube::select_bands(std::vector<std::string> bands) {
+    if (bands.empty()) {
+        load_bands();  // restore band selection from original image collection
+        return;
+    }
+    // Check that all given bands exist
+    for (uint16_t i = 0; i < bands.size(); ++i) {
+        if (!_bands.has(bands[i])) {
+            GCBS_ERROR("Band '" + bands[i] + "' does not exist in image collection");
+            return;
+        }
+    }
+    band_collection sel;
+    for (uint16_t i = 0; i < bands.size(); ++i) {
+        band b = _bands.get(bands[i]);
+        sel.add(b);
+    }
+    _bands = sel;
+}
+
+void image_collection_cube::select_bands(std::vector<uint16_t> bands) {
+    if (bands.empty()) {
+        load_bands();  // restore band selection from original image collection
+        return;
+    }
+    // Check that all given bands exist
+    for (uint16_t i = 0; i < bands.size(); ++i) {
+        if (!(bands[i] >= 0 && bands[i] < _bands.count())) {
+            GCBS_ERROR("Band '" + std::to_string(bands[i]) + "' does not exist in image collection");
+            return;
+        }
+    }
+    band_collection sel;
+    for (uint16_t i = 0; i < bands.size(); ++i) {
+        band b = _bands.get(bands[i]);
+        sel.add(b);
+    }
+    _bands = sel;
 }

@@ -27,6 +27,8 @@
  * 1. the stream operation will not change the spatial / temporal extent of a chunk
  * 2. except boundary chunks, all result chunks will have the same dimensions
  * 3. the size of the output chunk is a function of the size of an input chunk, the function is linear in each dimension
+ *
+ * @TODO: implement constructor that takes output size as argument if already known
  */
 class stream_cube : public cube {
    public:

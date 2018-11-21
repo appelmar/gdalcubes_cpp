@@ -25,6 +25,7 @@
 #include "swarm.h"
 #include "timer.h"
 #include "view.h"
+#include "select_bands.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -91,10 +92,11 @@ int main(int argc, char *argv[]) {
         //   image_collection_cube c("test.db", v);
 
         /**************************************************************************/
-        //auto c = image_collection_cube::create("test.db", v);
-        //c->write_netcdf_file("full.nc");
-        // auto cr = reduce_cube::create(c, "max");
-        // cr->write_gdal_image("test.tif");
+        auto c = image_collection_cube::create("test.db", v);
+        auto cb = select_bands_cube::create(c, {"B04", "B08"});
+        cb->write_netcdf_file("band_select.nc");
+        auto cr = reduce_cube::create(cb, "max");
+        cr->write_gdal_image("test.tif");
         /**************************************************************************/
 
         //std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "max");
@@ -138,9 +140,9 @@ int main(int argc, char *argv[]) {
         /******************************************/
 
         chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
-        auto c = image_collection_cube::create("MOD13A3.db");
-        c->view()->aggregation_method() = aggregation::MEDIAN;
-        c->write_netcdf_file("full.nc");
+        auto cc = image_collection_cube::create("MOD13A3.db");
+        cc->view()->aggregation_method() = aggregation::MEDIAN;
+        cc->write_netcdf_file("full.nc");
 
     } catch (std::string e) {
         std::cout << e << std::endl;

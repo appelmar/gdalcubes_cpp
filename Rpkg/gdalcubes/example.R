@@ -7,19 +7,23 @@ v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l
 xcube <- gcbs_cube(x, v)
 xcube
 
-plot_cube(xcube, rgb=4:2, t=c(1,4,8))
+plot(xcube, rgb=4:2, t=c(1,4,8))
+plot(xcube, rgb=4:2, t=8)
+plot(xcube, rgb=4:2)
 
-plot_cube(xcube, rgb=4:2, t=8)
-plot_cube(xcube, key.pos=1, t=c(1,4,8))
+plot(xcube, rgb=4:2, t=8)
+plot(xcube, key.pos=1, t=c(1,4,8))
+plot(xcube, key.pos=1, t=c(1,4,8))
 
-
-plot_cube(xcube)
+plot(xcube)
 
 x_red_cube <- gcbs_reduce(xcube,"median")
-plot_cube(x_red_cube, key.pos = 1, bands=1)
+plot(x_red_cube, key.pos = 1, bands=1)
 
 #gcbs_eval(x_red_cube, "/home/marius/Desktop/test2.tif", "GTiff")
 
+require(magrittr)
+gcbs_cube(x, v) %>% gcbs_reduce("median") 
 
 
 f <- function() {

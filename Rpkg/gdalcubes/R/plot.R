@@ -130,10 +130,10 @@ plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks="quantile",col=grey(1:
   
   dimsx = seq(dims$low[3], dims$high[3], length.out = size[4])
   dimsy = seq(dims$low[2], dims$high[2], length.out = size[3])
-  asp = diff(range(dimsy))/diff(range(dimsx))
+  asp = ((dims$high[2] - dims$low[2])/dims$size[2])/((dims$high[3] - dims$low[3])/dims$size[3])
   ylim = c(dims$low[2], dims$high[2]) 
   xlim =c(dims$low[3], dims$high[3])
-  asp = 1 # ??? TODO CHECK!
+  
   
   
   # if breaks will be computed from the data,
@@ -229,11 +229,13 @@ plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks="quantile",col=grey(1:
       for (ti in 1:size[2]) {
         #image(aperm(dat[,,t], 2:1))
         if (length(dim(dat)) == 2) {
-          image.default(dimsx, dimsy, dat[,size[3]:1], asp = asp, col=col, breaks=breaks, xlim=xlim, ylim=ylim, ...)
+          # add asp? 
+          image.default(dimsx, dimsy, dat[,size[3]:1], col=col, asp=asp,  breaks=breaks, xlim=xlim, ylim=ylim, ...)
           title(paste(b, " - ", "t=", t[ti], sep="")) # TODO: replace t with string
         }
         else {
-          image.default(dimsx, dimsy, dat[,size[3]:1,t[ti]], asp = asp, col=col, breaks=breaks, xlim=xlim, ylim=ylim, ...)
+          # add asp? 
+          image.default(dimsx, dimsy, dat[,size[3]:1,t[ti]], col=col, asp=asp, breaks=breaks, xlim=xlim, ylim=ylim, ...)
           title(paste(b, " - ", "t=", t[ti], sep="")) # TODO: replace t with string
         }
       }

@@ -119,7 +119,6 @@ class stream_cube : public cube {
     std::shared_ptr<chunk_data> stream_chunk_stdin(std::shared_ptr<chunk_data> data);
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        std::cout << "ENTERING stream_cube::set_st_reference()" << std::endl;
         // assumption here is that input cube is image_collection_cube
         _st_ref->win() = stref->win();
         _st_ref->proj() = stref->proj();
@@ -129,12 +128,9 @@ class stream_cube : public cube {
         _st_ref->t1() = stref->t1();
         _st_ref->dt() = stref->dt();
 
-        std::cout << "RUNNING stream_cube::set_st_reference()" << std::endl;
-
         if (!_keep_input_nt) _st_ref->nt(count_chunks_t());
         if (!_keep_input_ny) _st_ref->ny() = count_chunks_y();
         if (!_keep_input_nx) _st_ref->nx() = count_chunks_x();
-        std::cout << "EXITING stream_cube::set_st_reference()" << std::endl;
     }
 };
 

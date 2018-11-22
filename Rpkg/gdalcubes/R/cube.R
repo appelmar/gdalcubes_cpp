@@ -183,15 +183,4 @@ gcbs_eval <- function(x, fname = tempfile()) {
 
 
 
-## export
-head.gcbs_cube <- function(x,...) {
-  
-}
-
-
-## export
-tail.gcbs_cube <- function(x, ...) {
-  
-}
-
 

@@ -471,6 +471,40 @@ SEXP libgdalcubes_create_reduce_cube(SEXP pin, std::string reducer) {
   }
 }
 
+// [[Rcpp::export]]
+SEXP libgdalcubes_create_select_bands_cube(SEXP pin, std::vector<std::string> bands) {
+  try {
+    Rcpp::XPtr< std::shared_ptr<cube> > aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pin);
+    
+    std::shared_ptr<select_bands_cube>* x = new std::shared_ptr<select_bands_cube>(select_bands_cube::create(*aa, bands));
+    Rcpp::XPtr< std::shared_ptr<select_bands_cube> > p(x, true) ;
+    
+    return p;
+    
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
+}
+
+// [[Rcpp::export]]
+SEXP libgdalcubes_create_apply_pixel_cube(SEXP pin, std::vector<std::string> expr, std::vector<std::string> names = std::vector<std::string>()) {
+  try {
+    Rcpp::XPtr< std::shared_ptr<cube> > aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pin);
+    
+    std::shared_ptr<apply_pixel_cube>* x = new std::shared_ptr<apply_pixel_cube>(apply_pixel_cube::create(*aa, expr, names));
+    Rcpp::XPtr< std::shared_ptr<apply_pixel_cube> > p(x, true) ;
+    
+    return p;
+    
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
+}
+
+
+
 
 
 

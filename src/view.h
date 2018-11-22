@@ -319,6 +319,7 @@ class cube_st_reference {
      * @return integer number of cells
      */
     uint32_t nt() {
+        if (_t1 == _t0) return 1;
         duration d = (_t1 - _t0) + 1;
         return (d % _dt == 0) ? d / _dt : (1 + (d / _dt));
     }

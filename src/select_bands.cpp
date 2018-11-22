@@ -21,7 +21,7 @@ std::shared_ptr<chunk_data> select_bands_cube::read_chunk(chunkid_t id) {
     if (id < 0 || id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
 
-    // if input cube is image_collection_cube, delegate (since in->select_bands have been called in the cosntructor)
+    // if input cube is image_collection_cube, delegate (since in->select_bands has been called in the cosntructor)
     if (_input_is_image_collection_cube) {
         return _in_cube->read_chunk(id);
     }
@@ -30,6 +30,7 @@ std::shared_ptr<chunk_data> select_bands_cube::read_chunk(chunkid_t id) {
 
     // Fill buffers accordingly
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
+    out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
     out->buf(calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
 
     // We do not need to fill with NAN because we can be sure that it is completeley filled from the input cube

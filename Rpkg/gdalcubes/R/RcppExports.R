@@ -41,6 +41,14 @@ libgdalcubes_create_reduce_cube <- function(pin, reducer) {
     .Call('_gdalcubes_libgdalcubes_create_reduce_cube', PACKAGE = 'gdalcubes', pin, reducer)
 }
 
+libgdalcubes_create_select_bands_cube <- function(pin, bands) {
+    .Call('_gdalcubes_libgdalcubes_create_select_bands_cube', PACKAGE = 'gdalcubes', pin, bands)
+}
+
+libgdalcubes_create_apply_pixel_cube <- function(pin, expr, names) {
+    .Call('_gdalcubes_libgdalcubes_create_apply_pixel_cube', PACKAGE = 'gdalcubes', pin, expr, names)
+}
+
 libgdalcubes_debug_output <- function(debug) {
     invisible(.Call('_gdalcubes_libgdalcubes_debug_output', PACKAGE = 'gdalcubes', debug))
 }

@@ -16,6 +16,7 @@
 
 #include "cube_factory.h"
 
+#include "apply_pixel.h"
 #include "external/json.hpp"
 #include "image_collection_cube.h"
 #include "reduce.h"
@@ -34,6 +35,17 @@ std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
         "select_bands", [](nlohmann::json& j) {
             auto x = select_bands_cube::create(create_from_json(j["in_cube"]), j["bands"].get<std::vector<std::string>>());
             return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "apply_pixel", [](nlohmann::json& j) {
+            if (j.count("band_names") > 0) {
+                auto x = apply_pixel_cube::create(create_from_json(j["in_cube"]), j["expr"].get<std::vector<std::string>>(), j["band_names"].get<std::vector<std::string>>());
+                return x;
+            } else {
+                auto x = apply_pixel_cube::create(create_from_json(j["in_cube"]), j["expr"].get<std::vector<std::string>>());
+                return x;
+            }
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(

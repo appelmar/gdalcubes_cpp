@@ -4,10 +4,19 @@ x = gcbs_open_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/
 #v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=22, r=24,t=-18,b=-20, proj="EPSG:4326", aggregation = "min")
 v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=23, r=24,t=-19,b=-20, proj="EPSG:4326", aggregation = "min")
 
+
 xcube <- gcbs_cube(x, v)
 xcube
 
-plot(xcube, rgb=4:2, t=c(1,4,8))
+plot(gcbs_apply_pixel(gcbs_select_bands(xcube, c("B04","B08")), c("(B04 - B08)/10000", "(B04 + B08)/10000")), t= c(1,4,8), key.pos=1)
+
+
+
+plot(xcube, bands = 4)
+plot(gcbs_select_bands(xcube, c("B04","B08")))
+cat(gcbs_graph(gcbs_select_bands(xcube, c("B04","B08"))))
+
+plot_cube(xcube, rgb=4:2, t=c(4,8))
 plot(xcube, rgb=4:2, t=8)
 plot(xcube, rgb=4:2)
 
@@ -23,7 +32,11 @@ plot(x_red_cube, key.pos = 1, bands=1)
 #gcbs_eval(x_red_cube, "/home/marius/Desktop/test2.tif", "GTiff")
 
 require(magrittr)
-gcbs_cube(x, v) %>% gcbs_reduce("median") 
+plot(gcbs_cube(x, v)  %>% gcbs_reduce("median") %>% gcbs_select_bands(c("B04_median","B08_median")) )
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08A"))  %>% gcbs_reduce("median")  )
+
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08", "B8A"))  %>% gcbs_apply_pixel(c("((B08-B04)/(B08+B04))", "B08-B08A")) %>%  gcbs_reduce("median"), key.pos=1)
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08", "B8A"))  %>% gcbs_apply_pixel(c("B08 < 2000")) %>%  gcbs_reduce("mean"), key.pos=1)
 
 
 f <- function() {
@@ -64,10 +77,10 @@ xcube <- gcbs_cube(x, v)
 xcube
 
 
-x_red_cube <- gcbs_reduce(xcube,"max")
+x_red_cube <- gcbs_reduce(xcube,"median")
 x_red_cube
  
-plot_cube(x_red_cube)
+plot_cube(x_red_cube, rgb=4:2)
 
 
 gcbs_eval(x_red_cube, "/home/marius/Desktop/test_chirps.nc")
@@ -106,7 +119,7 @@ v <- gcbs_view(proj="EPSG:4326", nx = 500, ny=500, t0 = "2018-01-01", t1="2018-0
 xcube <- gcbs_cube(x, v)
 xcube
 
-plot_cube(xcube, col=heat.colors, key.pos = 1, t = 1:3)
+plot_cube(xcube, col=heat.colors, key.pos = 1, t = 1)
 
 
 plot_cube(gcbs_reduce(xcube, reducer="median"), key.pos=1)

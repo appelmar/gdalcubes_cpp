@@ -16,16 +16,14 @@
 
 #include <gdal_priv.h>
 #include <iostream>
+#include "apply_pixel.h"
 #include "collection_format.h"
 #include "error.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "reduce.h"
-#include "stream.h"
-#include "swarm.h"
-#include "timer.h"
-#include "view.h"
 #include "select_bands.h"
+#include "stream.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -39,110 +37,79 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
 
 int main(int argc, char *argv[]) {
     config::instance()->gdalcubes_init();
-
     config::instance()->set_error_handler(error_handler::error_handler_debug);
+    config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
 
     collection_format fmt("../../test/collection_format_test.json");
-    //std::vector<std::string> temp;
+
     try {
         timer t0;
-        //        image_collection x = image_collection::create(fmt, string_list_from_text_file("../../test/test_list.txt"));
-        //        x.write("test.db");
-        //        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
-        //        std::cout << x.to_string();
-        //
-        //        x.temp_copy();
-        //        timer t1;
-        //        x.filter_datetime_range("20170101T000000", "20180101T000000");
-        //        auto b = std::vector<std::string>{"B02", "B03", "B04"};
-        //        x.filter_bands(b);
-        //        x.write("test2.db");
-        //        std::cout << "DONE (" << t1.time() << "s)" << std::endl;
-        //        std::cout << x.to_string();
-        //
-        //        cube_view v = cube_view::read_json("../../test/view.json");
-        //        v.write_json("out_view.json");
-        //
-        //        image_collection x2("test.db");
-        //
-        //        bounds_st box;
-        //        box.t0 = datetime::from_string("20170101");
-        //        box.t1 = datetime::from_string("20180101");
-        //        box.s.left = 22;
-        //        box.s.right = 24;
-        //        box.s.top = -18;
-        //        box.s.bottom = -20;
-        //
-        //        //        std::vector<image_collection::find_range_st_row> results = x2.find_range_st(box);
-        //        //        for (uint32_t i=0; i<results.size(); ++i) {
-        //        //            std::cout << results[i].image_name << " " << results[i].datetime << " " << results[i].band_name << " -> " << results[i].descriptor << " " << results[i].band_num << std::endl;
-        //        //        }
-        //
-        //        //
-        //        //        std::shared_ptr<cube_st_reference> ref = std::make_shared<cube_view>(cube_view::read_json("../../test/view.json"));
-        //        //        std::shared_ptr<cube_view> vvv = std::dynamic_pointer_cast<cube_view>(ref);
-        //        //        std::cout << vvv->proj() << std::endl;
-        //        //
 
         cube_view v = cube_view::read_json("../../test/view2.json");
-        //v.proj() = "EPSG:3857";
-        //v.win() = v.win().transform("EPSG:4326", "EPSG:3857");
-        // std::cout << v.write_json_string() << std::endl;
 
-        //   image_collection_cube c("test.db", v);
-
-        /**************************************************************************/
-        auto c = image_collection_cube::create("test.db", v);
-        auto cb = select_bands_cube::create(c, {"B04", "B08"});
-        cb->write_netcdf_file("band_select.nc");
-        auto cr = reduce_cube::create(cb, "max");
-        cr->write_gdal_image("test.tif");
-        /**************************************************************************/
-
-        //std::shared_ptr<reduce_cube> cr = std::make_shared<reduce_cube>(std::make_shared<image_collection_cube>(c), "max");
-        // t0.start();
-        // cr->write_gdal_image("test.tif");
-        //std::cout << "DONE (" << t0.time() << "s)" << std::endl;
-
-        //stream_cube s(std::make_shared<image_collection_cube>(c), "Rscript --vanilla -e \"require(gdalcubes); summary(read_stream_as_vector()); write_stream_from_vector();\"");
-
-        //        std::shared_ptr<stream_cube> s = std::make_shared<stream_cube>(std::make_shared<image_collection_cube>(c), "Rscript --vanilla stream_example.R", "");
+        //        /**************************************************************************/
+        //        // test reduction
+        //        {
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //            cb->write_netcdf_file("band_select.nc");
+        //            auto cr = reduce_cube::create(cb, "max");
+        //            cr->write_gdal_image("test_A.tif");
         //
-        //        std::shared_ptr<reduce_cube> cstream = std::make_shared<reduce_cube>(s, "min");
-        //        t0.start();
-        //        cstream->write_gdal_image("test_stream.tif");
-        //        std::cout << "DONE (" << t0.time() << "s)" << std::endl;
+        //            c = image_collection_cube::create("test.db", v);
+        //            cr = reduce_cube::create(c, "max");
+        //            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
+        //            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
+        //        }
+        //        /**************************************************************************/
 
-        //  std::cout << cstream.make_constructible_json().dump(2) << std::endl;
+        /**************************************************************************/
+        // Test apply_pixel
+        {
+            auto c = image_collection_cube::create("test.db", v);
+            //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
+            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
+            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
+            // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
 
-        //        std::vector<std::string> servers;
-        //        servers.push_back("http://localhost:1112/gdalcubes/api");
-        //        std::shared_ptr<gdalcubes_swarm> swarm = std::make_shared<gdalcubes_swarm>(servers);
-        //        config::instance()->set_default_chunk_processor(swarm);
-        //        cstream->write_gdal_image("test_swarm.tif");
+            auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
 
-        //        chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
-        //        std::shared_ptr<image_collection_cube> x = std::make_shared<image_collection_cube>("MOD13A3.db");
-        //        std::cout << x->view()->write_json_string() << std::endl;
+            auto cr = reduce_cube::create(capply, "median");
+            cr->write_gdal_image("test_apply_reduce.tif");
+        }
+        /**************************************************************************/
+
+        // TODO: add streaming test
+
+        //
+        //        /******************************************/
+        //        // Test CHIRPS dataset and update_view()
+        //        {
+        //            chdir("/home/marius/Desktop/CHIRPS/");
+        //            config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
+        //            auto x = image_collection_cube::create("/home/marius/Desktop/CHIRPS/CHIRPS.db", "/home/marius/Desktop/CHIRPS/view_debug.json");
+        //            std::cout << x->view()->write_json_string() << std::endl;
+        //            auto xmax = reduce_cube::create(x, "max");
+        //            std::shared_ptr<cube_st_reference> vv = x->st_reference();
+        //            vv->nt(1);
+        //            vv->nx() = 100;
+        //            vv->ny() = 100;
+        //            xmax->update_st_reference(vv);
+        //            xmax->write_gdal_image("test_max.tif");
+        //        }
+        //        /******************************************/
+
+        //
+        //        /******************************************/
+        //        // Test NetCDF export
+        //        {
+        //            chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
+        //            auto cc = image_collection_cube::create("MOD13A3.db");
+        //            cc->view()->aggregation_method() = aggregation::MEDIAN;
+        //            cc->write_netcdf_file("full.nc");
+        //        }
 
         /******************************************/
-        //        chdir("/home/marius/Desktop/CHIRPS/");
-        //        config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
-        //        auto x = image_collection_cube::create("/home/marius/Desktop/CHIRPS/CHIRPS.db", "/home/marius/Desktop/CHIRPS/view_debug.json");
-        //        std::cout << x->view()->write_json_string() << std::endl;
-        //        auto xmax = reduce_cube::create(x, "max");
-        //        std::shared_ptr<cube_st_reference> vv = x->st_reference();
-        //        vv->nt(1);
-        //        vv->nx() = 100;
-        //        vv->ny() = 100;
-        //        xmax->update_st_reference(vv);
-        //        xmax->write_gdal_image("test_max.tif");
-        /******************************************/
-
-        chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
-        auto cc = image_collection_cube::create("MOD13A3.db");
-        cc->view()->aggregation_method() = aggregation::MEDIAN;
-        cc->write_netcdf_file("full.nc");
 
     } catch (std::string e) {
         std::cout << e << std::endl;

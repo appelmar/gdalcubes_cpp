@@ -32,10 +32,25 @@ class select_bands_cube : public cube {
      * @note This static creation method should preferably be used instead of the constructors as
      * the constructors will not set connections between cubes properly.
      * @param in input data cube
-     * @param reducer selected bands given by name
+     * @param bands selected bands given by name
      * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<select_bands_cube> create(std::shared_ptr<cube> in, std::vector<std::string> bands) {
+        std::shared_ptr<select_bands_cube> out = std::make_shared<select_bands_cube>(in, bands);
+        in->add_child_cube(out);
+        out->add_parent_cube(in);
+        return out;
+    }
+
+    /**
+     * @brief Create a data cube that subsets bands of an input data cube
+     * @note This static creation method should preferably be used instead of the constructors as
+     * the constructors will not set connections between cubes properly.
+     * @param in input data cube
+     * @param bands selected bands given by index
+     * @return a shared pointer to the created data cube instance
+     */
+    static std::shared_ptr<select_bands_cube> create(std::shared_ptr<cube> in, std::vector<uint16_t> bands) {
         std::shared_ptr<select_bands_cube> out = std::make_shared<select_bands_cube>(in, bands);
         in->add_child_cube(out);
         out->add_parent_cube(in);
@@ -53,12 +68,41 @@ class select_bands_cube : public cube {
             std::dynamic_pointer_cast<image_collection_cube>(in)->select_bands(bands);
         }
 
-        for (uint16_t ib = 0; ib < bands.size(); ++ib) {
-            if (!in->bands().has(bands[ib])) {
-                GCBS_ERROR("Input cube has no band '" + bands[ib] + "'");
-                throw std::string("ERROR in select_bands_cube::select_bands_cube(): Input cube has no band '" + bands[ib] + "'");
+        for (uint16_t ib = 0; ib < _band_sel.size(); ++ib) {
+            if (!in->bands().has(_band_sel[ib])) {
+                GCBS_ERROR("Input cube has no band '" + _band_sel[ib] + "'");
+                throw std::string("ERROR in select_bands_cube::select_bands_cube(): Input cube has no band '" + _band_sel[ib] + "'");
             }
-            _bands.add(in->bands().get(bands[ib]));
+            _bands.add(in->bands().get(_band_sel[ib]));
+        }
+    }
+
+    select_bands_cube(std::shared_ptr<cube> in, std::vector<uint16_t> bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _band_sel(), _input_is_image_collection_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+        _chunk_size[0] = _in_cube->chunk_size()[0];
+        _chunk_size[1] = _in_cube->chunk_size()[1];
+        _chunk_size[2] = _in_cube->chunk_size()[2];
+
+        std::vector<std::string> bands_str;
+        for (uint16_t ib = 0; ib < bands.size(); ++ib) {
+            if (bands[ib] < 0 || bands[ib] >= in->bands().count()) {
+                GCBS_ERROR("Input cube has no band '" + std::to_string(bands[ib]) + "'");
+                throw std::string("ERROR in select_bands_cube::select_bands_cube(): Input cube has no band '" + std::to_string(bands[ib]) + "'");
+            }
+            bands_str.push_back(in->bands().get(bands[ib]).name);
+        }
+        _band_sel = bands_str;
+
+        if (std::dynamic_pointer_cast<image_collection_cube>(in)) {
+            _input_is_image_collection_cube = true;
+            std::dynamic_pointer_cast<image_collection_cube>(in)->select_bands(bands);
+        }
+
+        for (uint16_t ib = 0; ib < _band_sel.size(); ++ib) {
+            if (!in->bands().has(_band_sel[ib])) {
+                GCBS_ERROR("Input cube has no band '" + _band_sel[ib] + "'");
+                throw std::string("ERROR in select_bands_cube::select_bands_cube(): Input cube has no band '" + _band_sel[ib] + "'");
+            }
+            _bands.add(in->bands().get(_band_sel[ib]));
         }
     }
 
@@ -92,4 +136,4 @@ class select_bands_cube : public cube {
     }
 };
 
-#endif  //REDUCE_H
+#endif  //SELECT_BANDS_H

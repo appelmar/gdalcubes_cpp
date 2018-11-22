@@ -19,12 +19,14 @@
 #ifndef GDALCUBES_H
 #define GDALCUBES_H
 
+#include "apply_pixel.h"
 #include "build_info.h"
 #include "config.h"
 #include "cube.h"
 #include "image_collection_cube.h"
 #include "progress.h"
 #include "reduce.h"
+#include "select_bands.h"
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"

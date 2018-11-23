@@ -1,0 +1,17 @@
+{
+  "description" : "Image collection format for CHIRPS v 2.0. global precipitation dataset (0.05 degrees resolution) from gzipped GeoTIFFs, expects list of .gz files as input.",
+  "pattern" : ".*chirps.+\\.tif\\.gz",
+  "images" : {
+    "pattern" : ".*/(.+)\\.tif\\.gz"
+  },
+  "datetime" : {
+    "pattern" : ".*chirps-v2.0.(.{10})\\.tif\\.gz",
+    "format" : "%Y.%m.%d"
+  },
+  "bands" : {
+    "precipitation" : {
+      "pattern" : ".+",
+      "nodata" : -9999
+    }
+  }
+}

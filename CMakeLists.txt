@@ -85,12 +85,12 @@ if (DOXYGEN AND MKDOCS)
 endif()
 
 
-
-
-
-
-
-
+# install collection formats
+if ( WIN32 )
+    install(DIRECTORY formats/ DESTINATION $ENV{HOMEDRIVE}/$ENV{HOMEPATH}/.gdalcubes/formats FILES_MATCHING PATTERN "*.json")
+else( WIN32 )
+    install(DIRECTORY formats/ DESTINATION $ENV{HOME}/.gdalcubes/formats FILES_MATCHING PATTERN "*.json")
+endif(WIN32)
 
 
 ## export src archive

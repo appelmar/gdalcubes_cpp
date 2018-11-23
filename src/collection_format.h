@@ -46,13 +46,41 @@ class collection_format {
 
     /**
      * Construct a collection format from a JSON file
+     *
+     *
      * @param filename
      */
     void load_file(std::string filename) {
         _j.clear();
         namespace fs = boost::filesystem;
-        if (!fs::exists(filename))
-            throw std::string("ERROR in collection_format::collection_format(): image collection format file does not exist.");
+
+        fs::path p(filename);
+        if (p.is_absolute()) {
+            if (!fs::exists(filename))
+                throw std::string("ERROR in collection_format::collection_format(): image collection format file does not exist.");
+        } else if (!p.parent_path().string().empty()) {
+            // relative path but not single filename without dir
+            if (!fs::exists(filename))
+                throw std::string("ERROR in collection_format::collection_format(): image collection format file does not exist.");
+        } else {
+            // simple filename without directories
+            if (!fs::exists(filename)) {
+                if (std::getenv("GDALCUBES_DIR") != NULL) {
+                    p = fs::path(std::getenv("GDALCUBES_DIR")) / fs::path("formats") / p;
+                    if (!fs::exists(p.string())) {
+                        if (std::getenv("HOME") != NULL) {
+                            p = fs::path(std::getenv("HOME")) / fs::path(".gdalcubes") / fs::path("formats") / p;
+                            if (!fs::exists(p.string())) {
+                            } else if (std::getenv("HOMEDRIVE") != NULL && std::getenv("HOMEPATH") != NULL) {
+                                p = fs::path(std::getenv("HOMEDRIVE")) / fs::path(std::getenv("HOMEPATH")) / fs::path(".gdalcubes") / fs::path("formats") / p;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        filename = p.string();
+
         std::ifstream i(filename);
         i >> _j;
     }

@@ -46,8 +46,16 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
         r = new mean_reducer();
     } else if (_reducer == "median") {
         r = new median_reducer();
+    } else if (_reducer == "sum") {
+        r = new sum_reducer();
     } else if (_reducer == "count") {
         r = new count_reducer();
+    } else if (_reducer == "prod") {
+        r = new prod_reducer();
+    } else if (_reducer == "var") {
+        r = new var_reducer();
+    } else if (_reducer == "sd") {
+        r = new sd_reducer();
     } else
         throw std::string("ERROR in reduce_cube::read_chunk(): Unknown reducer given");
 
@@ -55,8 +63,6 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
 
     // iterate over all chunks that must be read from the input cube to compute this chunk
     for (chunkid_t i = id; i < _in_cube->count_chunks(); i += _in_cube->count_chunks_x() * _in_cube->count_chunks_y()) {
-        // read chunk i from input cube
-
         std::shared_ptr<chunk_data> x = _in_cube->read_chunk(i);
         r->combine(out, x);
     }

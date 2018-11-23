@@ -43,6 +43,56 @@ struct reducer {
 };
 
 /**
+ * @brief Implementation of reducer to calculate sum values (for all bands) over time
+ */
+struct sum_reducer : public reducer {
+    void init(std::shared_ptr<chunk_data> a) override {
+        for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
+            ((double *)a->buf())[ibxy] = 0;
+        }
+    }
+
+    void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b) override {
+        for (uint16_t ib = 0; ib < a->size()[0]; ++ib) {
+            for (uint32_t it = 0; it < b->size()[1]; ++it) {
+                for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
+                    double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
+                    if (!isnan(v)) {
+                        ((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy] += v;
+                    }
+                }
+            }
+        }
+    }
+    void finalize(std::shared_ptr<chunk_data> a) override {}
+};
+
+/**
+ * @brief Implementation of reducer to calculate product values (for all bands) over time
+ */
+struct prod_reducer : public reducer {
+    void init(std::shared_ptr<chunk_data> a) override {
+        for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
+            ((double *)a->buf())[ibxy] = 1;
+        }
+    }
+
+    void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b) override {
+        for (uint16_t ib = 0; ib < a->size()[0]; ++ib) {
+            for (uint32_t it = 0; it < b->size()[1]; ++it) {
+                for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
+                    double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
+                    if (!isnan(v)) {
+                        ((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy] *= v;
+                    }
+                }
+            }
+        }
+    }
+    void finalize(std::shared_ptr<chunk_data> a) override {}
+};
+
+/**
  * @brief Implementation of reducer to calculate mean values (for all bands) over time
  */
 struct mean_reducer : public reducer {
@@ -207,6 +257,66 @@ struct median_reducer : public reducer {
 };
 
 /**
+ * @brief Implementation of reducer to calculate variance values (for all bands) over time using Welford's Online algorithm
+ */
+struct var_reducer : public reducer {
+    void init(std::shared_ptr<chunk_data> a) override {
+        _count = (uint32_t *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
+        _mean = (double *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
+        for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
+            _count[ibxy] = 0;
+            _mean[ibxy] = 0;
+            ((double *)a->buf())[ibxy] = 0;
+        }
+    }
+
+    void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b) override {
+        for (uint16_t ib = 0; ib < a->size()[0]; ++ib) {
+            for (uint32_t it = 0; it < b->size()[1]; ++it) {
+                for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
+                    double &v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
+                    if (!isnan(v)) {
+                        double &mean = _mean[ib * a->size()[2] * a->size()[3] + ixy];
+                        uint32_t &count = _count[ib * a->size()[2] * a->size()[3] + ixy];
+                        ++count;
+                        double delta = v - mean;
+                        mean += delta / count;
+                        ((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy] += delta * (v - mean);
+                    }
+                }
+            }
+        }
+    }
+
+    virtual void finalize(std::shared_ptr<chunk_data> a) override {
+        // divide by count - 1;
+        for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
+            ((double *)a->buf())[ibxy] = _count[ibxy] > 1 ? ((double *)a->buf())[ibxy] / (_count[ibxy] - 1) : NAN;
+        }
+        free(_count);
+        free(_mean);
+    }
+
+   protected:
+    uint32_t *_count;
+    double *_mean;
+};
+
+/**
+ * @brief Implementation of reducer to calculate standard deviation values (for all bands) over time using Welford's Online algorithm
+ */
+struct sd_reducer : public var_reducer {
+    void finalize(std::shared_ptr<chunk_data> a) override {
+        // divide by count - 1;
+        for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
+            ((double *)a->buf())[ibxy] = _count[ibxy] > 1 ? sqrt(((double *)a->buf())[ibxy] / (_count[ibxy] - 1)) : NAN;
+        }
+        free(_count);
+        free(_mean);
+    }
+};
+
+/**
  * @brief A data cube that applies a reducer function to another data cube over time
  */
 class reduce_cube : public cube {
@@ -247,7 +357,11 @@ class reduce_cube : public cube {
               reducer == "max" ||
               reducer == "mean" ||
               reducer == "median" ||
-              reducer == "count"))
+              reducer == "count" ||
+              reducer == "var" ||
+              reducer == "sd" ||
+              reducer == "prod" ||
+              reducer == "sum"))
             throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }
 

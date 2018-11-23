@@ -361,21 +361,146 @@ void libgdalcubes_update_cube_view( SEXP pin, SEXP v) {
 // [[Rcpp::export]]
 SEXP libgdalcubes_open_image_collection(std::string filename) {
   
-  
-  
-  std::shared_ptr<image_collection>* x = new std::shared_ptr<image_collection>( std::make_shared<image_collection>(filename));
-  Rcout << (*x)->to_string() << std::endl;
+  try {
+    std::shared_ptr<image_collection>* x = new std::shared_ptr<image_collection>( std::make_shared<image_collection>(filename));
+    Rcpp::XPtr< std::shared_ptr<image_collection> > p(x, true) ;
+    return p;
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
+}
 
-  Rcpp::XPtr< std::shared_ptr<image_collection> > p(x, true) ;
-  return p;
+
+
+// [[Rcpp::export]]
+Rcpp::List libgdalcubes_image_collection_info( SEXP pin) {
+  
+  try {
+    Rcpp::XPtr<std::shared_ptr<image_collection>> aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<image_collection>>>(pin);
+    std::shared_ptr<image_collection> ic = *aa;
+    
+    std::vector<image_collection::images_row> img = ic->get_images();
+    
+    Rcpp::CharacterVector images_name(img.size());
+    Rcpp::NumericVector images_left(img.size());
+    Rcpp::NumericVector images_top(img.size());
+    Rcpp::NumericVector images_right(img.size());
+    Rcpp::NumericVector images_bottom(img.size());
+    Rcpp::CharacterVector images_datetime(img.size());
+    Rcpp::CharacterVector images_proj(img.size());
+    
+    
+    for (uint32_t i=0; i<img.size(); ++i) {
+      images_name[i] = img[i].name;
+      images_left[i] = img[i].left;
+      images_right[i] = img[i].right;
+      images_top[i] = img[i].top;
+      images_bottom[i] = img[i].bottom;
+      images_proj[i] = img[i].proj;
+      images_datetime[i] = img[i].datetime;
+    }
+    
+    
+    Rcpp::DataFrame images_df =
+      Rcpp::DataFrame::create(Rcpp::Named("name")=images_name,
+                              Rcpp::Named("left")=images_left,
+                              Rcpp::Named("top")=images_top,
+                              Rcpp::Named("bottom")=images_bottom,
+                              Rcpp::Named("right")=images_right,
+                              Rcpp::Named("datetime")=images_datetime,
+                              Rcpp::Named("proj")=images_proj);
+    
+    
+    
+    
+    std::vector<image_collection::bands_row> bands = ic->get_bands();
+    
+    Rcpp::CharacterVector bands_name(bands.size());
+    Rcpp::CharacterVector bands_type(bands.size());
+    Rcpp::NumericVector bands_offset(bands.size());
+    Rcpp::NumericVector bands_scale(bands.size());
+    Rcpp::CharacterVector bands_unit(bands.size());
+    Rcpp::CharacterVector bands_nodata(bands.size());
+    
+    for (uint32_t i=0; i<bands.size(); ++i) {
+      bands_name[i] = bands[i].name;
+      bands_type[i] = bands[i].type;
+      bands_offset[i] = bands[i].offset;
+      bands_scale[i] = bands[i].scale;
+      bands_unit[i] = bands[i].unit;
+      bands_nodata[i] = bands[i].nodata;
+    }
+    
+    Rcpp::DataFrame bands_df =
+      Rcpp::DataFrame::create(Rcpp::Named("name")=bands_name,
+                              Rcpp::Named("type")=bands_type,
+                              Rcpp::Named("offset")=bands_offset,
+                              Rcpp::Named("scale")=bands_scale,
+                              Rcpp::Named("unit")=bands_unit,
+                              Rcpp::Named("nodata")=bands_nodata);
+    
+    
+    
+    
+    
+    
+    std::vector<image_collection::gdalrefs_row> gdalrefs = ic->get_gdalrefs();
+    
+  
+    
+    Rcpp::IntegerVector gdalrefs_imageid(gdalrefs.size());
+    Rcpp::IntegerVector gdalrefs_bandid(gdalrefs.size());
+    Rcpp::CharacterVector gdalrefs_descriptor(gdalrefs.size());
+    Rcpp::IntegerVector gdalrefs_bandnum(gdalrefs.size());
+    
+    for (uint32_t i=0; i<gdalrefs.size(); ++i) {
+      gdalrefs_imageid[i] = gdalrefs[i].image_id;
+      gdalrefs_bandid[i] = gdalrefs[i].band_id;
+      gdalrefs_descriptor[i] = gdalrefs[i].descriptor;
+      gdalrefs_bandnum[i] = gdalrefs[i].band_num;
+    }
+    
+    Rcpp::DataFrame gdalrefs_df =
+      Rcpp::DataFrame::create(Rcpp::Named("image_id")=gdalrefs_imageid,
+                              Rcpp::Named("band_id")=gdalrefs_bandid,
+                              Rcpp::Named("descriptor")=gdalrefs_descriptor,
+                              Rcpp::Named("band_num")=gdalrefs_bandnum);
+    
+    
+    return Rcpp::List::create(Rcpp::Named("images") = images_df,
+                              Rcpp::Named("bands") = bands_df,
+                              Rcpp::Named("gdalrefs") = gdalrefs_df);
+    
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
 }
 
 // [[Rcpp::export]]
-SEXP libgdalcubes_create_image_collection_cube(std::string filename, SEXP v = R_NilValue) {
+SEXP libgdalcubes_create_image_collection(std::vector<std::string> files, std::string format_file, std::string outfile) {
+
+  try {
+    collection_format cfmt(format_file);
+    image_collection::create(cfmt, files)->write(outfile);
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
+}
+
+
+// [[Rcpp::export]]
+SEXP libgdalcubes_create_image_collection_cube(SEXP pin, SEXP v = R_NilValue) {
 
   try {
     
-    std::shared_ptr<image_collection_cube>* x = new std::shared_ptr<image_collection_cube>(image_collection_cube::create(filename));
+    Rcpp::XPtr<std::shared_ptr<image_collection>> aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<image_collection>>>(pin);
+    
+   
+    
+    std::shared_ptr<image_collection_cube>* x = new std::shared_ptr<image_collection_cube>( image_collection_cube::create(*aa));
 
     if (v != R_NilValue) {
       Rcpp::List view = Rcpp::as<Rcpp::List>(v);

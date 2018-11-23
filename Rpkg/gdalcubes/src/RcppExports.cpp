@@ -88,15 +88,39 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// libgdalcubes_create_image_collection_cube
-SEXP libgdalcubes_create_image_collection_cube(std::string filename, SEXP v);
-RcppExport SEXP _gdalcubes_libgdalcubes_create_image_collection_cube(SEXP filenameSEXP, SEXP vSEXP) {
+// libgdalcubes_image_collection_info
+Rcpp::List libgdalcubes_image_collection_info(SEXP pin);
+RcppExport SEXP _gdalcubes_libgdalcubes_image_collection_info(SEXP pinSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< std::string >::type filename(filenameSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type pin(pinSEXP);
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_image_collection_info(pin));
+    return rcpp_result_gen;
+END_RCPP
+}
+// libgdalcubes_create_image_collection
+SEXP libgdalcubes_create_image_collection(std::vector<std::string> files, std::string format_file, std::string outfile);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_image_collection(SEXP filesSEXP, SEXP format_fileSEXP, SEXP outfileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::vector<std::string> >::type files(filesSEXP);
+    Rcpp::traits::input_parameter< std::string >::type format_file(format_fileSEXP);
+    Rcpp::traits::input_parameter< std::string >::type outfile(outfileSEXP);
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_image_collection(files, format_file, outfile));
+    return rcpp_result_gen;
+END_RCPP
+}
+// libgdalcubes_create_image_collection_cube
+SEXP libgdalcubes_create_image_collection_cube(SEXP pin, SEXP v);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_image_collection_cube(SEXP pinSEXP, SEXP vSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pin(pinSEXP);
     Rcpp::traits::input_parameter< SEXP >::type v(vSEXP);
-    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_image_collection_cube(filename, v));
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_image_collection_cube(pin, v));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -191,6 +215,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gdalcubes_libgdalcubes_get_cube_view", (DL_FUNC) &_gdalcubes_libgdalcubes_get_cube_view, 1},
     {"_gdalcubes_libgdalcubes_update_cube_view", (DL_FUNC) &_gdalcubes_libgdalcubes_update_cube_view, 2},
     {"_gdalcubes_libgdalcubes_open_image_collection", (DL_FUNC) &_gdalcubes_libgdalcubes_open_image_collection, 1},
+    {"_gdalcubes_libgdalcubes_image_collection_info", (DL_FUNC) &_gdalcubes_libgdalcubes_image_collection_info, 1},
+    {"_gdalcubes_libgdalcubes_create_image_collection", (DL_FUNC) &_gdalcubes_libgdalcubes_create_image_collection, 3},
     {"_gdalcubes_libgdalcubes_create_image_collection_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_image_collection_cube, 2},
     {"_gdalcubes_libgdalcubes_create_reduce_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_reduce_cube, 2},
     {"_gdalcubes_libgdalcubes_create_select_bands_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_select_bands_cube, 2},

@@ -137,6 +137,35 @@ struct bounds_st {
   */
 class image_collection {
    public:
+    struct bands_row {
+        uint32_t id;
+        std::string name;
+        GDALDataType type;
+        double offset;
+        double scale;
+        std::string unit;
+        std::string nodata;
+    };
+
+    struct images_row {
+        uint32_t id;
+        std::string name;
+        double left;
+        double top;
+        double bottom;
+        double right;
+        std::string datetime;
+        std::string proj;
+    };
+
+    struct gdalrefs_row {
+        uint32_t image_id;
+        uint32_t band_id;
+        std::string descriptor;
+        uint16_t band_num;
+    };
+
+   public:
     /**
      * Constructs an empty image collection with given format
      * @param format
@@ -166,7 +195,7 @@ class image_collection {
         _format = A._format;
     }
 
-    static image_collection create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
+    static std::shared_ptr<image_collection> create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
 
     std::string to_string();
 
@@ -260,24 +289,18 @@ class image_collection {
         return find_range_st(range, srs, std::vector<std::string>(), order_by);
     };
 
-    struct band_info_row {
-        uint32_t id;
-        std::string name;
-        GDALDataType type;
-        double offset;
-        double scale;
-        std::string nodata;
-        std::string unit;
-    };
+    std::vector<image_collection::bands_row> get_bands();
 
-    std::vector<image_collection::band_info_row> get_bands();
+    std::vector<image_collection::gdalrefs_row> get_gdalrefs();
+
+    std::vector<image_collection::images_row> get_images();
 
     /**
      * Helper function to create image collections programatically,
      * e.g. for processing results.
      * @note NOT YET IMPLEMENTED
      */
-    static void create_empty(std::vector<band_info_row>);
+    static void create_empty(std::vector<bands_row>);
 
     /**
      * Derive the size of a pixel for one or all bands in bytes

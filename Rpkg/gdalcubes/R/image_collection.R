@@ -1,68 +1,47 @@
-#' @example gcbs_open_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/src/test.db")
+#' @example gcbs_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/src/test.db")
 #' @export
-gcbs_open_image_collection <- function(filename) {
+gcbs_image_collection <- function(filename) {
   stopifnot(file.exists(filename))
-
-  db <- DBI::dbConnect(RSQLite::SQLite(), dbname = filename)
-
-  out <- list(
-    name = basename(filename),
-    path = filename,
-    bands = dbReadTable(db, "bands"),
-    images = dbReadTable(db, "images"),
-    gdalrefs = dbReadTable(db, "gdalrefs")
-  )
-
-  DBI::dbDisconnect(db)
-
-
-  # xptr <- gdalcubes:::libgdalcubes_open_image_collection(filename)
-  # out <- list(
-  #   name = basename(filename),
-  #   path = filename,
-  #   xptr = xptr
-  # )
-
-  class(out) <- c("gcbs_image_collection", "list")
-  return(out)
+  xptr <- libgdalcubes_open_image_collection(filename)
+  class(xptr) <- c("gcbs_image_collection", "xptr")
+  return(xptr)
 }
 
 
 #' @export
 is.gcbs_image_collection <- function(obj) {
-  return("gcbs_image_collection" %in% class(obj))
+  if(!("gcbs_image_collection" %in% class(obj))) {
+    return(FALSE)
+  }
+  if (libgdalcubes_is_null(obj)) {
+    warning("Image collection proxy object is invalid")
+    return(FALSE)
+  }
+  return(TRUE)
 }
 
 
 #' @export
-summary.gcbs_image_collection <- function(obj) {
-  print("xxxx")
+print.gcbs_image_collection <- function(obj) {
+  stopifnot(is.gcbs_image_collection(obj))
+  info <- libgdalcubes_image_collection_info(obj)
+  cat(paste("A GDAL image collection object, referencing",nrow(info$images), "images with", nrow(info$bands), " bands\n"))
+  cat("Images:\n")
+  print(info$images)
+  cat("\n")
+  cat("Bands:\n")
+  print(info$bands)
+  cat("\n")
 }
 
-# 
-# get_image_id <- function(path) {
-#   p <- unlist(strsplit(path, "/"))
-#   p[length(p)-4]
-#   return(gsub(".SAFE", "",p[length(p)-4]))
-# }
-# 
-# get_datetime <- function(path) {
-#   return(substr(get_image_id(path), 12, 26))
-# }
-# 
-# get_band <- function(path) {
-#   return(substr(get_image_id(path), 12, 26))
-# }
 
+
+
+# files <- list.files("/home/marius/eodata/Sentinel2/", pattern="*.jp2", recursive = TRUE, full.names = TRUE) 
+#
 #' @export
-gcbs_create_image_collection <-function(files, get_band, get_datetime, get_image_id, ignore_pattern=NULL)
+gcbs_create_image_collection <-function(files, format_file, out_file=tempfile(fileext = ".sqlite"))
 {
-  files <- list.files("/home/marius/eodata/Sentinel2/", pattern="*.jp2", recursive = TRUE, full.names = TRUE)
-  sapply(files, function(f) {
-    
-  })
-  
+  libgdalcubes_create_image_collection(files, format_file, out_file)
+  return(gcbs_image_collection(out_file))
 }
-
-
-

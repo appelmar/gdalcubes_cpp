@@ -6,10 +6,10 @@ gcbs_cube <- function(image_collection, view, chunking=c(16, 256, 256)) {
   x = NULL
   if (!missing(view)) {
     stopifnot(is.gcbs_view(view))
-    x = libgdalcubes_create_image_collection_cube(image_collection$path, view)
+    x = libgdalcubes_create_image_collection_cube(image_collection, view)
   }
   else {
-    x = libgdalcubes_create_image_collection_cube(image_collection$path)
+    x = libgdalcubes_create_image_collection_cube(image_collection)
   }
   class(x) <- c("gcbs_image_collection_cube", "gcbs_cube", "xptr")
   return(x)

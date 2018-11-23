@@ -275,9 +275,9 @@ int main(int argc, char* argv[]) {
             }
 
             collection_format f(format);
-            image_collection ic = image_collection::create(f, in, strict);
-            ic.write(output);
-            std::cout << ic.to_string() << std::endl;
+            auto ic = image_collection::create(f, in, strict);
+            ic->write(output);
+            std::cout << ic->to_string() << std::endl;
 
         } else if (cmd == "info") {
             po::options_description info_desc("info arguments");
@@ -299,7 +299,7 @@ int main(int argc, char* argv[]) {
 
             image_collection ic = image_collection(input);
 
-            std::vector<image_collection::band_info_row> bands = ic.get_bands();
+            std::vector<image_collection::bands_row> bands = ic.get_bands();
 
             bounds_st e = ic.extent();
             std::cout << ic.to_string() << std::endl;

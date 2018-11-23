@@ -1,6 +1,7 @@
 library(gdalcubes)
 
-x = gcbs_open_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/src/test.db")
+x = gcbs_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/src/test.db")
+x
 #v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=22, r=24,t=-18,b=-20, proj="EPSG:4326", aggregation = "min")
 v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=23, r=24,t=-19,b=-20, proj="EPSG:4326", aggregation = "min")
 
@@ -13,10 +14,10 @@ plot(gcbs_apply_pixel(gcbs_select_bands(xcube, c("B04","B08")), c("(B04 - B08)/1
 
 
 plot(xcube, bands = 4)
-plot(gcbs_select_bands(xcube, c("B04","B08")))
+plot(gcbs_select_bands(xcube, c("B04","B08")), t=c(4,8))
 cat(gcbs_graph(gcbs_select_bands(xcube, c("B04","B08"))))
 
-plot_cube(xcube, rgb=4:2, t=c(4,8))
+plot(xcube, rgb=4:2, t=c(4,8))
 plot(xcube, rgb=4:2, t=8)
 plot(xcube, rgb=4:2)
 
@@ -33,10 +34,18 @@ plot(x_red_cube, key.pos = 1, bands=1)
 
 require(magrittr)
 plot(gcbs_cube(x, v)  %>% gcbs_reduce("median") %>% gcbs_select_bands(c("B04_median","B08_median")) )
-plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08A"))  %>% gcbs_reduce("median")  )
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B8A"))  %>% gcbs_reduce("median")  )
 
-plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08", "B8A"))  %>% gcbs_apply_pixel(c("((B08-B04)/(B08+B04))", "B08-B08A")) %>%  gcbs_reduce("median"), key.pos=1)
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08", "B8A"))  %>% gcbs_apply_pixel(c("((B08-B04)/(B08+B04))", "B08-B8A")) %>%  gcbs_reduce("median"), key.pos=1)
 plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08", "B8A"))  %>% gcbs_apply_pixel(c("B08 < 2000")) %>%  gcbs_reduce("mean"), key.pos=1)
+
+# median NDVI
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08"))  %>% gcbs_apply_pixel(c("((B08-B04)/(B08+B04))")) %>%  gcbs_reduce("median"), key.pos=1)
+
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B02","B03","B04"))  %>%  gcbs_reduce("median"), rgb=3:1)
+
+
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08"))  %>% gcbs_apply_pixel(c("((B08-B04)/(B08+B04))")), key.pos=1, t=c(4,8))
 
 
 f <- function() {
@@ -70,11 +79,15 @@ gcbs_eval(xstrm_red, "/home/marius/Desktop/xxx.tif", "GTiff")
 #####
 library(gdalcubes)
 setwd("/home/marius/Desktop/CHIRPS/")
-x = gcbs_open_image_collection("/home/marius/Desktop/CHIRPS/CHIRPS.db")
+x = gcbs_image_collection("/home/marius/Desktop/CHIRPS/CHIRPS.db")
 x
 v <- gcbs_view(nx = 360*2, ny=2*100, t0 = "1981-01-01", t1="1981-05-31", dt="P1D", l=-180, r=180,t=50,b=-50)
 xcube <- gcbs_cube(x, v)
 xcube
+
+
+# count numer of days wiht precipitation larger than 40
+plot(gcbs_cube(x, v)  %>% gcbs_apply_pixel(c("precipitation > 50", "precipitation < 0.001")) %>%  gcbs_reduce("sum"), key.pos=1, col=heat.colors)
 
 
 x_red_cube <- gcbs_reduce(xcube,"median")
@@ -112,17 +125,17 @@ gcbs_eval(xstrm_red, "/home/marius/Desktop/chirps_min30day_1981.tif", "GTiff")
 library(gdalcubes)
 gcbs_set_threads(8)
 setwd("/home/marius/Desktop/MODIS/MOD13A3.A2018/")
-x = gcbs_open_image_collection("MOD13A3.db")
+x = gcbs_image_collection("MOD13A3.db")
 x
 
 v <- gcbs_view(proj="EPSG:4326", nx = 500, ny=500, t0 = "2018-01-01", t1="2018-09-30", dt="P3M", l=-20, r=20,t=60,b=40, aggregation = "first")
 xcube <- gcbs_cube(x, v)
 xcube
 
-plot_cube(xcube, col=heat.colors, key.pos = 1, t = 1)
+plot(xcube, col=heat.colors, key.pos = 1, t = 1)
 
 
-plot_cube(gcbs_reduce(xcube, reducer="median"), key.pos=1)
+plot(gcbs_reduce(xcube, reducer="median"), key.pos=1)
 
 f <- function() {
   x = read_stream_as_array()
@@ -135,7 +148,7 @@ f <- function() {
 }
 
 xstrm <- gcbs_stream(xcube, f,c(gcbs_nt(xcube),128,128))
-plot_cube(xstrm,key.pos=1, breaks=seq(0, 3000, length.out=11), col=heat.colors)
+plot(xstrm,key.pos=1, breaks=seq(0, 3000, length.out=11), col=heat.colors)
 cat(gcbs_graph(xstrm))
 xstrm_red <- gcbs_reduce(xstrm,reducer = "min")
 cat(gcbs_graph(xstrm_red))

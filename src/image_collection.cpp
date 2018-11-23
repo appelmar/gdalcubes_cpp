@@ -112,11 +112,9 @@ image_collection::image_collection(std::string filename) : _format(), _filename(
     sqlite3_finalize(stmt);
 }
 
-image_collection image_collection::create(collection_format format, std::vector<std::string> descriptors, bool strict) {
-    image_collection o(format);
-
-    o.add(descriptors, strict);
-
+std::shared_ptr<image_collection> image_collection::create(collection_format format, std::vector<std::string> descriptors, bool strict) {
+    std::shared_ptr<image_collection> o = std::make_shared<image_collection>(format);
+    o->add(descriptors, strict);
     return o;
 }
 
@@ -564,8 +562,8 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     return out;
 }
 
-std::vector<image_collection::band_info_row> image_collection::get_bands() {
-    std::vector<image_collection::band_info_row> out;
+std::vector<image_collection::bands_row> image_collection::get_bands() {
+    std::vector<image_collection::bands_row> out;
 
     std::string sql = "SELECT id, name, type, offset,scale, unit, nodata FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
     sqlite3_stmt* stmt;
@@ -575,7 +573,7 @@ std::vector<image_collection::band_info_row> image_collection::get_bands() {
     }
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
-        image_collection::band_info_row row;
+        image_collection::bands_row row;
         row.id = sqlite3_column_int(stmt, 0);
         row.name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
         row.type = utils::gdal_type_from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2))));
@@ -583,6 +581,54 @@ std::vector<image_collection::band_info_row> image_collection::get_bands() {
         row.scale = sqlite3_column_double(stmt, 4);
         row.unit = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
         row.nodata = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6)));
+        out.push_back(row);
+    }
+    sqlite3_finalize(stmt);
+    return out;
+}
+
+std::vector<image_collection::gdalrefs_row> image_collection::get_gdalrefs() {
+    std::vector<image_collection::gdalrefs_row> out;
+
+    std::string sql = "SELECT image_id, band_id, descriptor, band_num FROM gdalrefs";
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in image_collection::get_gdalrefs(): cannot prepare query statement");
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        image_collection::gdalrefs_row row;
+        row.image_id = sqlite3_column_int(stmt, 0);
+        row.band_id = sqlite3_column_int(stmt, 1);
+        row.descriptor = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
+        row.band_num = sqlite3_column_int(stmt, 3);
+        out.push_back(row);
+    }
+    sqlite3_finalize(stmt);
+    return out;
+}
+
+std::vector<image_collection::images_row> image_collection::get_images() {
+    std::vector<image_collection::images_row> out;
+    std::string sql = "SELECT id, name, left, top, bottom, right, datetime, proj FROM images";
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in image_collection::get_images(): cannot prepare query statement");
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        image_collection::images_row row;
+
+        row.id = sqlite3_column_int(stmt, 0);
+        row.name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+        row.left = sqlite3_column_double(stmt, 2);
+        row.top = sqlite3_column_double(stmt, 3);
+        row.bottom = sqlite3_column_double(stmt, 4);
+        row.right = sqlite3_column_double(stmt, 5);
+        row.datetime = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6)));
+        row.proj = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7)));
         out.push_back(row);
     }
     sqlite3_finalize(stmt);

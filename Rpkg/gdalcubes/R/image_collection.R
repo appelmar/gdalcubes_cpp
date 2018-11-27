@@ -53,9 +53,11 @@ gcbs_create_image_collection <-function(files, format, out_file=tempfile(fileext
 gcbs_collection_formats <-function()
 {
   df = libgdalcubes_list_collection_formats()
+  df$name = as.character(df$name)
+  df$path = as.character(df$path)
   df$description = ""
   for (i in 1:nrow(df)) {
-    x = jsonlite::read_json("/home/marius/.gdalcubes/formats/CHIRPS-2.0_p05_tif_gzip_local.json")$description
+    x = jsonlite::read_json(df$path[i])$description
     if (!is.null(x))
       df$description[i] = x
   }

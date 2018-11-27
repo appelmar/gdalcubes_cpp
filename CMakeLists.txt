@@ -11,7 +11,7 @@ project(gdalcubes LANGUAGES CXX VERSION 0.0.1)
 if (NOT CMAKE_BUILD_TYPE)
     message(STATUS "No build type specified, using Release")
     set(CMAKE_BUILD_TYPE Release)
-endif (NOT CMAKE_BUILD_TYPE)
+endif ()
 
 
 # TODO: replace with target_compile_options
@@ -22,7 +22,7 @@ if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") # enable profiling and coverage repo
     #set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg --coverage")
     #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
     #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
-endif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+endif ( )
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -32,7 +32,7 @@ add_subdirectory(src)
 find_program (CPPCHECK NAMES cppcheck)
 if(${CPPCHECK-NOTFOUND})
     message(WARNING "could not find cppcheck, skipping static code analysis.")
-else (${CPPCHECK-NOTFOUND})
+else ()
     add_custom_target(cppcheck ALL
             COMMAND ${CPPCHECK} --enable=warning,performance  --language=c++ src 2> cppcheck.log
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -44,7 +44,7 @@ endif()
 find_program (CLANG_FORMAT NAMES clang-format)
 if(NOT CLANG_FORMAT)
     message(WARNING "could not find clang-format, skipping automated source code formatting.")
-else (NOT CLANG_FORMAT)
+else ()
     file(GLOB_RECURSE ALL_SOURCE_FILES  src/*.cpp src/*.h)
     # clang-format -i -style=file $
     add_custom_target(clangformat ALL
@@ -87,16 +87,16 @@ endif()
 
 # install collection formats
 if ( WIN32 )
-    install(DIRECTORY formats/ DESTINATION $ENV{HOMEDRIVE}/$ENV{HOMEPATH}/.gdalcubes/formats FILES_MATCHING PATTERN "*.json")
-else( WIN32 )
-    install(DIRECTORY formats/ DESTINATION $ENV{HOME}/.gdalcubes/formats FILES_MATCHING PATTERN "*.json")
-endif(WIN32)
+    install(DIRECTORY formats/ DESTINATION $ENV{AllUsersProfile}/gdalcubes/formats FILES_MATCHING PATTERN "*.json")
+else()
+    install(DIRECTORY formats/ DESTINATION /usr/lib/gdalcubes/formats FILES_MATCHING PATTERN "*.json")
+endif()
 
 
 ## export src archive
 #find_program (TARBIN NAMES tar)
 #if(${TARBIN-NOTFOUND})
 #    message(WARNING "could not find tar, skipping source code archive creation.")
-#else (${TARBIN-NOTFOUND})
+#else ()
 #    add_custom_target(srczip ALL COMMAND ${CMAKE_COMMAND} -E chdir .. tar "cfz" "${PROJECT_NAME}_src_${PROJECT_VERSION}.tar.gz" src  CMakeLists.txt LICENSE .gitignore .clang-format README.md)
 #endif()

@@ -126,12 +126,21 @@ struct image_band {
     std::string nodata;
 };
 
-void image_collection::add(std::vector<std::string> descriptors, bool strict) {
+void image_collection::add(std::vector<std::string> descriptors, bool strict, bool unroll_arch) {
     std::vector<boost::regex> regex_band_pattern;
 
     /* TODO: The following will fail if other applications create image collections and assign ids to bands differently. A better solution would be to load band ids, names, and nums from the database bands table directly
      */
 
+    if (unroll_arch) {
+        std::vector<std::string> unrolled_descriptors;
+        for (uint32_t i = 0; i < descriptors.size(); ++i) {
+        }
+    }
+
+    /**
+     * TODO: enable .zip, .gz, .tar, .tar.gz...
+     */
     std::vector<std::string> band_name;
     std::vector<uint16_t> band_num;
     std::vector<uint16_t> band_ids;
@@ -170,10 +179,13 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     }
 
     uint32_t counter = -1;
-    std::shared_ptr<progress> p = config::instance()->get_default_progress_bar();
+    std::shared_ptr<progress> p = config::instance()->get_default_progress_bar()->get();
     p->set(0);  // explicitly set to zero to show progress bar immediately
     for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
         ++counter;
+
+        // if .zip, .tar.gz, .gz, or .tar
+
         p->set((double)counter / (double)descriptors.size());
         if (!global_pattern.empty()) {  // prevent unnecessary GDALOpen calls
             if (!boost::regex_match(*it, regex_global_pattern)) {
@@ -329,9 +341,9 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     p->finalize();
 }
 
-void image_collection::add(std::string descriptor) {
+void image_collection::add(std::string descriptor, bool strict, bool unroll_arch) {
     std::vector<std::string> x{descriptor};
-    return add(x);
+    return add(x, strict, unroll_arch);
 }
 
 void image_collection::write(const std::string filename) {
@@ -673,4 +685,42 @@ bool image_collection::is_aligned() {
     }
     sqlite3_finalize(stmt);
     return aligned;
+}
+
+std::vector<std::string> image_collection::unroll_archives(std::vector<std::string> descriptors) {
+    std::vector<std::string> out;
+    namespace fs = boost::filesystem;
+
+    for (uint32_t i = 0; i < descriptors.size(); ++i) {
+        std::string s = descriptors[i];
+        if (s.compare(s.length() - 4, 4, ".zip") == 0 || s.compare(s.length() - 4, 4, ".ZIP") == 0) {
+            char** y = VSIReadDirRecursive(("/vsizip/" + s).c_str());
+            char** x = y;
+            if (x != NULL) {
+                while (*x != NULL) {
+                    out.push_back("/vsizip/" + (fs::path(s) / fs::path(*x)).string());
+                    ++x;
+                }
+                CSLDestroy(y);
+            }
+
+        } else if (s.compare(s.length() - 3, 3, ".gz") == 0 || s.compare(s.length() - 3, 3, ".GZ") == 0) {
+            out.push_back("/vsigzip/" + s);
+        } else if (s.compare(s.length() - 4, 4, ".tar") == 0 || s.compare(s.length() - 4, 4, ".TAR") == 0 ||
+                   s.compare(s.length() - 7, 7, ".tar.gz") == 0 || s.compare(s.length() - 7, 7, ".TAR.GZ") == 0 ||
+                   s.compare(s.length() - 4, 4, ".tgz") == 0 || s.compare(s.length() - 4, 4, ".TGZ") == 0) {
+            char** y = VSIReadDirRecursive(("/vsitar/" + s).c_str());
+            char** x = y;
+            if (x != NULL) {
+                while (*x != NULL) {
+                    out.push_back("/vsitar/" + (fs::path(s) / fs::path(*x)).string());
+                    ++x;
+                }
+                CSLDestroy(y);
+            }
+        } else {
+            out.push_back(s);
+        }
+    }
+    return out;
 }

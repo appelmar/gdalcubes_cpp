@@ -23,7 +23,6 @@
 #include "build_info.h"
 #include "error.h"
 #include "progress.h"
-
 // forward declarations
 class chunk_processor;
 class chunk_processor_singlethread;
@@ -152,6 +151,45 @@ class config {
         CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
         srand(time(NULL));
         CPLSetErrorHandler(CPLQuietErrorHandler);
+
+        // Add default locations where to look for collection format presets
+
+        if (std::getenv("GDALCUBES_DATA_DIR") != NULL) {
+            if (boost::filesystem::exists(std::getenv("GDALCUBES_DATA_DIR"))) {
+                config::instance()->add_collection_format_preset_dir(std::getenv("GDALCUBES_DATA_DIR"));
+            }
+        }
+        if (std::getenv("AllUsersProfile") != NULL) {
+            // Windows default location
+            boost::filesystem::path p(std::getenv("AllUsersProfile"));
+            p = p / "gdalcubes" / "formats";
+            if (boost::filesystem::exists(p)) {
+                config::instance()->add_collection_format_preset_dir(p.string());
+            }
+        }
+        if (std::getenv("HOME") != NULL) {
+            boost::filesystem::path p(std::getenv("HOME"));
+            p = p / ".gdalcubes" / "formats";
+            if (boost::filesystem::exists(p)) {
+                config::instance()->add_collection_format_preset_dir(p.string());
+            }
+        }
+        if (std::getenv("HOMEPATH") != NULL && getenv("HOMEDRIVE") != NULL) {
+            boost::filesystem::path p(std::getenv("HOMEDRIVE"));
+            p = p / std::getenv("HOMEPATH") / ".gdalcubes" / "formats";
+            if (boost::filesystem::exists(p)) {
+                config::instance()->add_collection_format_preset_dir(p.string());
+            }
+        }
+
+        const std::vector<std::string> candidate_dirs =
+            {"/usr/lib/gdalcubes/formats"};
+
+        for (uint16_t i = 0; i < candidate_dirs.size(); ++i) {
+            if (boost::filesystem::exists(candidate_dirs[i])) {
+                config::instance()->add_collection_format_preset_dir(candidate_dirs[i]);
+            }
+        }
     }
 
     /**
@@ -174,6 +212,18 @@ class config {
         return _error_handler;
     }
 
+    inline std::vector<std::string> get_collection_format_preset_dirs() {
+        return _collection_format_preset_dirs;
+    }
+
+    inline void add_collection_format_preset_dir(std::string dir) {
+        // only add if not exists
+        for (uint16_t i = 0; i < _collection_format_preset_dirs.size(); ++i) {
+            if (_collection_format_preset_dirs[i] == dir) return;
+        }
+        _collection_format_preset_dirs.push_back(dir);
+    }
+
    private:
     std::shared_ptr<chunk_processor> _chunk_processor;
     std::shared_ptr<progress> _progress_bar;
@@ -184,6 +234,7 @@ class config {
     bool _swarm_curl_verbose;
     uint16_t _gdal_num_threads;
     bool _gdal_debug;
+    std::vector<std::string> _collection_format_preset_dirs;
 
    private:
     config();

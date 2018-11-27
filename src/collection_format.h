@@ -23,6 +23,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include "config.h"
 #include "external/json.hpp"
 
 /**
@@ -44,6 +45,28 @@ class collection_format {
         return _j.empty();
     }
 
+    static std::map<std::string, std::string> list_presets() {
+        namespace fs = boost::filesystem;
+        std::map<std::string, std::string> out;
+
+        std::vector<std::string> dirs = config::instance()->get_collection_format_preset_dirs();
+
+        // do not use uint here because of descending iteration
+        for (int i = dirs.size() - 1; i >= 0; --i) {
+            fs::directory_iterator end;
+            if (!fs::exists(dirs[i])) {
+                continue;
+            }
+            for (fs::directory_iterator it(fs::path(dirs[i])); it != end; ++it) {
+                if (fs::is_regular_file(it->path()) && it->path().extension().string() == ".json") {
+                    if (out.find(it->path().stem().string()) != out.end()) continue;
+                    out.insert(std::pair<std::string, std::string>(it->path().stem().string(), fs::absolute(it->path()).string()));
+                }
+            }
+        }
+        return out;
+    }
+
     /**
      * Construct a collection format from a JSON file
      *
@@ -55,31 +78,16 @@ class collection_format {
         namespace fs = boost::filesystem;
 
         fs::path p(filename);
-        if (p.is_absolute()) {
-            if (!fs::exists(filename))
-                throw std::string("ERROR in collection_format::collection_format(): image collection format file does not exist.");
-        } else if (!p.parent_path().string().empty()) {
-            // relative path but not single filename without dir
-            if (!fs::exists(filename))
-                throw std::string("ERROR in collection_format::collection_format(): image collection format file does not exist.");
-        } else {
+        if (!fs::exists(filename) && !p.is_absolute() && p.parent_path().string().empty()) {
             // simple filename without directories
-            if (!fs::exists(filename)) {
-                if (std::getenv("GDALCUBES_DIR") != NULL) {
-                    p = fs::path(std::getenv("GDALCUBES_DIR")) / fs::path("formats") / p;
-                    if (!fs::exists(p.string())) {
-                        if (std::getenv("HOME") != NULL) {
-                            p = fs::path(std::getenv("HOME")) / fs::path(".gdalcubes") / fs::path("formats") / p;
-                            if (!fs::exists(p.string())) {
-                            } else if (std::getenv("HOMEDRIVE") != NULL && std::getenv("HOMEPATH") != NULL) {
-                                p = fs::path(std::getenv("HOMEDRIVE")) / fs::path(std::getenv("HOMEPATH")) / fs::path(".gdalcubes") / fs::path("formats") / p;
-                            }
-                        }
-                    }
-                }
+            GCBS_DEBUG("Couldn't find collection format '" + filename + "', looking for a preset with the same name");
+            std::map<std::string, std::string> preset_formats = list_presets();
+            if (preset_formats.find(fs::path(filename).stem().string()) != preset_formats.end()) {
+                filename = preset_formats[fs::path(filename).stem().string()];
             }
         }
-        filename = p.string();
+        if (!fs::exists(filename))
+            throw std::string("ERROR in collection_format::load_file(): image collection format file does not exist.");
 
         std::ifstream i(filename);
         i >> _j;

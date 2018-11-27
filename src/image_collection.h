@@ -199,8 +199,8 @@ class image_collection {
 
     std::string to_string();
 
-    void add(std::vector<std::string> descriptors, bool strict = true);
-    void add(std::string descriptor);
+    void add(std::vector<std::string> descriptors, bool strict = true, bool unroll_arch = true);
+    void add(std::string descriptor, bool strict = true, bool unroll_arch = true);
 
     void write(const std::string filename);
 
@@ -328,6 +328,15 @@ class image_collection {
      * @return SRS (usually proj4 string) if all images have the same SRS, empty string otherwise
      */
     std::string distinct_srs();
+
+    /**
+     * @brief Replace .zip .gz .tar files from given list by their content as virtual file system GDAL descriptors
+     * @see https://www.gdal.org/gdal_virtual_file_systems.html
+     * @param descriptors input list of filenames
+     * @note This function is not recursive, i.e., it will not unroll .zip files within .zip files etc.
+     * @return list of filenames with unrolled archive and or compressed files using GDAL VSI
+     */
+    static std::vector<std::string> unroll_archives(std::vector<std::string> descriptors);
 
    protected:
     collection_format _format;

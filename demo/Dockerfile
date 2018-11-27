@@ -14,7 +14,7 @@ RUN useradd -m -d /home/rstudio rstudio && echo "rstudio:rstudio" | chpasswd
 
 # TODO: replace by installing from github
 
-RUN Rscript -e "install.packages(c('RcppProgress', 'DBI', 'RSQLite', 'ncdf4'))"
+RUN Rscript -e "install.packages(c('RcppProgress', 'ncdf4'))"
 RUN cd /opt/gdalcubes/Rpkg &&  R CMD INSTALL gdalcubes
 
 RUN echo "[program:rstudio-server]\ncommand=rstudio-server start" >> /opt/supervisord.conf

@@ -42,6 +42,13 @@ int main(int argc, char *argv[]) {
 
     collection_format fmt("../../test/collection_format_test.json");
 
+    collection_format ftest("Sentinel2_L1C_local");
+
+    auto prsts = collection_format::list_presets();
+    for (auto it = prsts.begin(); it != prsts.end(); ++it) {
+        std::cout << it->first << "    " << it->second << std::endl;
+    }
+
     try {
         timer t0;
 

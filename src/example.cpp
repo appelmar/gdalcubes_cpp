@@ -52,6 +52,11 @@ int main(int argc, char *argv[]) {
     try {
         timer t0;
 
+        image_collection xxxxxx("/home/marius/Desktop/file7329263c65.sqlite");
+        xxxxxx.get_images();
+        xxxxxx.get_bands();
+        xxxxxx.get_gdalrefs();
+
         cube_view v = cube_view::read_json("../../test/view2.json");
 
         //        /**************************************************************************/

@@ -107,7 +107,7 @@ image_collection::image_collection(std::string filename) : _format(), _filename(
         std::string msg = "ERROR in image_collection::image_collection(): cannot extract collection format from existing image collection file.";
         throw msg;
     } else {
-        _format.load_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0))));
+        _format.load_string(sqlite_as_string(stmt, 0));
     }
     sqlite3_finalize(stmt);
 }
@@ -511,8 +511,8 @@ bounds_st image_collection::extent() {
         out.s.right = sqlite3_column_double(stmt, 1);
         out.s.bottom = sqlite3_column_double(stmt, 2);
         out.s.top = sqlite3_column_double(stmt, 3);
-        out.t0 = datetime::from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 4))));
-        out.t1 = datetime::from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5))));
+        out.t0 = datetime::from_string(sqlite_as_string(stmt, 4));
+        out.t1 = datetime::from_string(sqlite_as_string(stmt, 5));
     } else {
         throw std::string("ERROR in image_collection::extent(): cannot fetch query results");
     }
@@ -562,10 +562,10 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     std::vector<find_range_st_row> out;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         find_range_st_row r;
-        r.image_name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
-        r.descriptor = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
-        r.datetime = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
-        r.band_name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 3)));
+        r.image_name = sqlite_as_string(stmt, 0);
+        r.descriptor = sqlite_as_string(stmt, 1);
+        r.datetime = sqlite_as_string(stmt, 2);
+        r.band_name = sqlite_as_string(stmt, 3);
         r.band_num = sqlite3_column_int(stmt, 4);
 
         out.push_back(r);
@@ -587,12 +587,12 @@ std::vector<image_collection::bands_row> image_collection::get_bands() {
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         image_collection::bands_row row;
         row.id = sqlite3_column_int(stmt, 0);
-        row.name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
-        row.type = utils::gdal_type_from_string(std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2))));
+        row.name = sqlite_as_string(stmt, 1);
+        row.type = utils::gdal_type_from_string(sqlite_as_string(stmt, 2));
         row.offset = sqlite3_column_double(stmt, 3);
         row.scale = sqlite3_column_double(stmt, 4);
-        row.unit = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 5)));
-        row.nodata = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6)));
+        row.unit = sqlite_as_string(stmt, 5);
+        row.nodata = sqlite_as_string(stmt, 6);
         out.push_back(row);
     }
     sqlite3_finalize(stmt);
@@ -613,7 +613,7 @@ std::vector<image_collection::gdalrefs_row> image_collection::get_gdalrefs() {
         image_collection::gdalrefs_row row;
         row.image_id = sqlite3_column_int(stmt, 0);
         row.band_id = sqlite3_column_int(stmt, 1);
-        row.descriptor = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 2)));
+        row.descriptor = sqlite_as_string(stmt, 2);
         row.band_num = sqlite3_column_int(stmt, 3);
         out.push_back(row);
     }
@@ -634,13 +634,13 @@ std::vector<image_collection::images_row> image_collection::get_images() {
         image_collection::images_row row;
 
         row.id = sqlite3_column_int(stmt, 0);
-        row.name = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1)));
+        row.name = sqlite_as_string(stmt, 1);
         row.left = sqlite3_column_double(stmt, 2);
         row.top = sqlite3_column_double(stmt, 3);
         row.bottom = sqlite3_column_double(stmt, 4);
         row.right = sqlite3_column_double(stmt, 5);
-        row.datetime = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 6)));
-        row.proj = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 7)));
+        row.datetime = sqlite_as_string(stmt, 6);
+        row.proj = sqlite_as_string(stmt, 7);
         out.push_back(row);
     }
     sqlite3_finalize(stmt);
@@ -657,7 +657,7 @@ std::string image_collection::distinct_srs() {
     }
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-        out = std::string(reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0)));
+        out = sqlite_as_string(stmt, 0);
         if (sqlite3_step(stmt) == SQLITE_ROW) {
             // if more than one row in the results, return empty string
             out = "";
@@ -723,4 +723,13 @@ std::vector<std::string> image_collection::unroll_archives(std::vector<std::stri
         }
     }
     return out;
+}
+
+std::string image_collection::sqlite_as_string(sqlite3_stmt* stmt, uint16_t col) {
+    const unsigned char* a = sqlite3_column_text(stmt, col);
+    if (!a) {
+        return std::string("");
+    } else {
+        return std::string(reinterpret_cast<const char*>(a));
+    }
 }

@@ -342,6 +342,8 @@ class image_collection {
     collection_format _format;
     std::string _filename;
     sqlite3* _db;
+
+    static std::string sqlite_as_string(sqlite3_stmt* stmt, uint16_t col);
 };
 
 #endif  //IMAGE_COLLECTION_H

@@ -1,5 +1,12 @@
 library(gdalcubes)
 
+gcbs_collection_formats()
+
+
+x = gcbs_create_image_collection(list.files("/home/marius/eodata/Sentinel2/",recursive = TRUE,pattern=".jp2$",full.names = TRUE), format = "Sentinel2_L1C_local")
+
+
+
 x = gcbs_image_collection("/home/marius/github/gdalcubes/cmake-build-debug/src/test.db")
 x
 #v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=22, r=24,t=-18,b=-20, proj="EPSG:4326", aggregation = "min")
@@ -42,7 +49,7 @@ plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08", "B8A"))  %>% gcbs_appl
 # median NDVI
 plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08"))  %>% gcbs_apply_pixel(c("((B08-B04)/(B08+B04))")) %>%  gcbs_reduce("median"), key.pos=1)
 
-plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B02","B03","B04"))  %>%  gcbs_reduce("median"), rgb=3:1)
+plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B02","B03","B04"))  %>%  gcbs_reduce("min"), rgb=3:1)
 
 
 plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08"))  %>% gcbs_apply_pixel(c("((B08-B04)/(B08+B04))")), key.pos=1, t=c(4,8))
@@ -79,6 +86,10 @@ gcbs_eval(xstrm_red, "/home/marius/Desktop/xxx.tif", "GTiff")
 #####
 library(gdalcubes)
 setwd("/home/marius/Desktop/CHIRPS/")
+
+
+x = gcbs_create_image_collection(list.files(pattern=".tif",recursive = T), format="collection_format.json")
+
 x = gcbs_image_collection("/home/marius/Desktop/CHIRPS/CHIRPS.db")
 x
 v <- gcbs_view(nx = 360*2, ny=2*100, t0 = "1981-01-01", t1="1981-05-31", dt="P1D", l=-180, r=180,t=50,b=-50)
@@ -93,7 +104,7 @@ plot(gcbs_cube(x, v)  %>% gcbs_apply_pixel(c("precipitation > 50", "precipitatio
 x_red_cube <- gcbs_reduce(xcube,"median")
 x_red_cube
  
-plot_cube(x_red_cube, rgb=4:2)
+plot(x_red_cube, rgb=4:2)
 
 
 gcbs_eval(x_red_cube, "/home/marius/Desktop/test_chirps.nc")
@@ -104,18 +115,15 @@ f <- function() {
   require(zoo)
   x = read_stream_as_array()
   out <- reduce_time_multiband(x, function(x) {
-    min(rollsum(x[1,], 30), na.rm = TRUE)
+    a = min(rollsum(x[1,], 30), na.rm = TRUE)
+    if (!is.finite(a)) a <- NA
+    a
   })
   write_stream_from_array(out)
 }
 
 xstrm <- gcbs_stream(xcube, f,c(gcbs_nt(xcube),128,128))
-xstrm
-cat(gcbs_graph(xstrm))
-xstrm_red <- gcbs_reduce(xstrm,reducer = "min")
-cat(gcbs_graph(xstrm_red))
-gcbs_eval(xstrm_red, "/home/marius/Desktop/chirps_min30day_1981.tif", "GTiff")
-
+plot(xstrm)
 
 
 

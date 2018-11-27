@@ -100,15 +100,26 @@ BEGIN_RCPP
 END_RCPP
 }
 // libgdalcubes_create_image_collection
-SEXP libgdalcubes_create_image_collection(std::vector<std::string> files, std::string format_file, std::string outfile);
-RcppExport SEXP _gdalcubes_libgdalcubes_create_image_collection(SEXP filesSEXP, SEXP format_fileSEXP, SEXP outfileSEXP) {
+SEXP libgdalcubes_create_image_collection(std::vector<std::string> files, std::string format_file, std::string outfile, bool unroll_archives);
+RcppExport SEXP _gdalcubes_libgdalcubes_create_image_collection(SEXP filesSEXP, SEXP format_fileSEXP, SEXP outfileSEXP, SEXP unroll_archivesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< std::vector<std::string> >::type files(filesSEXP);
     Rcpp::traits::input_parameter< std::string >::type format_file(format_fileSEXP);
     Rcpp::traits::input_parameter< std::string >::type outfile(outfileSEXP);
-    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_image_collection(files, format_file, outfile));
+    Rcpp::traits::input_parameter< bool >::type unroll_archives(unroll_archivesSEXP);
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_create_image_collection(files, format_file, outfile, unroll_archives));
+    return rcpp_result_gen;
+END_RCPP
+}
+// libgdalcubes_list_collection_formats
+SEXP libgdalcubes_list_collection_formats();
+RcppExport SEXP _gdalcubes_libgdalcubes_list_collection_formats() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_list_collection_formats());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -216,7 +227,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gdalcubes_libgdalcubes_update_cube_view", (DL_FUNC) &_gdalcubes_libgdalcubes_update_cube_view, 2},
     {"_gdalcubes_libgdalcubes_open_image_collection", (DL_FUNC) &_gdalcubes_libgdalcubes_open_image_collection, 1},
     {"_gdalcubes_libgdalcubes_image_collection_info", (DL_FUNC) &_gdalcubes_libgdalcubes_image_collection_info, 1},
-    {"_gdalcubes_libgdalcubes_create_image_collection", (DL_FUNC) &_gdalcubes_libgdalcubes_create_image_collection, 3},
+    {"_gdalcubes_libgdalcubes_create_image_collection", (DL_FUNC) &_gdalcubes_libgdalcubes_create_image_collection, 4},
+    {"_gdalcubes_libgdalcubes_list_collection_formats", (DL_FUNC) &_gdalcubes_libgdalcubes_list_collection_formats, 0},
     {"_gdalcubes_libgdalcubes_create_image_collection_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_image_collection_cube, 2},
     {"_gdalcubes_libgdalcubes_create_reduce_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_reduce_cube, 2},
     {"_gdalcubes_libgdalcubes_create_select_bands_cube", (DL_FUNC) &_gdalcubes_libgdalcubes_create_select_bands_cube, 2},

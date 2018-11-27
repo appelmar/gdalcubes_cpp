@@ -37,8 +37,12 @@ libgdalcubes_image_collection_info <- function(pin) {
     .Call('_gdalcubes_libgdalcubes_image_collection_info', PACKAGE = 'gdalcubes', pin)
 }
 
-libgdalcubes_create_image_collection <- function(files, format_file, outfile) {
-    .Call('_gdalcubes_libgdalcubes_create_image_collection', PACKAGE = 'gdalcubes', files, format_file, outfile)
+libgdalcubes_create_image_collection <- function(files, format_file, outfile, unroll_archives = TRUE) {
+    .Call('_gdalcubes_libgdalcubes_create_image_collection', PACKAGE = 'gdalcubes', files, format_file, outfile, unroll_archives)
+}
+
+libgdalcubes_list_collection_formats <- function() {
+    .Call('_gdalcubes_libgdalcubes_list_collection_formats', PACKAGE = 'gdalcubes')
 }
 
 libgdalcubes_create_image_collection_cube <- function(pin, v = NULL) {

@@ -479,11 +479,35 @@ Rcpp::List libgdalcubes_image_collection_info( SEXP pin) {
 }
 
 // [[Rcpp::export]]
-SEXP libgdalcubes_create_image_collection(std::vector<std::string> files, std::string format_file, std::string outfile) {
+SEXP libgdalcubes_create_image_collection(std::vector<std::string> files, std::string format_file, std::string outfile, bool unroll_archives=true) {
 
   try {
     collection_format cfmt(format_file);
+    if (unroll_archives) {
+      files = image_collection::unroll_archives(files);
+    }
     image_collection::create(cfmt, files)->write(outfile);
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
+}
+
+// [[Rcpp::export]]
+SEXP libgdalcubes_list_collection_formats() {
+  try {
+  
+    std::map<std::string,std::string> fmts = collection_format::list_presets();
+    Rcpp::CharacterVector out_keys(fmts.size());
+    Rcpp::CharacterVector out_values(fmts.size());
+    uint32_t i=0;
+    for (auto it=fmts.begin(); it != fmts.end(); ++it) {
+      out_values[i] = it->second;
+      out_keys[i++] = it->first;
+      
+    }
+    return  Rcpp::DataFrame::create(Rcpp::Named("name")=out_keys,
+                                    Rcpp::Named("path")=out_values);
   }
   catch (std::string s) {
     Rcpp::stop(s);

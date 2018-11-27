@@ -40,8 +40,24 @@ print.gcbs_image_collection <- function(obj) {
 # files <- list.files("/home/marius/eodata/Sentinel2/", pattern="*.jp2", recursive = TRUE, full.names = TRUE) 
 #
 #' @export
-gcbs_create_image_collection <-function(files, format_file, out_file=tempfile(fileext = ".sqlite"))
+gcbs_create_image_collection <-function(files, format, out_file=tempfile(fileext = ".sqlite"), unroll_archives=TRUE)
 {
-  libgdalcubes_create_image_collection(files, format_file, out_file)
+  libgdalcubes_create_image_collection(files, format, out_file, unroll_archives)
   return(gcbs_image_collection(out_file))
+}
+
+
+
+
+#' @export
+gcbs_collection_formats <-function()
+{
+  df = libgdalcubes_list_collection_formats()
+  df$description = ""
+  for (i in 1:nrow(df)) {
+    x = jsonlite::read_json("/home/marius/.gdalcubes/formats/CHIRPS-2.0_p05_tif_gzip_local.json")$description
+    if (!is.null(x))
+      df$description[i] = x
+  }
+  return(df[,c("name","description")])
 }

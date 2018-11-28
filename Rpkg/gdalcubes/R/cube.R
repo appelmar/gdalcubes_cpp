@@ -2,14 +2,17 @@
 gcbs_cube <- function(image_collection, view, chunking=c(16, 256, 256)) {
 
   stopifnot(is.gcbs_image_collection(image_collection))
+  stopifnot(length(chunking) == 3)
+  chunking = as.integer(chunking)
+  stopifnot(chunking[1] > 0 && chunking[2] > 0 && chunking[3] > 0)
   
   x = NULL
   if (!missing(view)) {
     stopifnot(is.gcbs_view(view))
-    x = libgdalcubes_create_image_collection_cube(image_collection, view)
+    x = libgdalcubes_create_image_collection_cube(image_collection, as.integer(chunking), view)
   }
   else {
-    x = libgdalcubes_create_image_collection_cube(image_collection)
+    x = libgdalcubes_create_image_collection_cube(image_collection, as.integer(chunking))
   }
   class(x) <- c("gcbs_image_collection_cube", "gcbs_cube", "xptr")
   return(x)

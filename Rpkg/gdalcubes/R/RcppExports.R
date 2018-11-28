@@ -45,8 +45,8 @@ libgdalcubes_list_collection_formats <- function() {
     .Call('_gdalcubes_libgdalcubes_list_collection_formats', PACKAGE = 'gdalcubes')
 }
 
-libgdalcubes_create_image_collection_cube <- function(pin, v = NULL) {
-    .Call('_gdalcubes_libgdalcubes_create_image_collection_cube', PACKAGE = 'gdalcubes', pin, v)
+libgdalcubes_create_image_collection_cube <- function(pin, chunk_sizes, v = NULL) {
+    .Call('_gdalcubes_libgdalcubes_create_image_collection_cube', PACKAGE = 'gdalcubes', pin, chunk_sizes, v)
 }
 
 libgdalcubes_create_reduce_cube <- function(pin, reducer) {

@@ -2,7 +2,8 @@ library(gdalcubes)
 
 gcbs_collection_formats()
 
-
+x = gcbs_image_collection("/home/marius/Desktop/file7329263c65.sqlite")
+x
 x = gcbs_create_image_collection(list.files("/home/marius/eodata/Sentinel2/",recursive = TRUE,pattern=".jp2$",full.names = TRUE), format = "Sentinel2_L1C_local")
 
 
@@ -13,7 +14,7 @@ x
 v <- gcbs_view(nx = 500, ny=500, t0 = "2017-01-01", t1="2018-01-01", dt="P1M", l=23, r=24,t=-19,b=-20, proj="EPSG:4326", aggregation = "min")
 
 
-xcube <- gcbs_cube(x, v)
+xcube <- gcbs_cube(x, v, chunking = c(16,128,128))
 xcube
 
 plot(gcbs_apply_pixel(gcbs_select_bands(xcube, c("B04","B08")), c("(B04 - B08)/10000", "(B04 + B08)/10000")), t= c(1,4,8), key.pos=1)

@@ -447,8 +447,6 @@ Rcpp::List libgdalcubes_image_collection_info( SEXP pin) {
     
     std::vector<image_collection::gdalrefs_row> gdalrefs = ic->get_gdalrefs();
     
-  
-    
     Rcpp::IntegerVector gdalrefs_imageid(gdalrefs.size());
     Rcpp::IntegerVector gdalrefs_bandid(gdalrefs.size());
     Rcpp::CharacterVector gdalrefs_descriptor(gdalrefs.size());
@@ -516,7 +514,7 @@ SEXP libgdalcubes_list_collection_formats() {
 
 
 // [[Rcpp::export]]
-SEXP libgdalcubes_create_image_collection_cube(SEXP pin, SEXP v = R_NilValue) {
+SEXP libgdalcubes_create_image_collection_cube(SEXP pin, Rcpp::IntegerVector chunk_sizes, SEXP v = R_NilValue) {
 
   try {
     
@@ -587,6 +585,7 @@ SEXP libgdalcubes_create_image_collection_cube(SEXP pin, SEXP v = R_NilValue) {
         std::dynamic_pointer_cast<cube_view>((*x)->st_reference())->resampling_method() = resampling::from_string(tmp);
       }
     }
+    (*x)->set_chunk_size(chunk_sizes[0], chunk_sizes[1], chunk_sizes[2]);
     
     
     //Rcpp::Rcout << std::dynamic_pointer_cast<cube_view>((*x)->st_reference())->write_json_string() << std::endl;

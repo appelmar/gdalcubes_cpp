@@ -22,6 +22,6 @@ gcbs_enable_debug_output <- function() {
 
 #' @export
 gcbs_disable_debug_output <- function() {
-  libgdalcubes_debug_output(TRUE)
+  libgdalcubes_debug_output(FALSE)
   invisible()
 }

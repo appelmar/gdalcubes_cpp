@@ -69,8 +69,8 @@ libgdalcubes_eval_cube <- function(pin, outfile) {
     invisible(.Call('_gdalcubes_libgdalcubes_eval_cube', PACKAGE = 'gdalcubes', pin, outfile))
 }
 
-libgdalcubes_create_stream_cube <- function(pin, cmd, chunk_size) {
-    .Call('_gdalcubes_libgdalcubes_create_stream_cube', PACKAGE = 'gdalcubes', pin, cmd, chunk_size)
+libgdalcubes_create_stream_cube <- function(pin, cmd) {
+    .Call('_gdalcubes_libgdalcubes_create_stream_cube', PACKAGE = 'gdalcubes', pin, cmd)
 }
 
 libgdalcubes_set_threads <- function(n) {

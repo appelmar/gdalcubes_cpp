@@ -687,10 +687,9 @@ void libgdalcubes_eval_cube( SEXP pin, std::string outfile) {
 
 
 // [[Rcpp::export]]
-SEXP libgdalcubes_create_stream_cube(SEXP pin, std::string cmd, std::vector<int> chunk_size) {
+SEXP libgdalcubes_create_stream_cube(SEXP pin, std::string cmd) {
   try {
-    Rcpp::XPtr< std::shared_ptr<image_collection_cube> > aa = Rcpp::as<Rcpp::XPtr< std::shared_ptr<image_collection_cube> >>(pin);
-    (*aa)->set_chunk_size(chunk_size[0], chunk_size[1], chunk_size[2]); // important: change chunk size before creating the cube
+    Rcpp::XPtr< std::shared_ptr<cube> > aa = Rcpp::as<Rcpp::XPtr< std::shared_ptr<cube> >>(pin);
     
     std::shared_ptr<stream_cube>* x = new std::shared_ptr<stream_cube>( stream_cube::create(*aa, cmd));
     

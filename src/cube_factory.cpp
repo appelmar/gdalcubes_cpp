@@ -50,9 +50,7 @@ std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "stream", [](nlohmann::json& j) {
-            // input MUST be an image_collection_cube
-            std::shared_ptr<image_collection_cube> cin = std::dynamic_pointer_cast<image_collection_cube>(create_from_json(j["in_cube"]));
-            auto x = stream_cube::create(cin, j["command"].get<std::string>());
+            auto x = stream_cube::create(create_from_json(j["in_cube"]), j["command"].get<std::string>());
             return x;
         }));
 

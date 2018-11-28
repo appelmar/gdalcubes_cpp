@@ -25,7 +25,7 @@ plot(xcube, bands = 4)
 plot(gcbs_select_bands(xcube, c("B04","B08")), t=c(4,8))
 cat(gcbs_graph(gcbs_select_bands(xcube, c("B04","B08"))))
 
-plot(xcube, rgb=4:2, t=c(4,8))
+plot(xcube, rgb=4:2, t=c(4,8), zlim=c(100,2000))
 plot(xcube, rgb=4:2, t=8)
 plot(xcube, rgb=4:2)
 

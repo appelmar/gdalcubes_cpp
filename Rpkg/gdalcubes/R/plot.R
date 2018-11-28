@@ -1,6 +1,6 @@
-
+#' TODO: plot function for evaluated result cubes
 #' @export
-plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks="quantile",col=grey(1:(nbreaks-1)/nbreaks), key.pos=NULL, bands=NULL, t=NULL, rgb=NULL) {
+plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks=NULL,col=grey(1:(nbreaks-1)/nbreaks), key.pos=NULL, bands=NULL, t=NULL, rgb=NULL, zlim=NULL) {
   stopifnot(is.gcbs_cube(x))
   size = c(gcbs_nbands(x), gcbs_size(x))
   stopifnot(!(!is.null(rgb) && !is.null(bands))) # RGB and bands parameters ase mutually exclusive
@@ -140,24 +140,29 @@ plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks="quantile",col=grey(1:
   # read data from all bands to get a good sample of pixels
   # TODO avoid reading the data twice
   if (is.null(rgb)) {
-    if(is.character(breaks)) {
-      val <- NULL
-      for (b in vars) {
-        if (!is.null(bands)) {
-          if (is.character(bands)) {
-            if (b %in% bands) 
-              next
+    if(is.null(breaks)) {
+      if (is.null(zlim)) {
+        val <- NULL
+        for (b in vars) {
+          if (!is.null(bands)) {
+            if (is.character(bands)) {
+              if (b %in% bands) 
+                next
+            }
+          }
+          dat <- ncdf4::ncvar_get(f, b)
+          if (length(dim(dat)) == 2) {
+            val = c(val, as.vector(dat)[seq(1,prod(size[2:4]), length.out = min(10000 %/% size[1], prod(size[2:4])))]) 
+          }
+          else {
+            val = c(val, as.vector(dat[,,t])[seq(1,prod(size[2:4]), length.out = min(10000 %/% size[1], prod(size[2:4])))])
           }
         }
-        dat <- ncdf4::ncvar_get(f, b)
-        if (length(dim(dat)) == 2) {
-          val = c(val, as.vector(dat)[seq(1,prod(size[2:4]), length.out = min(10000 %/% size[1], prod(size[2:4])))]) 
-        }
-        else {
-          val = c(val, as.vector(dat[,,t])[seq(1,prod(size[2:4]), length.out = min(10000 %/% size[1], prod(size[2:4])))])
-        }
+        breaks = seq(min(dat,na.rm = TRUE), max(dat,na.rm = TRUE), length.out = nbreaks)
       }
-      breaks = seq(min(dat,na.rm = TRUE), max(dat,na.rm = TRUE), length.out = nbreaks)
+      else {
+        breaks = seq(zlim[1], zlim[2], length.out = nbreaks)
+      }
       #breaks = quantile(dat, seq(0,1,length.out=nbreaks+2)[2:(nbreaks+1)], na.rm=TRUE)
     }
     stopifnot(length(breaks) ==  nbreaks) # TODO: clean up graphics state
@@ -167,6 +172,7 @@ plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks="quantile",col=grey(1:
     }
     stopifnot(length(col) == nbreaks - 1)
   }
+  
   
   if (!is.null(rgb)) {
     dat_R <- ncdf4::ncvar_get(f, vars[1])
@@ -178,10 +184,13 @@ plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks="quantile",col=grey(1:
     rng_G <- range(dat_G, na.rm = T, finite=T)
     rng_B <- range(dat_B, na.rm = T, finite=T)
     
-    rng <- quantile(c(dat_R, dat_G, dat_B), c(0.1, 0.75), na.rm = T)
+    if (is.null(zlim)) {
+      zlim <- quantile(c(dat_R, dat_G, dat_B), c(0.1, 0.9), na.rm = T)
+    }
+    
     #rng <- range(c(rng_R, rng_B, rng_G), na.rm = T, finite=T)
-    scale  = (rng[2]-rng[1])
-    offset = rng[1]
+    scale  = (zlim[2]-zlim[1])
+    offset = zlim[1]
     
     dat_R <- (dat_R - offset)/scale
     dat_G <- (dat_G - offset)/scale

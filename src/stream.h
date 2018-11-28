@@ -18,7 +18,7 @@
 #define STREAM_H
 
 #include <boost/process.hpp>
-#include "image_collection_cube.h"
+#include "cube.h"
 
 /**
  * @brief A data cube that streams data from another data cube to stdin of an external program and captures stdout as result
@@ -119,7 +119,7 @@ class stream_cube : public cube {
     std::shared_ptr<chunk_data> stream_chunk_stdin(std::shared_ptr<chunk_data> data);
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        // assumption here is that input cube is image_collection_cube
+
         _st_ref->win() = stref->win();
         _st_ref->proj() = stref->proj();
         _st_ref->ny() = stref->ny();

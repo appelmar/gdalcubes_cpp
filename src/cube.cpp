@@ -113,8 +113,8 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         double *dim_y = (double *)calloc(csize[2], sizeof(double));
         int *dim_t = (int *)calloc(csize[2], sizeof(int));
 
-        if (_st_ref->dt().dt_unit == WEEK) {
-            _st_ref->dt().dt_unit = DAY;
+        if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
+            _st_ref->dt().dt_unit = datetime_unit::DAY;
             _st_ref->dt().dt_interval *= 7;  // UDUNIT does not support week
         }
         for (uint32_t i = 0; i < csize[1]; ++i) {
@@ -150,21 +150,21 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
 
         std::string dtunit_str;
-        if (_st_ref->dt().dt_unit == YEAR) {
+        if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
             dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
-        } else if (_st_ref->dt().dt_unit == MONTH) {
+        } else if (_st_ref->dt().dt_unit == datetime_unit::MONTH) {
             dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
-        } else if (_st_ref->dt().dt_unit == DAY) {
+        } else if (_st_ref->dt().dt_unit == datetime_unit::DAY) {
             dtunit_str = "days";
-        } else if (_st_ref->dt().dt_unit == HOUR) {
+        } else if (_st_ref->dt().dt_unit == datetime_unit::HOUR) {
             dtunit_str = "hours";
-        } else if (_st_ref->dt().dt_unit == MINUTE) {
+        } else if (_st_ref->dt().dt_unit == datetime_unit::MINUTE) {
             dtunit_str = "minutes";
-        } else if (_st_ref->dt().dt_unit == SECOND) {
+        } else if (_st_ref->dt().dt_unit == datetime_unit::SECOND) {
             dtunit_str = "seconds";
         }
         dtunit_str += " since ";
-        dtunit_str += _st_ref->t0().to_string(SECOND);
+        dtunit_str += _st_ref->t0().to_string(datetime_unit::SECOND);
 
         nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
         nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
@@ -273,8 +273,8 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     double *dim_y = (double *)calloc(size_y(), sizeof(double));
     int *dim_t = (int *)calloc(size_t(), sizeof(int));
 
-    if (_st_ref->dt().dt_unit == WEEK) {
-        _st_ref->dt().dt_unit = DAY;
+    if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
+        _st_ref->dt().dt_unit = datetime_unit::DAY;
         _st_ref->dt().dt_interval *= 7;  // UDUNIT does not support week
     }
     for (uint32_t i = 0; i < size_t(); ++i) {
@@ -318,21 +318,21 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
 
 
     std::string dtunit_str;
-    if (_st_ref->dt().dt_unit == YEAR) {
+    if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
         dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
-    } else if (_st_ref->dt().dt_unit == MONTH) {
+    } else if (_st_ref->dt().dt_unit == datetime_unit::MONTH) {
         dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
-    } else if (_st_ref->dt().dt_unit == DAY) {
+    } else if (_st_ref->dt().dt_unit == datetime_unit::DAY) {
         dtunit_str = "days";
-    } else if (_st_ref->dt().dt_unit == HOUR) {
+    } else if (_st_ref->dt().dt_unit == datetime_unit::HOUR) {
         dtunit_str = "hours";
-    } else if (_st_ref->dt().dt_unit == MINUTE) {
+    } else if (_st_ref->dt().dt_unit == datetime_unit::MINUTE) {
         dtunit_str = "minutes";
-    } else if (_st_ref->dt().dt_unit == SECOND) {
+    } else if (_st_ref->dt().dt_unit == datetime_unit::SECOND) {
         dtunit_str = "seconds";
     }
     dtunit_str += " since ";
-    dtunit_str += _st_ref->t0().to_string(SECOND);
+    dtunit_str += _st_ref->t0().to_string(datetime_unit::SECOND);
 
 
     nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());

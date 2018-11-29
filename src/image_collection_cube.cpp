@@ -294,17 +294,17 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     proj_out.SetFromUserInput(_st_ref->proj().c_str());
 
     aggregation_state *agg = nullptr;
-    if (view()->aggregation_method() == aggregation::MEAN) {
+    if (view()->aggregation_method() == aggregation::aggregation_type::MEAN) {
         agg = new aggregation_state_mean(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::MIN) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::MIN) {
         agg = new aggregation_state_min(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::MAX) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::MAX) {
         agg = new aggregation_state_max(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::FIRST) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::FIRST) {
         agg = new aggregation_state_first(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::LAST) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::LAST) {
         agg = new aggregation_state_last(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::MEDIAN) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::MEDIAN) {
         agg = new aggregation_state_median(size_btyx);
     } else
         agg = new aggregation_state_none(size_btyx);
@@ -429,7 +429,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 void *cbuf = ((double *)out->buf()) + (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
 
                 // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
-                if (view()->aggregation_method() == aggregation::NONE) {
+                if (view()->aggregation_method() == aggregation::aggregation_type::NONE) {
                     CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                     if (res != CE_None) {
                         GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
@@ -510,23 +510,23 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
     duration d = out.t1() - out.t0();
 
     if (out.t0() == out.t1()) {
-        out.dt().dt_unit = DAY;
+        out.dt().dt_unit = datetime_unit::DAY;
         out.dt().dt_interval = 1;
     } else {
-        if (d.convert(YEAR).dt_interval > 4) {
-            out.dt().dt_unit = YEAR;
-        } else if (d.convert(MONTH).dt_interval > 4) {
-            out.dt().dt_unit = MONTH;
-        } else if (d.convert(DAY).dt_interval > 4) {
-            out.dt().dt_unit = DAY;
-        } else if (d.convert(HOUR).dt_interval > 4) {
-            out.dt().dt_unit = HOUR;
-        } else if (d.convert(MINUTE).dt_interval > 4) {
-            out.dt().dt_unit = MINUTE;
-        } else if (d.convert(SECOND).dt_interval > 4) {
-            out.dt().dt_unit = SECOND;
+        if (d.convert(datetime_unit::YEAR).dt_interval > 4) {
+            out.dt().dt_unit = datetime_unit::YEAR;
+        } else if (d.convert(datetime_unit::MONTH).dt_interval > 4) {
+            out.dt().dt_unit = datetime_unit::MONTH;
+        } else if (d.convert(datetime_unit::DAY).dt_interval > 4) {
+            out.dt().dt_unit = datetime_unit::DAY;
+        } else if (d.convert(datetime_unit::HOUR).dt_interval > 4) {
+            out.dt().dt_unit = datetime_unit::HOUR;
+        } else if (d.convert(datetime_unit::MINUTE).dt_interval > 4) {
+            out.dt().dt_unit = datetime_unit::MINUTE;
+        } else if (d.convert(datetime_unit::SECOND).dt_interval > 4) {
+            out.dt().dt_unit = datetime_unit::SECOND;
         } else {
-            out.dt().dt_unit = DAY;
+            out.dt().dt_unit = datetime_unit::DAY;
         }
         out.t0().unit() = out.dt().dt_unit;
         out.t1().unit() = out.dt().dt_unit;

@@ -27,7 +27,7 @@
  * algorithms
  */
 struct aggregation {
-    enum aggregation_type {
+    enum class aggregation_type {
         NONE,
         MIN,
         MAX,
@@ -40,38 +40,38 @@ struct aggregation {
     static aggregation_type from_string(std::string s) {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
         if (s == "none") {
-            return NONE;
+            return aggregation_type::NONE;
         } else if (s == "min") {
-            return MIN;
+            return aggregation_type::MIN;
         } else if (s == "max") {
-            return MAX;
+            return aggregation_type::MAX;
         } else if (s == "mean") {
-            return MEAN;
+            return aggregation_type::MEAN;
         } else if (s == "median") {
-            return MEDIAN;
+            return aggregation_type::MEDIAN;
         } else if (s == "first") {
-            return FIRST;
+            return aggregation_type::FIRST;
         } else if (s == "last") {
-            return LAST;
+            return aggregation_type::LAST;
         }
-        return NONE;
+        return aggregation_type::NONE;
     }
 
     static std::string to_string(aggregation_type a) {
         switch (a) {
-            case NONE:
+            case aggregation_type::NONE:
                 return "none";
-            case MIN:
+            case aggregation_type::MIN:
                 return "min";
-            case MAX:
+            case aggregation_type::MAX:
                 return "max";
-            case MEAN:
+            case aggregation_type::MEAN:
                 return "mean";
-            case MEDIAN:
+            case aggregation_type::MEDIAN:
                 return "median";
-            case FIRST:
+            case aggregation_type::FIRST:
                 return "first";
-            case LAST:
+            case aggregation_type::LAST:
                 return "last";
             default:
                 return "none";
@@ -87,7 +87,7 @@ struct resampling {
     /**
      * @brief An enumeration listing all available resampling types
      */
-    enum resampling_type {
+    enum class resampling_type {
         NEAR,
         BILINEAR,
         CUBIC,
@@ -110,31 +110,31 @@ struct resampling {
     static resampling_type from_string(std::string s) {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
         if (s == "near" || s == "nearest") {
-            return NEAR;
+            return resampling_type::NEAR;
         } else if (s == "bilinear") {
-            return BILINEAR;
+            return resampling_type::BILINEAR;
         } else if (s == "cubic") {
-            return CUBIC;
+            return resampling_type::CUBIC;
         } else if (s == "cubicspline") {
-            return CUBICSPLINE;
+            return resampling_type::CUBICSPLINE;
         } else if (s == "lanczos") {
-            return LANCZOS;
+            return resampling_type::LANCZOS;
         } else if (s == "average" || s == "mean") {
-            return AVERAGE;
+            return resampling_type::AVERAGE;
         } else if (s == "mode") {
-            return MODE;
+            return resampling_type::MODE;
         } else if (s == "max") {
-            return MAX;
+            return resampling_type::MAX;
         } else if (s == "min") {
-            return MIN;
+            return resampling_type::MIN;
         } else if (s == "med" || s == "median") {
-            return MED;
+            return resampling_type::MED;
         } else if (s == "q1") {
-            return Q1;
+            return resampling_type::Q1;
         } else if (s == "q3") {
-            return Q3;
+            return resampling_type::Q3;
         }
-        return NEAR;
+        return resampling_type::NEAR;
     }
 
     /**
@@ -144,29 +144,29 @@ struct resampling {
      */
     static std::string to_string(resampling_type r) {
         switch (r) {
-            case NEAR:
+            case resampling_type::NEAR:
                 return "near";
-            case BILINEAR:
+            case resampling_type::BILINEAR:
                 return "bilinear";
-            case CUBIC:
+            case resampling_type::CUBIC:
                 return "cubic";
-            case CUBICSPLINE:
+            case resampling_type::CUBICSPLINE:
                 return "cubicspline";
-            case LANCZOS:
+            case resampling_type::LANCZOS:
                 return "lanczos";
-            case AVERAGE:
+            case resampling_type::AVERAGE:
                 return "average";
-            case MODE:
+            case resampling_type::MODE:
                 return "mode";
-            case MAX:
+            case resampling_type::MAX:
                 return "max";
-            case MIN:
+            case resampling_type::MIN:
                 return "min";
-            case MED:
+            case resampling_type::MED:
                 return "med";
-            case Q1:
+            case resampling_type::Q1:
                 return "q1";
-            case Q3:
+            case resampling_type::Q3:
                 return "q3";
             default:
                 return "near";
@@ -181,25 +181,25 @@ struct resampling {
      */
     static GDALRIOResampleAlg to_gdal_rasterio(resampling_type r) {
         switch (r) {
-            case NEAR:
+            case resampling_type::NEAR:
                 return GRIORA_NearestNeighbour;
-            case BILINEAR:
+            case resampling_type::BILINEAR:
                 return GRIORA_Bilinear;
-            case CUBIC:
+            case resampling_type::CUBIC:
                 return GRIORA_Cubic;
-            case CUBICSPLINE:
+            case resampling_type::CUBICSPLINE:
                 return GRIORA_CubicSpline;
-            case LANCZOS:
+            case resampling_type::LANCZOS:
                 return GRIORA_Lanczos;
-            case AVERAGE:
+            case resampling_type::AVERAGE:
                 return GRIORA_Average;
-            case MODE:
+            case resampling_type::MODE:
                 return GRIORA_Mode;
-            case MAX:
-            case MIN:
-            case MED:
-            case Q1:
-            case Q3:
+            case resampling_type::MAX:
+            case resampling_type::MIN:
+            case resampling_type::MED:
+            case resampling_type::Q1:
+            case resampling_type::Q3:
             default:
                 return GRIORA_NearestNeighbour;  // Not yet defined in gdal.h
         }
@@ -354,7 +354,7 @@ class cube_st_reference {
      * @param n duration / temporal size of one cell as number of days
      */
     void set_daily(uint16_t n = 1) {
-        _dt = duration(n, DAY);
+        _dt = duration(n, datetime_unit::DAY);
     }
 
     /**
@@ -362,7 +362,7 @@ class cube_st_reference {
     * @param n duration / temporal size of one cell as number of months
     */
     void set_monthly(uint16_t n = 1) {
-        _dt = duration(n, MONTH);
+        _dt = duration(n, datetime_unit::MONTH);
     }
 
     /**
@@ -370,7 +370,7 @@ class cube_st_reference {
     * @param n duration / temporal size of one cell as number of years
     */
     void set_yearly(uint16_t n = 1) {
-        _dt = duration(n, YEAR);
+        _dt = duration(n, datetime_unit::YEAR);
     }
 
     /**
@@ -378,7 +378,7 @@ class cube_st_reference {
     * @param n duration / temporal size of one cell as number of quarter years
     */
     void set_quarterly(uint16_t n = 1) {
-        _dt = duration(3 * n, MONTH);
+        _dt = duration(3 * n, datetime_unit::MONTH);
     }
 
     /**
@@ -386,7 +386,7 @@ class cube_st_reference {
     * @param n duration / temporal size of one cell as number of weeks
     */
     void set_weekly(uint16_t n = 1) {
-        _dt = duration(n, WEEK);
+        _dt = duration(n, datetime_unit::WEEK);
     }
 
     /**

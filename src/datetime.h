@@ -27,7 +27,7 @@
 #include <boost/regex.hpp>
 #include "error.h"
 
-enum datetime_unit {
+enum class datetime_unit {
     SECOND = 0,
     MINUTE = 1,
     HOUR = 2,
@@ -39,7 +39,7 @@ enum datetime_unit {
 };
 
 struct duration {
-    duration() : dt_interval(0), dt_unit(DAY) {}
+    duration() : dt_interval(0), dt_unit(datetime_unit::DAY) {}
     duration(int32_t interval, datetime_unit unit) : dt_interval(interval), dt_unit(unit) {}
 
     int32_t dt_interval;
@@ -47,21 +47,21 @@ struct duration {
 
     std::string to_string() {
         switch (dt_unit) {
-            case NONE:
+            case datetime_unit::NONE:
                 return "";
-            case SECOND:
+            case datetime_unit::SECOND:
                 return "PT" + std::to_string(dt_interval) + "S";
-            case MINUTE:
+            case datetime_unit::MINUTE:
                 return "PT" + std::to_string(dt_interval) + "M";
-            case HOUR:
+            case datetime_unit::HOUR:
                 return "PT" + std::to_string(dt_interval) + "H";
-            case DAY:
+            case datetime_unit::DAY:
                 return "P" + std::to_string(dt_interval) + "D";
-            case WEEK:
+            case datetime_unit::WEEK:
                 return "P" + std::to_string(dt_interval) + "W";
-            case MONTH:
+            case datetime_unit::MONTH:
                 return "P" + std::to_string(dt_interval) + "M";
-            case YEAR:
+            case datetime_unit::YEAR:
                 return "P" + std::to_string(dt_interval) + "Y";
         }
         return "";
@@ -78,20 +78,20 @@ struct duration {
         d.dt_interval = std::stoi(res[2]);
         if (!res[1].str().empty()) {
             if (res[3] == "H")
-                d.dt_unit = HOUR;
+                d.dt_unit = datetime_unit::HOUR;
             else if (res[3] == "M")
-                d.dt_unit = MINUTE;
+                d.dt_unit = datetime_unit::MINUTE;
             else if (res[3] == "S")
-                d.dt_unit = SECOND;
+                d.dt_unit = datetime_unit::SECOND;
         } else {
             if (res[3] == "Y")
-                d.dt_unit = YEAR;
+                d.dt_unit = datetime_unit::YEAR;
             else if (res[3] == "M")
-                d.dt_unit = MONTH;
+                d.dt_unit = datetime_unit::MONTH;
             else if (res[3] == "W")
-                d.dt_unit = WEEK;
+                d.dt_unit = datetime_unit::WEEK;
             else if (res[3] == "D")
-                d.dt_unit = DAY;
+                d.dt_unit = datetime_unit::DAY;
         }
         return d;
     }
@@ -148,7 +148,7 @@ struct duration {
 
     duration convert(datetime_unit u) {
         duration out;
-        if (u == NONE || dt_unit == NONE) {
+        if (u == datetime_unit::NONE || dt_unit == datetime_unit::NONE) {
             GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
             return out;
         }
@@ -160,67 +160,67 @@ struct duration {
         while (out.dt_unit != u) {
             if (out.dt_unit < u) {
                 switch (out.dt_unit) {
-                    case NONE:
-                    case YEAR:
+                    case datetime_unit::NONE:
+                    case datetime_unit::YEAR:
                         GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
                         out.dt_unit = dt_unit;
                         out.dt_interval = dt_interval;
                         return out;
-                    case SECOND:
-                        out.dt_unit = MINUTE;
+                    case datetime_unit::SECOND:
+                        out.dt_unit = datetime_unit::MINUTE;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval / 60.0);
                         break;
-                    case MINUTE:
-                        out.dt_unit = HOUR;
+                    case datetime_unit::MINUTE:
+                        out.dt_unit = datetime_unit::HOUR;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval / 60.0);
                         break;
-                    case HOUR:
-                        out.dt_unit = DAY;
+                    case datetime_unit::HOUR:
+                        out.dt_unit = datetime_unit::DAY;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval / 24.0);
                         break;
-                    case DAY:
-                        out.dt_unit = MONTH;
+                    case datetime_unit::DAY:
+                        out.dt_unit = datetime_unit::MONTH;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval / 30.0);
                         break;
-                    case WEEK:
-                        out.dt_unit = MONTH;
+                    case datetime_unit::WEEK:
+                        out.dt_unit = datetime_unit::MONTH;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 7 / 30.0);
                         break;
-                    case MONTH:
-                        out.dt_unit = YEAR;
+                    case datetime_unit::MONTH:
+                        out.dt_unit = datetime_unit::YEAR;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval / 12.0);
                         break;
                 }
             } else {
                 switch (out.dt_unit) {
-                    case NONE:
-                    case SECOND:
+                    case datetime_unit::NONE:
+                    case datetime_unit::SECOND:
                         GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
                         out.dt_unit = dt_unit;
                         out.dt_interval = dt_interval;
                         return out;
-                    case MINUTE:
-                        out.dt_unit = SECOND;
+                    case datetime_unit::MINUTE:
+                        out.dt_unit = datetime_unit::SECOND;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 60.0);
                         break;
-                    case HOUR:
-                        out.dt_unit = MINUTE;
+                    case datetime_unit::HOUR:
+                        out.dt_unit = datetime_unit::MINUTE;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 60.0);
                         break;
-                    case DAY:
-                        out.dt_unit = HOUR;
+                    case datetime_unit::DAY:
+                        out.dt_unit = datetime_unit::HOUR;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 24.0);
                         break;
-                    case WEEK:
-                        out.dt_unit = DAY;
+                    case datetime_unit::WEEK:
+                        out.dt_unit = datetime_unit::DAY;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 7.0);
                         break;
-                    case MONTH:
-                        out.dt_unit = DAY;
+                    case datetime_unit::MONTH:
+                        out.dt_unit = datetime_unit::DAY;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 30.0);
                         break;
-                    case YEAR:
-                        out.dt_unit = MONTH;
+                    case datetime_unit::YEAR:
+                        out.dt_unit = datetime_unit::MONTH;
                         out.dt_interval = (int)std::ceil((double)out.dt_interval * 12.0);
                         break;
                 }
@@ -240,8 +240,8 @@ struct duration {
  */
 class datetime {
    public:
-    datetime() : _p(), _unit(DAY) {}
-    datetime(boost::posix_time::ptime p) : _p(p), _unit(DAY) {}
+    datetime() : _p(), _unit(datetime_unit::DAY) {}
+    datetime(boost::posix_time::ptime p) : _p(p), _unit(datetime_unit::DAY) {}
     datetime(boost::posix_time::ptime p, datetime_unit u) : _p(p), _unit(u) {}
 
     /**
@@ -251,23 +251,23 @@ class datetime {
      */
     double to_double() {
         double out = _p.date().year();
-        if (_unit <= MONTH) {
+        if (_unit <= datetime_unit::MONTH) {
             out *= 100;
             out += _p.date().month();
         }
-        if (_unit <= DAY) {
+        if (_unit <= datetime_unit::DAY) {
             out *= 100;
             out += _p.date().day();
         }
-        if (_unit <= HOUR) {
+        if (_unit <= datetime_unit::HOUR) {
             out *= 100;
             out += _p.time_of_day().hours();
         }
-        if (_unit <= MINUTE) {
+        if (_unit <= datetime_unit::MINUTE) {
             out *= 100;
             out += _p.time_of_day().minutes();
         }
-        if (_unit <= SECOND) {
+        if (_unit <= datetime_unit::SECOND) {
             out *= 100;
             out += _p.time_of_day().seconds();
         }
@@ -320,22 +320,22 @@ class datetime {
             while (!res[i].str().empty() && i < 7) ++i;
             if (i == 2) {
                 out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), 1, 1), boost::posix_time::time_duration(0, 0, 0));
-                out._unit = YEAR;
+                out._unit = datetime_unit::YEAR;
             } else if (i == 3) {
                 out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), 1), boost::posix_time::time_duration(0, 0, 0));
-                out._unit = MONTH;
+                out._unit = datetime_unit::MONTH;
             } else if (i == 4) {
                 out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(0, 0, 0));
-                out._unit = DAY;
+                out._unit = datetime_unit::DAY;
             } else if (i == 5) {
                 out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), 0, 0));
-                out._unit = HOUR;
+                out._unit = datetime_unit::HOUR;
             } else if (i == 6) {
                 out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), std::stoi(res[5].str()), 0));
-                out._unit = MINUTE;
+                out._unit = datetime_unit::MINUTE;
             } else if (i == 7) {
                 out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), std::stoi(res[5].str()), std::stoi(res[6].str())));
-                out._unit = SECOND;
+                out._unit = datetime_unit::SECOND;
             }
         }
         return out;
@@ -349,24 +349,24 @@ class datetime {
         duration out;
         out.dt_unit = std::max(l.unit(), r.unit());  // TODO: warning if not the same unit
         switch (out.dt_unit) {
-            case NONE:
+            case datetime_unit::NONE:
                 break;
-            case SECOND:
+            case datetime_unit::SECOND:
                 out.dt_interval = (l._p - r._p).total_seconds();
                 break;
-            case MINUTE:
+            case datetime_unit::MINUTE:
                 out.dt_interval = (l._p - r._p).total_seconds() / 60;
                 break;
-            case HOUR:
+            case datetime_unit::HOUR:
                 out.dt_interval = (l._p - r._p).total_seconds() / (3600);
                 break;
-            case DAY:
+            case datetime_unit::DAY:
                 out.dt_interval = (l._p.date() - r._p.date()).days();
                 break;
-            case WEEK:
+            case datetime_unit::WEEK:
                 out.dt_interval = (l._p.date() - r._p.date()).days() / 7;
                 break;
-            case MONTH: {
+            case datetime_unit::MONTH: {
                 int yd = l._p.date().year() - r._p.date().year();
                 if (std::abs(yd) >= 1) {
                     out.dt_interval = yd * 12 + (l._p.date().month() - r._p.date().month());
@@ -375,7 +375,7 @@ class datetime {
                 }
                 break;
             }
-            case YEAR:
+            case datetime_unit::YEAR:
                 out.dt_interval = l._p.date().year() - r._p.date().year();
                 break;
         }
@@ -385,29 +385,29 @@ class datetime {
     friend bool operator==(const datetime& l, const datetime& r) {
         if (l.unit() != r._unit) return false;  // TODO: warning
         switch (l.unit()) {
-            case NONE:
+            case datetime_unit::NONE:
                 return false;
-            case SECOND:
+            case datetime_unit::SECOND:
                 return (l._p.date() == r._p.date() &&
                         l._p.time_of_day().hours() == r._p.time_of_day().hours() &&
                         l._p.time_of_day().minutes() == r._p.time_of_day().minutes() &&
                         l._p.time_of_day().seconds() == r._p.time_of_day().seconds());
-            case MINUTE:
+            case datetime_unit::MINUTE:
                 return (l._p.date() == r._p.date() &&
                         l._p.time_of_day().hours() == r._p.time_of_day().hours() &&
                         l._p.time_of_day().minutes() == r._p.time_of_day().minutes());
-            case HOUR:
+            case datetime_unit::HOUR:
                 return (l._p.date() == r._p.date() &&
                         l._p.time_of_day().hours() == r._p.time_of_day().hours());
-            case DAY:
+            case datetime_unit::DAY:
                 return (l._p.date() == r._p.date());
-            case WEEK:
+            case datetime_unit::WEEK:
                 // TODO: what if the same week overlaps two years?
                 return (l._p.date().year() == r._p.date().year() && l._p.date().week_number() == r._p.date().week_number());
-            case MONTH:
+            case datetime_unit::MONTH:
                 return (l._p.date().year() == r._p.date().year() && l._p.date().month() == r._p.date().month());
 
-            case YEAR:
+            case datetime_unit::YEAR:
                 return (l._p.date().year() == r._p.date().year());
         }
         return false;
@@ -418,36 +418,36 @@ class datetime {
     friend bool operator<(datetime& l, datetime& r) {
         if (l.unit() != r._unit) return false;
         switch (l.unit()) {
-            case NONE:
+            case datetime_unit::NONE:
                 return false;  // TODO: warning
-            case SECOND:
+            case datetime_unit::SECOND:
                 if (l._p.date() < r._p.date()) return true;
                 if (l._p.date() > r._p.date()) return false;
                 return (l._p.time_of_day().total_seconds() < r._p.time_of_day().total_seconds());
-            case MINUTE:
+            case datetime_unit::MINUTE:
                 if (l._p.date() < r._p.date()) return true;
                 if (l._p.date() > r._p.date()) return false;
                 if (l._p.time_of_day().hours() < r._p.time_of_day().hours()) return true;
                 if (l._p.time_of_day().hours() > r._p.time_of_day().hours()) return false;
                 return (l._p.time_of_day().hours() < r._p.time_of_day().hours());
-            case HOUR:
+            case datetime_unit::HOUR:
                 if (l._p.date() < r._p.date()) return true;
                 if (l._p.date() > r._p.date()) return false;
                 return (l._p.time_of_day().hours() < r._p.time_of_day().hours());
-            case DAY:
+            case datetime_unit::DAY:
                 if (l._p.date().year() < r._p.date().year()) return true;
                 if (l._p.date().year() > r._p.date().year()) return false;
                 return (l._p.date().day_of_year() < r._p.date().day_of_year());
-            case WEEK:
+            case datetime_unit::WEEK:
                 // TODO: what if the same week overlaps two years?
                 if (l._p.date().year() < r._p.date().year()) return true;
                 if (l._p.date().year() > r._p.date().year()) return false;
                 return (l._p.date().week_number() < r._p.date().week_number());
-            case MONTH:
+            case datetime_unit::MONTH:
                 if (l._p.date().year() < r._p.date().year()) return true;
                 if (l._p.date().year() > r._p.date().year()) return false;
                 return (l._p.date().month() < r._p.date().month());
-            case YEAR:
+            case datetime_unit::YEAR:
                 return l._p.date().year() < r._p.date().year();
         }
         return false;
@@ -459,27 +459,27 @@ class datetime {
     friend datetime operator+(datetime l, const duration& r) {
         datetime out(l._p);
         switch (r.dt_unit) {
-            case NONE:
+            case datetime_unit::NONE:
                 break;
-            case SECOND:
+            case datetime_unit::SECOND:
                 out._p += boost::posix_time::seconds(r.dt_interval);
                 break;
-            case MINUTE:
+            case datetime_unit::MINUTE:
                 out._p += boost::posix_time::minutes(r.dt_interval);
                 break;
-            case HOUR:
+            case datetime_unit::HOUR:
                 out._p += boost::posix_time::hours(r.dt_interval);
                 break;
-            case DAY:
+            case datetime_unit::DAY:
                 out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval));  // ignore time
                 break;
-            case WEEK:
+            case datetime_unit::WEEK:
                 out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval * 7));  // ignore time
                 break;
-            case MONTH:
+            case datetime_unit::MONTH:
                 out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + (long)(r.dt_interval / 12), 1 + (out._p.date().month() - 1 + r.dt_interval) % 12, 1));  // ignore time and day
                 break;
-            case YEAR:
+            case datetime_unit::YEAR:
                 out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval, 1, 1));  // ignore time, day, and month
                 break;
         }
@@ -492,20 +492,20 @@ class datetime {
 
     static std::string datetime_format_for_unit(datetime_unit u) {
         switch (u) {
-            case NONE:
-            case SECOND:
+            case datetime_unit::NONE:
+            case datetime_unit::SECOND:
                 return "%Y-%m-%dT%H:%M:%S";
-            case MINUTE:
+            case datetime_unit::MINUTE:
                 return "%Y-%m-%dT%H:%M";
-            case HOUR:
+            case datetime_unit::HOUR:
                 return "%Y-%m-%dT%H";
-            case DAY:
+            case datetime_unit::DAY:
                 return "%Y-%m-%d";
-            case WEEK:
+            case datetime_unit::WEEK:
                 return "%Y-%m-%dT%H:%M:%S";
-            case MONTH:
+            case datetime_unit::MONTH:
                 return "%Y-%m";
-            case YEAR:
+            case datetime_unit::YEAR:
                 return "%Y";
         }
         return "%Y-%m-%dT%H:%M:%S";

@@ -75,16 +75,16 @@ find_package(Threads)
 
 
 ## find NETCDF_CXX4 library
-find_path(NETCDF_CXX_INCLUDEDIR "netcdf")
-if (NETCDF_CXX_INCLUDEDIR-NOTFOUND)
-message(FATAL_ERROR "netcdf-cxx4 headers not found")
+find_path(NETCDF_INCLUDEDIR "netcdf.h")
+if (NETCDF_INCLUDEDIR-NOTFOUND)
+message(FATAL_ERROR "netcdf C library headers not found")
 endif ()
 
-find_library(NETCDF_CXX_LIBRARY netcdf_c++4)
-if (NOT NETCDF_CXX_LIBRARY)
-message(FATAL_ERROR "netcdf-cxx4 library not found!")
+find_library(NETCDF_LIBRARY netcdf)
+if (NOT NETCDF_LIBRARY)
+message(FATAL_ERROR "netcdf C library not found!")
 else ()
-message(STATUS "netcdf-cxx4 library found at ${NETCDF_CXX_LIBRARY}")
+message(STATUS "netcdf C library found at ${NETCDF_LIBRARY}")
 endif ()
 
 
@@ -98,7 +98,7 @@ endif ()
 
 
 
-include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_CXX_INCLUDEDIR})
+include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
 
 
 
@@ -115,13 +115,13 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 add_library(libgdalcubes_static STATIC  ${SOURCE_FILES})
 set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_static PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_static ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_static ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
 
 
 add_library(libgdalcubes_shared SHARED  ${SOURCE_FILES})
 set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_shared PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_shared ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_CXX_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_shared ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
 
 install(TARGETS libgdalcubes_static libgdalcubes_shared RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 

@@ -17,7 +17,7 @@
 #include "cube.h"
 #include <thread>
 
-#include <netcdf>
+#include <netcdf.h>
 #include "build_info.h"
 
 void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
@@ -131,22 +131,23 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         std::string yname = srs.IsProjected() ? "y" : "latitude";
         std::string xname = srs.IsProjected() ? "x" : "longitude";
 
-        netCDF::NcFile ncout(out_file.c_str(), netCDF::NcFile::newFile);
-        //netCDF::NcDim d_band = ncout.addDim("band", _bands.count());
-        netCDF::NcDim d_t = ncout.addDim("time", csize[1]);
-        netCDF::NcDim d_y = ncout.addDim(yname.c_str(), csize[2]);
-        netCDF::NcDim d_x = ncout.addDim(xname.c_str(), csize[3]);
+        int ncout;
+        nc_create(out_file.c_str(), NC_NETCDF4, &ncout);
 
-        netCDF::NcVar v_t = ncout.addVar("time", netCDF::ncInt, d_t);
-        netCDF::NcVar v_y = ncout.addVar(yname.c_str(), netCDF::ncDouble, d_y);
-        netCDF::NcVar v_x = ncout.addVar(xname.c_str(), netCDF::ncDouble, d_x);
+        int d_t, d_y, d_x;
+        nc_def_dim(ncout, "time", csize[1], &d_t);
+        nc_def_dim(ncout, yname.c_str(), csize[2], &d_y);
+        nc_def_dim(ncout, xname.c_str(), csize[3], &d_x);
 
-        ncout.putAtt("Conventions", "CF-1.6");
-        ncout.putAtt("source", ("gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH)).c_str());
+        int v_t, v_y, v_x;
+        nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
+        nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
+        nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
 
-        v_t.putVar(dim_t);
-        v_y.putVar(dim_y);
-        v_x.putVar(dim_x);
+        std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
+
+        nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
+        nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
 
         std::string dtunit_str;
         if (_st_ref->dt().dt_unit == YEAR) {
@@ -165,64 +166,83 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         dtunit_str += " since ";
         dtunit_str += _st_ref->t0().to_string(SECOND);
 
-        v_t.putAtt("units", dtunit_str.c_str());
-        v_t.putAtt("calendar", "gregorian");
-        v_t.putAtt("long_name", "time");
-        v_t.putAtt("standard_name", "time");
+        nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
+        nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
+        nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
+        nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
 
         if (srs.IsProjected()) {
             char *unit = nullptr;
             srs.GetLinearUnits(&unit);
-            v_y.putAtt("units", unit);
-            v_x.putAtt("units", unit);
+
+            nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
+            nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
 
             char *wkt;
             srs.exportToWkt(&wkt);
-            netCDF::NcVar v_crs = ncout.addVar("crs", netCDF::ncInt);
-            v_crs.putAtt("grid_mapping_name", "easting_northing");
-            v_crs.putAtt("crs_wkt", wkt);
+            int v_crs;
+            nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
+
+            nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+            nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+
             CPLFree(wkt);
         } else {
             // char* unit;
             // double scale = srs.GetAngularUnits(&unit);
-            v_y.putAtt("units", "degrees_north");
-            v_y.putAtt("long_name", "latitude");
-            v_y.putAtt("standard_name", "latitude");
-            v_x.putAtt("units", "degrees_east");
-            v_x.putAtt("long_name", "longitude");
-            v_x.putAtt("standard_name", "longitude");
+            nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
+            nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
+            nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
+
+            nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
+            nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
+            nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
 
             char *wkt;
             srs.exportToWkt(&wkt);
-            netCDF::NcVar v_crs = ncout.addVar("crs", netCDF::ncInt);
-            v_crs.putAtt("grid_mapping_name", "latitude_longitude");
-            v_crs.putAtt("crs_wkt", wkt);
+
+            int v_crs;
+            nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
+            nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
+            nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+
             CPLFree(wkt);
         }
 
-        std::vector<netCDF::NcVar> v_bands;
-        std::vector<netCDF::NcDim> d_all;
+        int d_all[] = {d_t, d_y, d_x};
 
-        d_all.push_back(d_t);
-        d_all.push_back(d_y);
-        d_all.push_back(d_x);
-
+        std::vector<int> v_bands;
         for (uint16_t i = 0; i < bands().count(); ++i) {
-            netCDF::NcVar v = ncout.addVar(bands().get(i).name, netCDF::ncDouble, d_all);
+            int v;
+            nc_def_var(ncout, bands().get(i).name.c_str(), NC_DOUBLE, 3, d_all, &v);
+
             if (!bands().get(i).unit.empty())
-                v.putAtt("units", bands().get(i).unit.c_str());
-            v.putAtt("scale_factor", netCDF::ncDouble, bands().get(i).scale);
-            v.putAtt("add_offset", netCDF::ncDouble, bands().get(i).offset);
-            //v.putAtt("nodata", std::to_string(bands().get(i).no_data_value).c_str());
-            v.putAtt("type", bands().get(i).type.c_str());
-            v.putAtt("grid_mapping", "crs");
-            v.putAtt("_FillValue", netCDF::ncDouble, NAN);
+                nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+
+            double pscale = bands().get(i).scale;
+            double poff = bands().get(i).offset;
+            nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
+            nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
+            nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+            nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+
+            double pNAN = NAN;
+            nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
+
             v_bands.push_back(v);
         }
 
+        nc_enddef(ncout);  ////////////////////////////////////////////////////
+
+        nc_put_var(ncout, v_t, (void *)dim_t);
+        nc_put_var(ncout, v_y, (void *)dim_y);
+        nc_put_var(ncout, v_x, (void *)dim_x);
+
         for (uint16_t i = 0; i < bands().count(); ++i) {
-            v_bands[i].putVar(((double *)dat->buf()) + (int)i * (int)size_t() * (int)size_y() * (int)size_x());
+            nc_put_var(ncout, v_bands[i], (void *)(((double *)dat->buf()) + (int)i * (int)size_t() * (int)size_y() * (int)size_x()));
         }
+
+        nc_close(ncout);
         prg->increment((double)1 / (double)this->count_chunks());
     };
 
@@ -271,22 +291,31 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     std::string yname = srs.IsProjected() ? "y" : "latitude";
     std::string xname = srs.IsProjected() ? "x" : "longitude";
 
-    netCDF::NcFile ncout(op.string().c_str(), netCDF::NcFile::FileMode::replace);
-    //netCDF::NcDim d_band = ncout.addDim("band", _bands.count());
-    netCDF::NcDim d_t = ncout.addDim("time", size_t());
-    netCDF::NcDim d_y = ncout.addDim(yname.c_str(), size_y());
-    netCDF::NcDim d_x = ncout.addDim(xname.c_str(), size_x());
+    int ncout;
+    nc_create(op.string().c_str(), NC_NETCDF4, &ncout);
 
-    netCDF::NcVar v_t = ncout.addVar("time", netCDF::ncInt, d_t);
-    netCDF::NcVar v_y = ncout.addVar(yname.c_str(), netCDF::ncDouble, d_y);
-    netCDF::NcVar v_x = ncout.addVar(xname.c_str(), netCDF::ncDouble, d_x);
 
-    ncout.putAtt("Conventions", "CF-1.6");
-    ncout.putAtt("source", ("gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH)).c_str());
+    int d_t, d_y, d_x;
+    nc_def_dim(ncout, "time", size_t(), &d_t);
+    nc_def_dim(ncout, yname.c_str(), size_y(), &d_y);
+    nc_def_dim(ncout, xname.c_str(), size_x(), &d_x);
 
-    v_t.putVar(dim_t);
-    v_y.putVar(dim_y);
-    v_x.putVar(dim_x);
+
+    int v_t, v_y, v_x;
+    nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
+    nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
+    nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
+
+
+    std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
+
+    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
+    nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+
+
+
+
+
 
     std::string dtunit_str;
     if (_st_ref->dt().dt_unit == YEAR) {
@@ -305,62 +334,88 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     dtunit_str += " since ";
     dtunit_str += _st_ref->t0().to_string(SECOND);
 
-    v_t.putAtt("units", dtunit_str.c_str());
-    v_t.putAtt("calendar", "gregorian");
-    v_t.putAtt("long_name", "time");
-    v_t.putAtt("standard_name", "time");
+
+    nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
+    nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
+    nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
+
+
 
     if (srs.IsProjected()) {
         char *unit = nullptr;
         srs.GetLinearUnits(&unit);
-        v_y.putAtt("units", unit);
-        v_x.putAtt("units", unit);
+
+        nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
+        nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
 
         char *wkt;
         srs.exportToWkt(&wkt);
-        netCDF::NcVar v_crs = ncout.addVar("crs", netCDF::ncInt);
-        v_crs.putAtt("grid_mapping_name", "easting_northing");
-        v_crs.putAtt("crs_wkt", wkt);
+
+        int v_crs;
+        nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
+        nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+
         CPLFree(wkt);
     } else {
         // char* unit;
         // double scale = srs.GetAngularUnits(&unit);
-        v_y.putAtt("units", "degrees_north");
-        v_y.putAtt("long_name", "latitude");
-        v_y.putAtt("standard_name", "latitude");
-        v_x.putAtt("units", "degrees_east");
-        v_x.putAtt("long_name", "longitude");
-        v_x.putAtt("standard_name", "longitude");
+        nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
+        nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
+
+        nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
+        nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
 
         char *wkt;
         srs.exportToWkt(&wkt);
-        netCDF::NcVar v_crs = ncout.addVar("crs", netCDF::ncInt);
-        v_crs.putAtt("grid_mapping_name", "latitude_longitude");
-        v_crs.putAtt("crs_wkt", wkt);
+        int v_crs;
+        nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
+        nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
+        nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
         CPLFree(wkt);
     }
 
-    std::vector<netCDF::NcVar> v_bands;
-    std::vector<netCDF::NcDim> d_all;
 
-    d_all.push_back(d_t);
-    d_all.push_back(d_y);
-    d_all.push_back(d_x);
+
+
+    int d_all[] = {d_t, d_y, d_x};
+
+
+
+    std::vector<int> v_bands;
 
     for (uint16_t i = 0; i < bands().count(); ++i) {
-        netCDF::NcVar v = ncout.addVar(bands().get(i).name, netCDF::ncDouble, d_all);
+        int v;
+        nc_def_var(ncout, bands().get(i).name.c_str(), NC_DOUBLE, 3, d_all, &v);
+
         if (!bands().get(i).unit.empty())
-            v.putAtt("units", bands().get(i).unit.c_str());
-        v.putAtt("scale_factor", netCDF::ncDouble, bands().get(i).scale);
-        v.putAtt("add_offset", netCDF::ncDouble, bands().get(i).offset);
-        //v.putAtt("nodata", std::to_string(bands().get(i).no_data_value).c_str());
-        v.putAtt("type", bands().get(i).type.c_str());
-        v.putAtt("grid_mapping", "crs");
-        v.putAtt("_FillValue", netCDF::ncDouble, NAN);
+            nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+
+        double pscale = bands().get(i).scale;
+        double poff = bands().get(i).offset;
+        nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
+        nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
+        nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+        nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+
+        double pNAN = NAN;
+        nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
+
         v_bands.push_back(v);
     }
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+
+    nc_enddef(ncout);  ////////////////////////////////////////////////////
+
+
+    nc_put_var(ncout, v_t, (void *)dim_t);
+    nc_put_var(ncout, v_y, (void *)dim_y);
+    nc_put_var(ncout, v_x, (void *)dim_x);
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         chunk_size_btyx csize = dat->size();
         bounds_nd<uint32_t, 3> climits = chunk_limits(id);
 
@@ -371,13 +426,14 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
 
         for (uint16_t i = 0; i < bands().count(); ++i) {
             m.lock();
-            v_bands[i].putVar(startp, countp, ((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]);
+            nc_put_var(ncout, v_bands[i], (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
             m.unlock();
         }
         prg->increment((double)1 / (double)this->count_chunks());
     };
 
     p->apply(shared_from_this(), f);
+    nc_close(ncout);
     prg->finalize();
 }
 

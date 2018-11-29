@@ -10,7 +10,7 @@ RUN apt-get install  -y doxygen graphviz
 
 # install GDAL from sources, necessary libraries from apt
 RUN add-apt-repository -y ppa:ubuntugis/ubuntugis-unstable && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 314DF160 && apt-get update && apt-get install -y libproj-dev
-RUN apt-get install  -y libxml2-dev libopenjp2-7-dev # install libraries needed for some important drivers
+RUN apt-get install  -y libxml2-dev libopenjp2-7-dev libhdf4-dev  # install libraries needed for some important drivers
 
 RUN wget https://download.osgeo.org/gdal/2.3.2/gdal-2.3.2.tar.gz && tar -xzf gdal-2.3.2.tar.gz
 RUN cd gdal-2.3.2 && ./configure && make -j 2 && make install && ldconfig

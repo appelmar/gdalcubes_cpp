@@ -294,28 +294,20 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     int ncout;
     nc_create(op.string().c_str(), NC_NETCDF4, &ncout);
 
-
     int d_t, d_y, d_x;
     nc_def_dim(ncout, "time", size_t(), &d_t);
     nc_def_dim(ncout, yname.c_str(), size_y(), &d_y);
     nc_def_dim(ncout, xname.c_str(), size_x(), &d_x);
-
 
     int v_t, v_y, v_x;
     nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
     nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
     nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
 
-
     std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
 
     nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
     nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
-
-
-
-
-
 
     std::string dtunit_str;
     if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
@@ -334,13 +326,10 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     dtunit_str += " since ";
     dtunit_str += _st_ref->t0().to_string(datetime_unit::SECOND);
 
-
     nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
     nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
     nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
     nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
-
-
 
     if (srs.IsProjected()) {
         char *unit = nullptr;
@@ -378,12 +367,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
         CPLFree(wkt);
     }
 
-
-
-
     int d_all[] = {d_t, d_y, d_x};
-
-
 
     std::vector<int> v_bands;
 
@@ -407,9 +391,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
         v_bands.push_back(v);
     }
 
-
     nc_enddef(ncout);  ////////////////////////////////////////////////////
-
 
     nc_put_var(ncout, v_t, (void *)dim_t);
     nc_put_var(ncout, v_y, (void *)dim_y);

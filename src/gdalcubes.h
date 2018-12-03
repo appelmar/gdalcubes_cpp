@@ -24,6 +24,7 @@
 #include "config.h"
 #include "cube.h"
 #include "image_collection_cube.h"
+#include "join_bands.h"
 #include "progress.h"
 #include "reduce.h"
 #include "select_bands.h"

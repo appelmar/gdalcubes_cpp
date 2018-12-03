@@ -146,6 +146,12 @@ struct duration {
         return out;
     }
 
+    friend bool operator==(const duration& l, const duration& r) {
+        return (l.dt_unit == r.dt_unit && l.dt_interval == r.dt_interval);
+    }
+
+    inline friend bool operator!=(const duration& l, const duration& r) { return !(l == r); }
+
     duration convert(datetime_unit u) {
         duration out;
         if (u == datetime_unit::NONE || dt_unit == datetime_unit::NONE) {

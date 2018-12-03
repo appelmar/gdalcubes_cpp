@@ -1,0 +1,41 @@
+{
+  "description" : "Collection format for selected bands from the MODIS MOD13A3 product",
+  "pattern" : ".*\\.hdf.*",
+  "images" : {
+    "pattern" : "HDF4_EOS:EOS_GRID:\"(.+)\\.hdf.*"
+  },
+  "datetime" : {
+    "pattern" : ".*MOD13A3\\.A(.{7}).*",
+    "format" : "%Y%j"
+  },
+  "bands" : {
+    "NDVI" : {
+      "pattern" : ".+NDVI$",
+      "nodata" : -3000
+    },
+    "EVI" : {
+      "pattern" : ".+EVI",
+      "nodata" : -3000
+    },
+    "VIQ" : {
+      "pattern" : ".+Quality",
+      "nodata" : -3000
+    },
+    "RED" : {
+      "pattern" : ".+red reflectance",
+      "nodata" : -3000
+    },
+    "NIR" : {
+      "pattern" : ".+NIR reflectance",
+      "nodata" : -3000
+    },
+    "BLUE" : {
+      "pattern" : ".+blue reflectance",
+      "nodata" : -3000
+    },
+    "MIR" : {
+      "pattern" : ".+MIR reflectance",
+      "nodata" : -3000
+    }
+  }
+}

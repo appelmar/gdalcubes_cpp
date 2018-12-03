@@ -296,9 +296,9 @@ class cube_st_reference {
      * Return the spatial reference system / projection
      * @return OGRSpatialReference object
      */
-    inline OGRSpatialReference proj_ogr() {
+    inline OGRSpatialReference proj_ogr() const {
         OGRSpatialReference s;
-        s.SetFromUserInput(proj().c_str());
+        s.SetFromUserInput(_proj.c_str());
         return s;
     }
 
@@ -422,6 +422,28 @@ class cube_st_reference {
         s[0] = (uint32_t)((p.t - _t0) / _dt);
         return s;
     }
+
+    friend bool operator==(const cube_st_reference& l, const cube_st_reference& r) {
+        if (!(l._win.left == r._win.left &&
+              l._win.right == r._win.right &&
+              l._win.top == r._win.top &&
+              l._win.bottom == r._win.bottom &&
+              l._nx == r._nx &&
+              l._ny == r._ny &&
+              l._t0 == r._t0 &&
+              l._dt == r._dt)) return false;
+
+        // compare SRS
+        OGRSpatialReference a = l.proj_ogr();
+        OGRSpatialReference b = r.proj_ogr();
+
+        if (!a.IsSame(&b))
+            return false;
+
+        return true;
+    }
+
+    inline friend bool operator!=(const cube_st_reference& l, const cube_st_reference& r) { return !(l == r); }
 
    protected:
     /**

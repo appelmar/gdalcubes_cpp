@@ -34,13 +34,13 @@ struct error_handling_r {
     _m_errhandl.lock();
     std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
     std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
-    if (type == 2 || type == 1) {
+    if (type == error_level::ERRLVL_ERROR || type == error_level::ERRLVL_FATAL ) {
       _err_stream << "ERROR" << code << ": " << msg << where_str << std::endl;
-    } else if (type == 3) {
+    } else if (type == error_level::ERRLVL_WARNING) {
       _err_stream << "WARNING" << code << ": " << msg << where_str << std::endl;
-    } else if (type == 4) {
+    } else if (type == error_level::ERRLVL_INFO) {
       _err_stream << "INFO" << code << ": " << msg << where_str << std::endl;
-    } else if (type == 5) {
+    } else if (type == error_level::ERRLVL_DEBUG) {
       _err_stream << "DEBUG" << code << ": " << msg << where_str << std::endl;
     }
     if (!_defer) {
@@ -54,11 +54,11 @@ struct error_handling_r {
     _m_errhandl.lock();
     std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
     std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
-    if (type == 2 || type == 1) {
+    if (type == error_level::ERRLVL_ERROR || type == error_level::ERRLVL_FATAL) {
       _err_stream << "ERROR" << code << ": " << msg << where_str << std::endl;
-    } else if (type == 3) {
+    } else if (type == error_level::ERRLVL_WARNING) {
       _err_stream << "WARNING" << code << ": " << msg << where_str << std::endl;
-    } else if (type == 4) {
+    } else if (type == error_level::ERRLVL_INFO) {
       _err_stream << "INFO" << code << ": " << msg << where_str << std::endl;
     }
     if (!_defer) {
@@ -610,6 +610,25 @@ SEXP libgdalcubes_create_reduce_cube(SEXP pin, std::string reducer) {
     
     std::shared_ptr<reduce_cube>* x = new std::shared_ptr<reduce_cube>(reduce_cube::create(*aa, reducer));
     Rcpp::XPtr< std::shared_ptr<reduce_cube> > p(x, true) ;
+    
+    return p;
+    
+  }
+  catch (std::string s) {
+    Rcpp::stop(s);
+  }
+}
+
+
+
+// [[Rcpp::export]]
+SEXP libgdalcubes_create_join_bands_cube(SEXP pinA, SEXP pinB) {
+  try {
+    Rcpp::XPtr< std::shared_ptr<cube> > A = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pinA);
+    Rcpp::XPtr< std::shared_ptr<cube> > B = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pinB);
+    
+    std::shared_ptr<join_bands_cube>* x = new std::shared_ptr<join_bands_cube>(join_bands_cube::create(*A, *B));
+    Rcpp::XPtr< std::shared_ptr<join_bands_cube> > p(x, true) ;
     
     return p;
     

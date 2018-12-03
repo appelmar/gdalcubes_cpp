@@ -28,50 +28,50 @@
  */
 struct aggregation {
     enum class aggregation_type {
-        NONE,
-        MIN,
-        MAX,
-        MEAN,
-        MEDIAN,
-        FIRST,
-        LAST
+        AGG_NONE,
+        AGG_MIN,
+        AGG_MAX,
+        AGG_MEAN,
+        AGG_MEDIAN,
+        AGG_FIRST,
+        AGG_LAST
     };
 
     static aggregation_type from_string(std::string s) {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
         if (s == "none") {
-            return aggregation_type::NONE;
+            return aggregation_type::AGG_NONE;
         } else if (s == "min") {
-            return aggregation_type::MIN;
+            return aggregation_type::AGG_MIN;
         } else if (s == "max") {
-            return aggregation_type::MAX;
+            return aggregation_type::AGG_MAX;
         } else if (s == "mean") {
-            return aggregation_type::MEAN;
+            return aggregation_type::AGG_MEAN;
         } else if (s == "median") {
-            return aggregation_type::MEDIAN;
+            return aggregation_type::AGG_MEDIAN;
         } else if (s == "first") {
-            return aggregation_type::FIRST;
+            return aggregation_type::AGG_FIRST;
         } else if (s == "last") {
-            return aggregation_type::LAST;
+            return aggregation_type::AGG_LAST;
         }
-        return aggregation_type::NONE;
+        return aggregation_type::AGG_NONE;
     }
 
     static std::string to_string(aggregation_type a) {
         switch (a) {
-            case aggregation_type::NONE:
+            case aggregation_type::AGG_NONE:
                 return "none";
-            case aggregation_type::MIN:
+            case aggregation_type::AGG_MIN:
                 return "min";
-            case aggregation_type::MAX:
+            case aggregation_type::AGG_MAX:
                 return "max";
-            case aggregation_type::MEAN:
+            case aggregation_type::AGG_MEAN:
                 return "mean";
-            case aggregation_type::MEDIAN:
+            case aggregation_type::AGG_MEDIAN:
                 return "median";
-            case aggregation_type::FIRST:
+            case aggregation_type::AGG_FIRST:
                 return "first";
-            case aggregation_type::LAST:
+            case aggregation_type::AGG_LAST:
                 return "last";
             default:
                 return "none";
@@ -88,18 +88,18 @@ struct resampling {
      * @brief An enumeration listing all available resampling types
      */
     enum class resampling_type {
-        NEAR,
-        BILINEAR,
-        CUBIC,
-        CUBICSPLINE,
-        LANCZOS,
-        AVERAGE,
-        MODE,
-        MAX,
-        MIN,
-        MED,
-        Q1,
-        Q3
+        RSMPL_NEAR,
+        RSMPL_BILINEAR,
+        RSMPL_CUBIC,
+        RSMPL_CUBICSPLINE,
+        RSMPL_LANCZOS,
+        RSMPL_AVERAGE,
+        RSMPL_MODE,
+        RSMPL_MAX,
+        RSMPL_MIN,
+        RSMPL_MED,
+        RSMPL_Q1,
+        RSMPL_Q3
     };
 
     /**
@@ -110,31 +110,31 @@ struct resampling {
     static resampling_type from_string(std::string s) {
         std::transform(s.begin(), s.end(), s.begin(), ::tolower);
         if (s == "near" || s == "nearest") {
-            return resampling_type::NEAR;
+            return resampling_type::RSMPL_NEAR;
         } else if (s == "bilinear") {
-            return resampling_type::BILINEAR;
+            return resampling_type::RSMPL_BILINEAR;
         } else if (s == "cubic") {
-            return resampling_type::CUBIC;
+            return resampling_type::RSMPL_CUBIC;
         } else if (s == "cubicspline") {
-            return resampling_type::CUBICSPLINE;
+            return resampling_type::RSMPL_CUBICSPLINE;
         } else if (s == "lanczos") {
-            return resampling_type::LANCZOS;
+            return resampling_type::RSMPL_LANCZOS;
         } else if (s == "average" || s == "mean") {
-            return resampling_type::AVERAGE;
+            return resampling_type::RSMPL_AVERAGE;
         } else if (s == "mode") {
-            return resampling_type::MODE;
+            return resampling_type::RSMPL_MODE;
         } else if (s == "max") {
-            return resampling_type::MAX;
+            return resampling_type::RSMPL_MAX;
         } else if (s == "min") {
-            return resampling_type::MIN;
+            return resampling_type::RSMPL_MIN;
         } else if (s == "med" || s == "median") {
-            return resampling_type::MED;
+            return resampling_type::RSMPL_MED;
         } else if (s == "q1") {
-            return resampling_type::Q1;
+            return resampling_type::RSMPL_Q1;
         } else if (s == "q3") {
-            return resampling_type::Q3;
+            return resampling_type::RSMPL_Q3;
         }
-        return resampling_type::NEAR;
+        return resampling_type::RSMPL_NEAR;
     }
 
     /**
@@ -144,29 +144,29 @@ struct resampling {
      */
     static std::string to_string(resampling_type r) {
         switch (r) {
-            case resampling_type::NEAR:
+            case resampling_type::RSMPL_NEAR:
                 return "near";
-            case resampling_type::BILINEAR:
+            case resampling_type::RSMPL_BILINEAR:
                 return "bilinear";
-            case resampling_type::CUBIC:
+            case resampling_type::RSMPL_CUBIC:
                 return "cubic";
-            case resampling_type::CUBICSPLINE:
+            case resampling_type::RSMPL_CUBICSPLINE:
                 return "cubicspline";
-            case resampling_type::LANCZOS:
+            case resampling_type::RSMPL_LANCZOS:
                 return "lanczos";
-            case resampling_type::AVERAGE:
+            case resampling_type::RSMPL_AVERAGE:
                 return "average";
-            case resampling_type::MODE:
+            case resampling_type::RSMPL_MODE:
                 return "mode";
-            case resampling_type::MAX:
+            case resampling_type::RSMPL_MAX:
                 return "max";
-            case resampling_type::MIN:
+            case resampling_type::RSMPL_MIN:
                 return "min";
-            case resampling_type::MED:
+            case resampling_type::RSMPL_MED:
                 return "med";
-            case resampling_type::Q1:
+            case resampling_type::RSMPL_Q1:
                 return "q1";
-            case resampling_type::Q3:
+            case resampling_type::RSMPL_Q3:
                 return "q3";
             default:
                 return "near";
@@ -181,25 +181,25 @@ struct resampling {
      */
     static GDALRIOResampleAlg to_gdal_rasterio(resampling_type r) {
         switch (r) {
-            case resampling_type::NEAR:
+            case resampling_type::RSMPL_NEAR:
                 return GRIORA_NearestNeighbour;
-            case resampling_type::BILINEAR:
+            case resampling_type::RSMPL_BILINEAR:
                 return GRIORA_Bilinear;
-            case resampling_type::CUBIC:
+            case resampling_type::RSMPL_CUBIC:
                 return GRIORA_Cubic;
-            case resampling_type::CUBICSPLINE:
+            case resampling_type::RSMPL_CUBICSPLINE:
                 return GRIORA_CubicSpline;
-            case resampling_type::LANCZOS:
+            case resampling_type::RSMPL_LANCZOS:
                 return GRIORA_Lanczos;
-            case resampling_type::AVERAGE:
+            case resampling_type::RSMPL_AVERAGE:
                 return GRIORA_Average;
-            case resampling_type::MODE:
+            case resampling_type::RSMPL_MODE:
                 return GRIORA_Mode;
-            case resampling_type::MAX:
-            case resampling_type::MIN:
-            case resampling_type::MED:
-            case resampling_type::Q1:
-            case resampling_type::Q3:
+            case resampling_type::RSMPL_MAX:
+            case resampling_type::RSMPL_MIN:
+            case resampling_type::RSMPL_MED:
+            case resampling_type::RSMPL_Q1:
+            case resampling_type::RSMPL_Q3:
             default:
                 return GRIORA_NearestNeighbour;  // Not yet defined in gdal.h
         }

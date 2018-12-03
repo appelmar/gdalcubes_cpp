@@ -84,13 +84,13 @@ cube_view cube_view::read(nlohmann::json j) {
     }
 
     if (j.count("resampling") == 0) {
-        v._resampling = resampling::resampling_type::NEAR;
+        v._resampling = resampling::resampling_type::RSMPL_NEAR;
     } else {
         v._resampling = resampling::from_string(j.at("resampling").get<std::string>());
     }
 
     if (j.count("aggregation") == 0) {
-        v._aggregation = aggregation::aggregation_type::NONE;
+        v._aggregation = aggregation::aggregation_type::AGG_NONE;
     } else {
         v._aggregation = aggregation::from_string(j.at("aggregation").get<std::string>());
     }

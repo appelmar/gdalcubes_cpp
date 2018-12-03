@@ -22,31 +22,31 @@ std::mutex logger::_m;
 // TODO: move mutex to specific error handler implementations
 void logger::error(std::string msg, std::string where, int error_code) {
     _m.lock();
-    config::instance()->get_error_handler()(error_level::ERROR, msg, where, error_code);
+    config::instance()->get_error_handler()(error_level::ERRLVL_ERROR, msg, where, error_code);
     _m.unlock();
 }
 void logger::warn(std::string msg, std::string where, int error_code) {
     _m.lock();
-    config::instance()->get_error_handler()(error_level::WARNING, msg, where, error_code);
+    config::instance()->get_error_handler()(error_level::ERRLVL_WARNING, msg, where, error_code);
     _m.unlock();
 }
 void logger::debug(std::string msg, std::string where, int error_code) {
     _m.lock();
-    config::instance()->get_error_handler()(error_level::DEBUG, msg, where, error_code);
+    config::instance()->get_error_handler()(error_level::ERRLVL_DEBUG, msg, where, error_code);
     _m.unlock();
 }
 void logger::fatal(std::string msg, std::string where, int error_code) {
     _m.lock();
-    config::instance()->get_error_handler()(error_level::FATAL, msg, where, error_code);
+    config::instance()->get_error_handler()(error_level::ERRLVL_FATAL, msg, where, error_code);
     _m.unlock();
 }
 void logger::trace(std::string msg, std::string where, int error_code) {
     _m.lock();
-    config::instance()->get_error_handler()(error_level::TRACE, msg, where, error_code);
+    config::instance()->get_error_handler()(error_level::ERRLVL_TRACE, msg, where, error_code);
     _m.unlock();
 }
 void logger::info(std::string msg, std::string where, int error_code) {
     _m.lock();
-    config::instance()->get_error_handler()(error_level::INFO, msg, where, error_code);
+    config::instance()->get_error_handler()(error_level::ERRLVL_INFO, msg, where, error_code);
     _m.unlock();
 }

@@ -57,7 +57,7 @@ struct sum_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         ((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy] += v;
                     }
                 }
@@ -82,7 +82,7 @@ struct prod_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         ((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy] *= v;
                     }
                 }
@@ -109,7 +109,7 @@ struct mean_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         ((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy] += v;
                         ++_count[ib * a->size()[2] * a->size()[3] + ixy];
                     }
@@ -145,9 +145,9 @@ struct min_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         double *w = &(((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy]);
-                        if (isnan(*w))
+                        if (std::isnan(*w))
                             *w = v;
                         else
                             *w = std::min(*w, v);
@@ -175,9 +175,9 @@ struct max_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         double *w = &(((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy]);
-                        if (isnan(*w))
+                        if (std::isnan(*w))
                             *w = v;
                         else
                             *w = std::max(*w, v);
@@ -202,7 +202,7 @@ struct count_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         double *w = &(((double *)a->buf())[ib * a->size()[1] * a->size()[2] * a->size()[3] + ixy]);
                         *w += 1;
                     }
@@ -229,7 +229,7 @@ struct median_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         _m_buckets[ib * a->size()[2] * a->size()[3] + ixy].push_back(v);
                     }
                 }
@@ -275,7 +275,7 @@ struct var_reducer : public reducer {
             for (uint32_t it = 0; it < b->size()[1]; ++it) {
                 for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                     double &v = ((double *)b->buf())[ib * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
-                    if (!isnan(v)) {
+                    if (!std::isnan(v)) {
                         double &mean = _mean[ib * a->size()[2] * a->size()[3] + ixy];
                         uint32_t &count = _count[ib * a->size()[2] * a->size()[3] + ixy];
                         ++count;

@@ -84,8 +84,8 @@ struct aggregation_state_mean : public aggregation_state {
 
             // iterate over all pixels
             for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-                if (isnan(((double *)img_buf)[i])) continue;
-                if (isnan(((double *)chunk_buf)[i])) {
+                if (std::isnan(((double *)img_buf)[i])) continue;
+                if (std::isnan(((double *)chunk_buf)[i])) {
                     ((double *)chunk_buf)[i] = ((double *)img_buf)[i];
                 } else {
                     double sum = ((double *)chunk_buf)[i] * _val_count[b][t][i] + ((double *)chunk_buf)[i];
@@ -121,7 +121,7 @@ struct aggregation_state_median : public aggregation_state {
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
         // iterate over all pixels
         for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-            if (isnan(((double *)img_buf)[i]))
+            if (std::isnan(((double *)img_buf)[i]))
                 continue;
             else {
                 _m_buckets[b * _size_btyx[1] * _size_btyx[2] * _size_btyx[3] + t * _size_btyx[2] * _size_btyx[3] + i].push_back(((double *)img_buf)[i]);
@@ -156,8 +156,8 @@ struct aggregation_state_first : public aggregation_state {
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
         // iterate over all pixels
         for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-            if (isnan(((double *)img_buf)[i])) continue;
-            if (!isnan(((double *)chunk_buf)[i]))
+            if (std::isnan(((double *)img_buf)[i])) continue;
+            if (!std::isnan(((double *)chunk_buf)[i]))
                 continue;
             else {
                 ((double *)chunk_buf)[i] = ((double *)img_buf)[i];
@@ -176,7 +176,7 @@ struct aggregation_state_last : public aggregation_state {
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
         // iterate over all pixels
         for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-            if (isnan(((double *)img_buf)[i])) continue;
+            if (std::isnan(((double *)img_buf)[i])) continue;
             ((double *)chunk_buf)[i] = ((double *)img_buf)[i];
         }
     }
@@ -192,8 +192,8 @@ struct aggregation_state_min : public aggregation_state {
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
         // iterate over all pixels
         for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-            if (isnan(((double *)img_buf)[i])) continue;
-            if (isnan(((double *)chunk_buf)[i])) {
+            if (std::isnan(((double *)img_buf)[i])) continue;
+            if (std::isnan(((double *)chunk_buf)[i])) {
                 ((double *)chunk_buf)[i] = ((double *)img_buf)[i];
             } else {
                 ((double *)chunk_buf)[i] = std::min(((double *)chunk_buf)[i], ((double *)img_buf)[i]);
@@ -212,8 +212,8 @@ struct aggregation_state_max : public aggregation_state {
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
         // iterate over all pixels
         for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-            if (isnan(((double *)img_buf)[i])) continue;
-            if (isnan(((double *)chunk_buf)[i])) {
+            if (std::isnan(((double *)img_buf)[i])) continue;
+            if (std::isnan(((double *)chunk_buf)[i])) {
                 ((double *)chunk_buf)[i] = ((double *)img_buf)[i];
             } else {
                 ((double *)chunk_buf)[i] = std::max(((double *)chunk_buf)[i], ((double *)img_buf)[i]);
@@ -294,17 +294,17 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     proj_out.SetFromUserInput(_st_ref->proj().c_str());
 
     aggregation_state *agg = nullptr;
-    if (view()->aggregation_method() == aggregation::aggregation_type::MEAN) {
+    if (view()->aggregation_method() == aggregation::aggregation_type::AGG_MEAN) {
         agg = new aggregation_state_mean(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::aggregation_type::MIN) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_MIN) {
         agg = new aggregation_state_min(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::aggregation_type::MAX) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_MAX) {
         agg = new aggregation_state_max(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::aggregation_type::FIRST) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_FIRST) {
         agg = new aggregation_state_first(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::aggregation_type::LAST) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_LAST) {
         agg = new aggregation_state_last(size_btyx);
-    } else if (view()->aggregation_method() == aggregation::aggregation_type::MEDIAN) {
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_MEDIAN) {
         agg = new aggregation_state_median(size_btyx);
     } else
         agg = new aggregation_state_none(size_btyx);
@@ -429,7 +429,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 void *cbuf = ((double *)out->buf()) + (b_internal * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]);
 
                 // optimization if aggregation method = NONE, avoid copy and directly write to the chunk buffer, is this really useful?
-                if (view()->aggregation_method() == aggregation::aggregation_type::NONE) {
+                if (view()->aggregation_method() == aggregation::aggregation_type::AGG_NONE) {
                     CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], cbuf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                     if (res != CE_None) {
                         GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
@@ -533,8 +533,8 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
         out.nt(4);
     }
 
-    out.aggregation_method() = aggregation::aggregation_type::NONE;
-    out.resampling_method() = resampling::resampling_type::NEAR;
+    out.aggregation_method() = aggregation::aggregation_type::AGG_NONE;
+    out.resampling_method() = resampling::resampling_type::RSMPL_NEAR;
 
     return out;
 }

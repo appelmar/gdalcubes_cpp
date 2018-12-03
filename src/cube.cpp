@@ -132,7 +132,7 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         std::string xname = srs.IsProjected() ? "x" : "longitude";
 
         int ncout;
-        nc_create(out_file.c_str(), NC_NETCDF4, &ncout);
+        nc_create(out_file.string().c_str(), NC_NETCDF4, &ncout);
 
         int d_t, d_y, d_x;
         nc_def_dim(ncout, "time", csize[1], &d_t);

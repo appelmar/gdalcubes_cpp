@@ -30,12 +30,12 @@
 #define GCBS_TRACE(MSG) logger::trace(MSG, std::string(__FILE__) + ":" + std::string(__func__) + ":" + std::to_string(__LINE__) + "")
 
 enum class error_level {
-    TRACE = 6,
-    DEBUG = 5,
-    INFO = 4,
-    WARNING = 3,
-    ERROR = 2,
-    FATAL = 1
+    ERRLVL_TRACE = 6,
+    ERRLVL_DEBUG = 5,
+    ERRLVL_INFO = 4,
+    ERRLVL_WARNING = 3,
+    ERRLVL_ERROR = 2,
+    ERRLVL_FATAL = 1
 };
 /**
  * @brief Function pointer prototype for custom error handlers
@@ -100,9 +100,9 @@ class error_handler {
     static void default_error_handler(error_level type, std::string msg, std::string where, int error_code) {
         std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
         std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
-        if (type == error_level::ERROR || type == error_level::FATAL) {
+        if (type == error_level::ERRLVL_ERROR || type == error_level::ERRLVL_FATAL) {
             std::cerr << "ERROR" << code << ": " << msg << where_str << std::endl;
-        } else if (type == error_level::WARNING) {
+        } else if (type == error_level::ERRLVL_WARNING) {
             std::cout << "WARNING" << code << ": " << msg << where_str << std::endl;
         }
     }
@@ -117,13 +117,13 @@ class error_handler {
     static void error_handler_debug(error_level type, std::string msg, std::string where, int error_code) {
         std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
         std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
-        if (type == error_level::ERROR || type == error_level::FATAL) {
+        if (type == error_level::ERRLVL_ERROR || type == error_level::ERRLVL_FATAL) {
             std::cerr << "ERROR" << code << ": " << msg << where_str << std::endl;
-        } else if (type == error_level::WARNING) {
+        } else if (type == error_level::ERRLVL_WARNING) {
             std::cout << "WARNING" << code << ": " << msg << where_str << std::endl;
-        } else if (type == error_level::INFO) {
+        } else if (type == error_level::ERRLVL_INFO) {
             std::cout << "INFO" << code << ": " << msg << where_str << std::endl;
-        } else if (type == error_level::DEBUG) {
+        } else if (type == error_level::ERRLVL_DEBUG) {
             std::cout << "DEBUG" << code << ": " << msg << where_str << std::endl;
         }
     }
@@ -139,13 +139,13 @@ class error_handler {
         std::string code = (error_code != 0) ? " (" + std::to_string(error_code) + ")" : "";
         std::string where_str = (where.empty()) ? "" : " [in " + where + "]";
         std::string now = "[" + utils::get_curdatetime() + "]";
-        if (type == error_level::ERROR || type == error_level::FATAL) {
+        if (type == error_level::ERRLVL_ERROR || type == error_level::ERRLVL_FATAL) {
             std::cerr << "ERROR" << code << ": " << msg << where_str << std::endl;
-        } else if (type == error_level::WARNING) {
+        } else if (type == error_level::ERRLVL_WARNING) {
             std::cout << "WARNING" << code << ": " << msg << where_str << std::endl;
-        } else if (type == error_level::INFO) {
+        } else if (type == error_level::ERRLVL_INFO) {
             std::cout << "INFO " << now << ": " << msg << where_str << std::endl;
-        } else if (type == error_level::DEBUG) {
+        } else if (type == error_level::ERRLVL_DEBUG) {
             std::cout << "DEBUG " << now << ": " << msg << where_str << std::endl;
         }
     }

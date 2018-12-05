@@ -17,7 +17,7 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <curl/curl.h>
+#include <curl.h>
 #include <gdal_priv.h>
 #include <memory>
 #include "build_info.h"

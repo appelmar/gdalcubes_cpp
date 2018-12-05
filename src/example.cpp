@@ -87,7 +87,8 @@ int main(int argc, char *argv[]) {
             auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
 
             auto cr = reduce_cube::create(capply, "median");
-            cr->write_gdal_image("test_apply_reduce.tif");
+           // cr->write_gdal_image("test_apply_reduce.tif");
+            cr->write_netcdf_file("test_apply_reduce.nc");
         }
         /**************************************************************************/
 
@@ -113,13 +114,14 @@ int main(int argc, char *argv[]) {
 
         //
         //        /******************************************/
-        //        // Test NetCDF export
-        //        {
-        //            chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
-        //            auto cc = image_collection_cube::create("MOD13A3.db");
-        //            cc->view()->aggregation_method() = aggregation::MEDIAN;
-        //            cc->write_netcdf_file("full.nc");
-        //        }
+                // Test NetCDF export
+                {
+                    chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
+                    auto cc = image_collection_cube::create("MOD13A3.db");
+                    cc->view()->aggregation_method() = aggregation::aggregation_type::AGG_MEDIAN;
+                    cc->write_netcdf_file("full.nc");
+
+                }
 
         /******************************************/
 

@@ -256,7 +256,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     op = fs::absolute(op);
 
     if (fs::is_directory(op)) {
-        throw std::string("ERROR in cube::write_netcdf_file(): output already existis and is a directory.");
+        throw std::string("ERROR in cube::write_netcdf_file(): output already exists and is a directory.");
     }
     if (fs::is_regular_file(op)) {
         GCBS_WARN("Existing file '" + op.string() + "' will be overwritten for NetCDF export");
@@ -269,7 +269,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    double *dim_x = (double *)calloc(size_x(), sizeof(double));
+    double *dim_x = (double *)calloc(size_x(), sizeof(double)); //TODO: check for free()
     double *dim_y = (double *)calloc(size_y(), sizeof(double));
     int *dim_t = (int *)calloc(size_t(), sizeof(int));
 
@@ -402,13 +402,13 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
         bounds_nd<uint32_t, 3> climits = chunk_limits(id);
 
         //std::vector<std::size_t> startp = {climits.low[0], climits.low[1], climits.low[2]};
-        std::vector<std::size_t> startp = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
+        std::size_t startp[] = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
 
-        std::vector<std::size_t> countp = {csize[1], csize[2], csize[3]};
+        std::size_t countp[] = {csize[1], csize[2], csize[3]};
 
         for (uint16_t i = 0; i < bands().count(); ++i) {
             m.lock();
-            nc_put_var(ncout, v_bands[i], (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
+            nc_put_vara(ncout, v_bands[i], startp, countp,  (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
             m.unlock();
         }
         prg->increment((double)1 / (double)this->count_chunks());

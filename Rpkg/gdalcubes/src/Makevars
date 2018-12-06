@@ -1,4 +1,4 @@
-PKG_CPPFLAGS=-I/usr/include/gdal -I/usr/include/gdalcubes
-PKG_LIBS=-lgdalcubes -lboost_system -lboost_date_time -lboost_filesystem -lnetcdf_c++4 -lgdal
+PKG_CPPFLAGS=-I/usr/include/gdal -I/usr/include/gdalcubes -I/usr/include/x86_64-linux-gnu/curl
+PKG_LIBS=-lgdalcubes -lboost_system -lboost_date_time -lboost_filesystem -lnetcdf -lgdal
 CXX_STD=CXX11
 # TODO: use autoconf to derive locations for gdal and gdalcubes

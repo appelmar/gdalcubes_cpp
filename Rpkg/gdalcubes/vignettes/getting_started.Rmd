@@ -1,0 +1,166 @@
+---
+title: "Getting started with gdalcubes"
+author: "Marius Appel"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+This document presents a first vignette to illustrate basic ideas of the gdalcubes R package and libarary. 
+
+- Requirement GDAL with HDF4 driver
+
+
+## Download some sample data
+
+A: monthly aggregated vegetation indexes over Europe from MODIS (MOD13A3) (tiles v=13,14, h=03,04), 360MB
+
+
+B: 8-daily land surface temperature over Europe from MODIS (MOD11A2) (tiles v=13,14, h=03,04)
+Jan to End of Sept 2018, 600MB
+
+
+
+
+```{r data_download, echo=TRUE, results='hide'}
+dl.method = ifelse(nchar(Sys.which("curl")) == 0, "auto" ,"curl")
+
+if (!file.exists("MOD11A2.zip"))
+  download.file("https://uni-muenster.sciebo.de/s/NSUNrX0Q3UcJRKq/download", destfile="MOD11A2.zip",method=dl.method,mode = "wb")
+if (!file.exists("MOD13A3.zip"))
+  download.file("https://uni-muenster.sciebo.de/s/qsy2zAV9TyjWlCG/download", method=dl.method, destfile="MOD13A3.zip",mode = "wb")
+
+unzip("MOD11A2.zip", exdir = "MOD11A2")
+unzip("MOD13A3.zip", exdir = "MOD13A3")
+```
+
+Will generate two directories, each comprising a set of HDF4 files
+
+
+# Creating an image collection
+
+
+```{r}
+library(gdalcubes)
+gcbs_collection_formats()
+```
+
+
+Datasets are in the form `HDF4_EOS:EOS_GRID:"MOD11A2.A2018001.h17v03.006.2018011145329.hdf":MODIS_Grid_8Day_1km_LST:LST_Day_1km`.
+
+
+```{r}
+file_subdatasets = expand.grid(file=list.files("MOD11A2", pattern=".hdf$", full.names = TRUE), 
+            subdataset=c("LST_Day_1km",
+                        "QC_Day",
+                        "Day_view_time",
+                        "LST_Night_1km",
+                        "QC_Night",
+                        "Night_view_time",
+                        "Emis_31",
+                        "Emis_32"))
+
+gdal_datasets = paste("HDF4_EOS:EOS_GRID:\"", file_subdatasets$file, "\":MODIS_Grid_8Day_1km_LST:",file_subdatasets$subdataset, sep="")
+
+
+gcbs_create_image_collection(gdal_datasets, "MOD11A2_local", "MOD11A2.db")
+```
+
+# Creating a data cube
+
+
+Now, we create a monthly data cube with 
+
+```{r}
+x = gcbs_cube(gcbs_image_collection("MOD11A2.db"))
+x
+
+dim(x)
+names(x)
+
+gcbs_get_projection(x)
+cat(gcbs_graph(x))
+```
+
+
+
+# Data cube operations
+
+- select bands
+- plotting
+- apply pixel
+- reduce
+- stream 
+- join
+
+
+
+```{r}
+plot(gcbs_select_bands(x, c("LST_DAY","LST_NIGHT")), col=heat.colors, key.pos=1)
+```
+
+
+
+```{r}
+plot(gcbs_apply_pixel(gcbs_select_bands(x, c("LST_DAY","LST_NIGHT")), "LST_DAY-LST_NIGHT"), col=terrain.colors, key.pos=1, t=1)
+```
+
+
+
+
+
+# Joining data cubes
+
+
+Create a data cube for the second dataset on Vegetation indexes
+
+```{r}
+# Create an image collection
+file_subdatasets = expand.grid(file=list.files("MOD13A3", pattern=".hdf$", full.names = TRUE), 
+            subdataset=c("1 km monthly NDVI",
+                        "1 km monthly EVI",
+                        "1 km monthly VI Quality",
+                        "1 km monthly red reflectance",
+                        "1 km monthly NIR reflectance",
+                        "1 km monthly blue reflectance",
+                        "1 km monthly MIR reflectance"))
+
+gdal_datasets = paste("HDF4_EOS:EOS_GRID:\"", file_subdatasets$file, "\":MOD_Grid_monthly_1km_VI:",file_subdatasets$subdataset, sep="")
+
+
+gcbs_create_image_collection(gdal_datasets, "MOD13A3_local", "MOD13A3.db")
+
+
+# create data cubes using the same view
+v = gcbs_view(proj="EPSG:4326", l = -20, r = 20, t = 60, b=40, t0="2018-01-01", t1="2018-09-30", dt="P1M", nx=1000, ny=500, aggregation = "mean")
+
+MOD13A1.cube = gcbs_cube(gcbs_image_collection("MOD13A3.db"), v)
+MOD11A2.cube = gcbs_cube(gcbs_image_collection("MOD11A2.db"), gcbs_view(view=v, resampling = "bilinear")) # we think that bilinear might work better for temperature data
+MOD11A2.cube = gcbs_cube(gcbs_image_collection("MOD11A2.db"), v) 
+
+MOD13A1.cube = gcbs_select_bands(MOD13A1.cube, "NDVI")
+MOD11A2.cube = gcbs_select_bands(MOD11A2.cube, c("LST_DAY", "LST_NIGHT"))
+
+
+cube = gcbs_join_bands(MOD13A1.cube, MOD11A2.cube)
+cube
+plot(cube, t=1)
+
+plot(gcbs_reduce(cube, "median"))
+
+```
+
+
+
+
+

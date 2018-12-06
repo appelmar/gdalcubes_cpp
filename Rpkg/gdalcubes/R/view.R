@@ -2,18 +2,39 @@
 
 
 #' 
-#' Create a spatiotemporal data cube view, i.e. the spatiotemporal extent, size and projection
+#' Create a spatiotemporal data cube view
 #' 
-#' Views are used to convert image collections to data cubes. The data cube will filter images based on the view's
-#' extent, read image data at the defined resolution, and warp to the output projection automatically.
-#' 
+#' Data cube views define the shape of a cube, i.e., the spatiotemporal extent, resolution, and projection how to look at the data.
+#' They are used to access image collections as on-demand data cubes. The data cube will filter images based on the view's
+#' extent, read image data at the defined resolution, and warp to the output projection automatically. All parameters
+#' are optional. By default gdalcubes tries to derive a view that covers the whole image collection at course resolution, which
+#' may or may not make sense in practice. It is recommended to at least spcify the spatial and temporal extent, the resolution (nx, ny, dt) 
+#' and the output projection.
 #' 
 #' @note All arguments are optional
 #' 
-#' @param view if provided, update the view object instead of creating a new data cube view
-#' 
-#' 
-#' @example gcbs_view(l=-180,r=180,b = -50, t=50, t0="2018-01-01", t1="2018-12-31", dt="P1D")
+#' @param cube Return the view of the specified data cube, other arguments will be ignored
+#' @param view if provided, update the view object instead of creating a new data cube view where fields that are already set will be overwritten
+#' @param proj output projection as string, can be proj4 definition, WKT, or in the form "EPSG:XXXX"
+#' @param nx number of pixels in x-direction (longitude / easting)
+#' @param ny number of pixels in y-direction (latitude / northing)
+#' @param dx size of pixels in x-direction (longitude / easting)
+#' @param dy size of pixels  in y-direction (latitude / northing)
+#' @param l left boundary of the spatial extent (expressed in the coordinate system defined by proj or WGS84 by default)
+#' @param r right boundary of the spatial extent (expressed in the coordinate system defined by proj or WGS84 by default)
+#' @param t top boundary of the spatial extent (expressed in the coordinate system defined by proj or WGS84 by default)
+#' @param b bottom boundary of the spatial extent (expressed in the coordinate system defined by proj or WGS84 by default)
+#' @param dt size of pixels in time-direction, expressed as ISO8601 period string (only 1 number and unit is allowed) such as "P16D"
+#' @param t0 start date/time of the temporal extent (expressed as ISO8601 datetime string)
+#' @param nt number of pixels in t-direction
+#' @param t1 end date/time of the temporal extent (expressed as ISO8601 datetime string)
+#' @param aggregation aggregation method as string, defining how to deal with pixels with data from multiple images, can be "min", "max", "mean", "median", "first"
+#' @param resampling resampling method used in gdalwarp when images are read, can be "near", "bilinear", "bicubic" or others as supported by gdalwarp (see \url{https://www.gdal.org/gdalwarp.html})
+#' @examples 
+#' gcbs_view(proj="EPSG:4326", l = -20, r = 20, t = 60, b=40, 
+#'           t0="2018-01-01", t1="2018-09-30", dt="P1M", nx=1000, 
+#'           ny=500, aggregation = "mean", resampling="bilinear")
+#' @return A list with view properties
 #' @export
 gcbs_view <- function(cube, view, proj, nx, ny, dx, dy, l, r, t, b, dt, nt, t0, t1, aggregation,resampling)  {
   if (!missing(cube)) {
@@ -110,20 +131,9 @@ gcbs_view <- function(cube, view, proj, nx, ny, dx, dy, l, r, t, b, dt, nt, t0, 
   return(xx)
 }
 
-##' @export
-#as_json <- function (x, ...) {
-#  UseMethod("as_json", x)
-#}
 
-# #' @export
-# as_json.gcbs_view <- function(obj) {
-#   return(jsonlite::toJSON(obj, auto_unbox =  TRUE))
-# }
-# 
-# 
 
- #' @export
- is.gcbs_view <- function(obj) {
-   return("gcbs_view" %in% class(obj))
- }
+is.gcbs_view <- function(obj) {
+ return("gcbs_view" %in% class(obj))
+}
 

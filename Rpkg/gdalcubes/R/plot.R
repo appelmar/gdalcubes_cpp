@@ -1,4 +1,17 @@
-#' TODO: plot function for evaluated result cubes
+#' Plot a gdalcubes data cube
+#' 
+#' @param x a data cube proxy object (class gcbs_cube)
+#' @param y _not used_
+#' @param nbreaks number of breaks, should be one more than the number of colors given
+#' @param breaks actual breaks used to assign colors to values, if missing, the function subsamples values and uses equally sized intervals between min and max or zlim[0] and zlim[1] if provided
+#' @param col color definition, can be a character vector with nbreaks - 1 elements or a function such as heat.colors 
+#' @param key.pos position for the legend, 1 (bottom), 2 (left), 3 (top), or 4 (right). If NULL, do not plot a legend. 
+#' @param bands integer vector with band numbers to plot (currently this must be band numbers, not band names)
+#' @param t integer vector time indexes to plot (currently this must be time index, not date / time)
+#' @param rgb bands used to assign RGB color channels, vector of length 3  (currently this must be band numbers, not band names)
+#' @param zlim vector of length 2, defining the maximum and minimum values to either derive breaks, or define black and white values in RGB plots
+#' @param ... further arguments passed to \code{image.default}
+#' @note There is currently no way to plot the result of \çode{gcbs_eval} without reevaluating the cube
 #' @export
 plot.gcbs_cube  <- function(x, y, ..., nbreaks=11, breaks=NULL,col=grey(1:(nbreaks-1)/nbreaks), key.pos=NULL, bands=NULL, t=NULL, rgb=NULL, zlim=NULL) {
   stopifnot(is.gcbs_cube(x))

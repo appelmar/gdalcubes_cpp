@@ -2,9 +2,14 @@
 #'
 #' Starts one or more gdalcubes_server instance on this machine. Created processes are added to a global list of gdalcubes_server processes.
 #' Simultaneously running processes must use different ports.
-#' @param port
+#' 
+#' @param port port number(s) where gdalcubes server(s) will listen for inccoming requests
+#' @param endpoint base path where the API sets up its endpoints
+#' @param whitelist character vector with hosts that are allowed to connect to the server, if null, all incoming requests will be accepted
+#' @param threads number of threads running to process parallel chunk read requests
+#' @param n number of servers to start, if n > 1 and ports has length 1, port numbers will be increased automatically by one
 #' @export
-gcbs_start_server <- function(port=1111, endpoint = "/gdalcubes/api", whitelist=NULL, threads=1, nserver=1) {
+gcbs_start_server <- function(port=1111, endpoint = "/gdalcubes/api", whitelist=NULL, threads=1, n=1) {
   stopifnot(require(processx))
 
   if (n > 1 && (length(port) != 1 && length(port) != n)) {

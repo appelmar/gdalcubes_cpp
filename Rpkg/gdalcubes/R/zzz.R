@@ -9,7 +9,7 @@
   invisible()
 }
 
-.onUnload <- function() {
+.onUnload <- function(libpath) {
   if(!Sys.getenv("GDALCUBES_STREAMING") == "1") {
     libgdalcubes_cleanup()
   }

@@ -269,7 +269,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    double *dim_x = (double *)calloc(size_x(), sizeof(double)); //TODO: check for free()
+    double *dim_x = (double *)calloc(size_x(), sizeof(double));  //TODO: check for free()
     double *dim_y = (double *)calloc(size_y(), sizeof(double));
     int *dim_t = (int *)calloc(size_t(), sizeof(int));
 
@@ -408,7 +408,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
 
         for (uint16_t i = 0; i < bands().count(); ++i) {
             m.lock();
-            nc_put_vara(ncout, v_bands[i], startp, countp,  (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
+            nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
             m.unlock();
         }
         prg->increment((double)1 / (double)this->count_chunks());

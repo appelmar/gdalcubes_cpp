@@ -533,7 +533,7 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
         out.nt(4);
     }
 
-    out.aggregation_method() = aggregation::aggregation_type::AGG_NONE;
+    out.aggregation_method() = aggregation::aggregation_type::AGG_FIRST;
     out.resampling_method() = resampling::resampling_type::RSMPL_NEAR;
 
     return out;

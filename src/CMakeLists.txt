@@ -18,77 +18,77 @@ configure_file( ${CMAKE_CURRENT_LIST_DIR}/build_info.h.in ${CMAKE_CURRENT_LIST_D
 
 
 ## find GDAL
-find_path(gdal_INCLUDEDIR "gdal.h" HINTS $ENV{GDAL_INCLUDEDIR} PATH_SUFFIXES gdal)
-if (gdal_INCLUDEDIR-NOTFOUND)
+find_path(GDAL_INCLUDEDIR "gdal.h" HINTS $ENV{GDAL_INCLUDEDIR} PATH_SUFFIXES gdal)
+if (GDAL_INCLUDEDIR-NOTFOUND)
     message(FATAL_ERROR "GDAL headers not found")
 endif ()
 
-find_library(gdal_LIBRARY NAMES gdal gdal_i HINTS $ENV{GDAL_LIBDIR})
-if (NOT gdal_LIBRARY)
+find_library(GDAL_LIBRARY NAMES gdal gdal_i HINTS $ENV{GDAL_LIBDIR} NO_DEFAULT_PATH)
+find_library(GDAL_LIBRARY NAMES gdal gdal_i HINTS $ENV{GDAL_LIBDIR})
+if (NOT GDAL_LIBRARY)
     message(FATAL_ERROR "GDAL library not found!")
 else ()
-    message(STATUS "GDAL library found at ${gdal_LIBRARY}")
+    message(STATUS "GDAL library found at ${GDAL_LIBRARY}")
 endif ()
 
 
-##  find PROJ
-#find_path(proj_INCLUDEDIR "proj_api.h" HINTS $ENV{PROJ_INCLUDEDIR})
-#if (proj_INCLUDEDIR-NOTFOUND)
-#    message(FATAL_ERROR "PROJ headers not found")
-#endif ()
-#
-#find_library(proj_LIBRARY NAMES proj proj_i HINTS $ENV{PROJ_LIBDIR} )
-#if (NOT proj_LIBRARY)
-#    message(FATAL_ERROR "PROJ library not found!")
-#else ()
-#    message(STATUS "PROJ library found at ${proj_LIBRARY}")
-#endif ()
 
-
-
+#set(Boost_DEBUG ON)
 ## find boost
+#if (WIN32)
+    set(BOOST_USE_STATIC_LIBS ON)
+#endif ()
+
 find_package(Boost COMPONENTS program_options filesystem system regex date_time REQUIRED)
 if (Boost_FOUND)
-    message(STATUS "Boost headers found at ${Boost_INCLUDE_DIRS}")
+    message(STATUS "Boost found at ${Boost_INCLUDE_DIRS}")
 else ()
-    message(FATAL_ERROR "Boost headers not found")
+    message(FATAL_ERROR "Could not find Boost libraries")
 endif ()
 
 
 
 ## find SQLite
-find_path(sqlite_INCLUDEDIR "sqlite3.h")
+find_path(sqlite_INCLUDEDIR "sqlite3.h" HINTS $ENV{SQLITE_INCLUDEDIR})
 if (sqlite_INCLUDEDIR-NOTFOUND)
     message(FATAL_ERROR "SQLite headers not found")
 endif ()
 
-find_library(sqlite_LIBRARY NAMES sqlite sqlite3)
-if (NOT sqlite_LIBRARY)
+find_library(SQLITE_LIBRARY NAMES sqlite sqlite3 HINTS $ENV{SQLITE_LIBDIR})
+if (NOT SQLITE_LIBRARY)
     message(FATAL_ERROR "SQLite library not found!")
 else ()
-    message(STATUS "SQLite library found at ${sqlite_LIBRARY}")
+    message(STATUS "SQLite library found at ${SQLITE_LIBRARY}")
 endif ()
+
 
 
 find_package(Threads)
 
 
 
-## find NETCDF_CXX4 library
-find_path(NETCDF_INCLUDEDIR "netcdf.h")
+## find netcdf C library
+find_path(NETCDF_INCLUDEDIR "netcdf.h" HINTS $ENV{NETCDF_INCLUDEDIR})
 if (NETCDF_INCLUDEDIR-NOTFOUND)
-message(FATAL_ERROR "netcdf C library headers not found")
+    message(FATAL_ERROR "netcdf C library headers not found")
 endif ()
 
-find_library(NETCDF_LIBRARY netcdf)
+find_library(NETCDF_LIBRARY netcdf HINTS $ENV{NETCDF_LIBDIR})
 if (NOT NETCDF_LIBRARY)
-message(FATAL_ERROR "netcdf C library not found!")
+    message(FATAL_ERROR "netcdf C library not found!")
 else ()
-message(STATUS "netcdf C library found at ${NETCDF_LIBRARY}")
+    message(STATUS "netcdf C library found at ${NETCDF_LIBRARY}")
 endif ()
 
 
-find_library(CURL_LIBRARY curl)
+
+# find libcurl
+find_path(CURL_INCLUDEDIR "curl.h" HINTS $ENV{CURL_INCLUDEDIR} PATH_SUFFIXES curl)
+if (CURL_INCLUDEDIR-NOTFOUND)
+    message(FATAL_ERROR "libcurl header not found")
+endif ()
+
+find_library(CURL_LIBRARY NAMES curl curl-dualssl HINTS $ENV{CURL_LIBDIR})
 if (NOT CURL_LIBRARY)
     message(FATAL_ERROR "libcurl not found!")
 else ()
@@ -97,8 +97,17 @@ endif ()
 
 
 
+include_directories (${gdal_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
 
-include_directories (${gdal_INCLUDEDIR} ${proj_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${geos_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
+get_filename_component(LDIR_1  ${NETCDF_LIBRARY} DIRECTORY)
+get_filename_component(LDIR_2  ${SQLITE_LIBRARY} DIRECTORY)
+get_filename_component(LDIR_3  ${GDAL_LIBRARY}  DIRECTORY)
+get_filename_component(LDIR_4  ${CURL_LIBRARY} DIRECTORY)
+link_directories(${LDIR_1} ${LDIR_2} ${LDIR_3} ${LDIR_4})
+
+
+# set(ADD_LIBS "-lgdal -lsqlite3 -lspatialite -lproj -lgeos_c -lgeos -ljson-c -lnetcdf -lmariadbclient -lpq -lintl -lwebp -lcurl -lssh2 -lssl -lcrypto -lkea -lhdf5_cpp -lhdf5_hl -lhdf5 -lexpat -lfreexl -lcfitsio -lmfhdf -ldf -lxdr -lopenjp2 -ljasper -lpng16 -ljpeg -ltiff -lgeotiff -lgif -lxml2 -llzma -lszip -lz -lodbc32 -lodbccp32 -liconv -lpsapi -lws2_32 -lcrypt32 -lwldap32 -lsecur32 -lgdi32 -lssh2 -lssl -lcrypto")
+
 
 
 
@@ -113,15 +122,16 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 
 
 add_library(libgdalcubes_static STATIC  ${SOURCE_FILES})
-set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+#set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_static PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_static ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${Boost_LIBRARIES} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
 
 
 add_library(libgdalcubes_shared SHARED  ${SOURCE_FILES})
-set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
+#set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_shared PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_shared ${gdal_LIBRARY} ${Boost_LIBRARIES} ${sqlite_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${Boost_LIBRARIES} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+
 
 install(TARGETS libgdalcubes_static libgdalcubes_shared RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
 

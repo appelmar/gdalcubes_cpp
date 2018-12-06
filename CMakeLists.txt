@@ -14,19 +14,29 @@ if (NOT CMAKE_BUILD_TYPE)
 endif ()
 
 
-# TODO: replace with target_compile_options
-if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") # enable profiling and coverage reports (gcc specific, only for debug)
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg --coverage")
-    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg --coverage" )
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-    #set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg --coverage")
-    #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
-    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
-endif ( )
+
+#if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") # enable profiling and coverage reports (gcc specific, only for debug)
+#    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg --coverage")
+#    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg --coverage" )
+#    #set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg --coverage")
+#    #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+#    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+#endif ( )
+
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
 
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+if (WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DCURL_STATICLIB")
+endif ()
+if (MINGW)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj") # for apply_pixel object due to exprtk library
+endif ()
 
-add_subdirectory(src)
+
 
 # cppcheck
 find_program (CPPCHECK NAMES cppcheck)
@@ -39,6 +49,7 @@ else ()
             COMMENT "Running Cppcheck" VERBATIM)
     set_target_properties(cppcheck PROPERTIES EXCLUDE_FROM_ALL true)
 endif()
+
 
 # code formatting
 find_program (CLANG_FORMAT NAMES clang-format)
@@ -58,14 +69,7 @@ endif()
 
 
 
-
-
-
-
-
-
 # documentation
-
 find_program (DOXYGEN NAMES doxygen)
 if(NOT DOXYGEN)
     message(WARNING "could not find doxygen, skipping documentation build")
@@ -93,10 +97,4 @@ else()
 endif()
 
 
-## export src archive
-#find_program (TARBIN NAMES tar)
-#if(${TARBIN-NOTFOUND})
-#    message(WARNING "could not find tar, skipping source code archive creation.")
-#else ()
-#    add_custom_target(srczip ALL COMMAND ${CMAKE_COMMAND} -E chdir .. tar "cfz" "${PROJECT_NAME}_src_${PROJECT_VERSION}.tar.gz" src  CMakeLists.txt LICENSE .gitignore .clang-format README.md)
-#endif()
+add_subdirectory(src)

@@ -46,7 +46,7 @@ class join_bands_cube : public cube {
         _st_ref = std::make_shared<cube_st_reference>();
 
         // Check that A and B have identical shape
-        if (_in_A->st_reference() != _in_B->st_reference()) {
+        if (*(_in_A->st_reference()) != *(_in_B->st_reference())) {
             throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cubes have different shape");
         }
 

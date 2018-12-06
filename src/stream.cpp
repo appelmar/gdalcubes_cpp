@@ -17,7 +17,6 @@
 #include "stream.h"
 #include <boost/asio.hpp>
 
-
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     GCBS_DEBUG("stream_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();

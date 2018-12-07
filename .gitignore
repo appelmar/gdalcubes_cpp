@@ -13,3 +13,4 @@ doc/site
 *.o
 *.so
 *.a
+*.gch

@@ -24,7 +24,7 @@
 #define DATETIME_H
 
 #include <boost/date_time.hpp>
-#include <boost/regex.hpp>
+#include <regex>
 #include "error.h"
 
 enum class datetime_unit {
@@ -68,10 +68,10 @@ struct duration {
     }
 
     static duration from_string(std::string s) {
-        boost::regex rexp("P(T?)([0-9]+)([YMWDHS])");
+        std::regex rexp("P(T?)([0-9]+)([YMWDHS])");
 
-        boost::cmatch res;
-        if (!boost::regex_match(s.c_str(), res, rexp)) {
+        std::cmatch res;
+        if (!std::regex_match(s.c_str(), res, rexp)) {
             throw std::string("ERROR in duration::from_string(): cannot derive date interval");
         }
         duration d;
@@ -314,11 +314,11 @@ class datetime {
         std::istringstream is(s);
 
         // TODO: Regex does not support ISO weeks / day of year yet
-        boost::regex regex1("([0-9]{4})(?:-?([0-9]{2})(?:-?([0-9]{2})(?:[T\\s]?([0-9]{2})(?::?([0-9]{2})(?::?([0-9]{2}))?)?)?)?)?");
+        std::regex regex1("([0-9]{4})(?:-?([0-9]{2})(?:-?([0-9]{2})(?:[T\\s]?([0-9]{2})(?::?([0-9]{2})(?::?([0-9]{2}))?)?)?)?)?");
         datetime out;
 
-        boost::cmatch res;
-        if (!boost::regex_match(s.c_str(), res, regex1)) {
+        std::cmatch res;
+        if (!std::regex_match(s.c_str(), res, regex1)) {
             throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
         } else {
             if (res.size() != 7) throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");

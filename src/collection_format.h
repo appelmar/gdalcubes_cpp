@@ -78,7 +78,7 @@ class collection_format {
         namespace fs = boost::filesystem;
 
         fs::path p(filename);
-        if (!fs::exists(filename) && !p.is_absolute() && p.parent_path().string().empty()) {
+        if ((!fs::exists(filename) && !p.is_absolute() && p.parent_path().string().empty()) || fs::is_directory(filename))  {
             // simple filename without directories
             GCBS_DEBUG("Couldn't find collection format '" + filename + "', looking for a preset with the same name");
             std::map<std::string, std::string> preset_formats = list_presets();
@@ -86,7 +86,7 @@ class collection_format {
                 filename = preset_formats[fs::path(filename).stem().string()];
             }
         }
-        if (!fs::exists(filename))
+        if (!fs::exists(filename) || fs::is_directory(filename))
             throw std::string("ERROR in collection_format::load_file(): image collection format file does not exist.");
 
         std::ifstream i(filename);

@@ -16,7 +16,7 @@
 
 #include "image_collection.h"
 
-#include <boost/regex.hpp>
+#include <regex>
 
 #include "config.h"
 #include "utils.h"
@@ -127,7 +127,7 @@ struct image_band {
 };
 
 void image_collection::add(std::vector<std::string> descriptors, bool strict, bool unroll_arch) {
-    std::vector<boost::regex> regex_band_pattern;
+    std::vector<std::regex> regex_band_pattern;
 
     /* TODO: The following will fail if other applications create image collections and assign ids to bands differently. A better solution would be to load band ids, names, and nums from the database bands table directly
      */
@@ -149,7 +149,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
     uint16_t band_id = 0;
     for (nlohmann::json::iterator it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
         band_name.push_back(it.key());
-        regex_band_pattern.push_back(boost::regex(it.value()["pattern"].get<std::string>()));
+        regex_band_pattern.push_back(std::regex(it.value()["pattern"].get<std::string>()));
         if (it.value().count("band")) {
             band_num.push_back(it.value()["band"].get<int>());
         } else {
@@ -162,18 +162,18 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
 
     std::string global_pattern = "";
     if (_format.json().count("pattern")) global_pattern = _format.json()["pattern"].get<std::string>();
-    boost::regex regex_global_pattern(global_pattern);
+    std::regex regex_global_pattern(global_pattern);
 
     if (!_format.json()["images"].count("pattern"))
         throw std::string("ERROR in image_collection::add(): image collection format does not contain a composition rule for images.");
-    boost::regex regex_images(_format.json()["images"]["pattern"].get<std::string>());
+    std::regex regex_images(_format.json()["images"]["pattern"].get<std::string>());
 
     // @TODO: Make datetime optional, e.g., for DEMs
     std::string datetime_format = "%Y-%m-%d";
     if (!_format.json().count("datetime") || !_format.json()["datetime"].count("pattern")) {
         throw std::string("ERROR in image_collection::add(): image collection format does not contain a rule to derive date/time.");
     }
-    boost::regex regex_datetime(_format.json()["datetime"]["pattern"].get<std::string>());
+    std::regex regex_datetime(_format.json()["datetime"]["pattern"].get<std::string>());
     if (_format.json()["datetime"].count("format")) {
         datetime_format = _format.json()["datetime"]["format"].get<std::string>();
     }
@@ -188,7 +188,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
 
         p->set((double)counter / (double)descriptors.size());
         if (!global_pattern.empty()) {  // prevent unnecessary GDALOpen calls
-            if (!boost::regex_match(*it, regex_global_pattern)) {
+            if (!std::regex_match(*it, regex_global_pattern)) {
                 // std::cout << "ignoring " << *it << std::endl;
                 GCBS_DEBUG("Dataset " + *it + " doesn't match the global collection pattern and will be ignored");
                 continue;
@@ -247,8 +247,8 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
         // TODO: check consistency for all files of an image?!
         // -> add parameter checks=true / false
 
-        boost::cmatch res_image;
-        if (!boost::regex_match(it->c_str(), res_image, regex_images)) {
+        std::cmatch res_image;
+        if (!std::regex_match(it->c_str(), res_image, regex_images)) {
             if (strict) throw std::string("ERROR in image_collection::add(): image composition rule failed for " + std::string(*it));
             GCBS_WARN("Skipping " + *it + " due to failed image composition rule");
             continue;
@@ -256,7 +256,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
 
         uint32_t image_id;
 
-        std::string sql_select_image = "SELECT id FROM images WHERE name='" + res_image[1] + "'";
+        std::string sql_select_image = "SELECT id FROM images WHERE name='" + res_image[1].str() + "'";
         sqlite3_stmt* stmt;
         sqlite3_prepare_v2(_db, sql_select_image.c_str(), -1, &stmt, NULL);
         if (!stmt) {
@@ -268,8 +268,8 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
             // @TODO: Shall we check that all files óf the same image have the same date / time? Currently we don't.
 
             // Extract datetime
-            boost::cmatch res_datetime;
-            if (!boost::regex_match(it->c_str(), res_datetime, regex_datetime)) {  // not sure to continue or throw an exception here...
+            std::cmatch res_datetime;
+            if (!std::regex_match(it->c_str(), res_datetime, regex_datetime)) {  // not sure to continue or throw an exception here...
                 if (strict) throw std::string("ERROR in image_collection::add(): datetime rule failed for " + std::string(*it));
                 GCBS_WARN("Skipping " + *it + " due to failed datetime rule");
                 continue;
@@ -289,7 +289,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
             std::stringstream os;
             os.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%S")));  // ISO8601 with separators to make this readable for SQlite
             os << pt;
-            std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + res_image[1] + "','" +
+            std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + res_image[1].str() + "','" +
                                            os.str() + "'," +
                                            std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
             if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
@@ -308,7 +308,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
         // Insert into gdalrefs table
 
         for (uint16_t i = 0; i < band_name.size(); ++i) {
-            if (boost::regex_match(*it, regex_band_pattern[i])) {
+            if (std::regex_match(*it, regex_band_pattern[i])) {
                 // TODO: if checks, check whether bandnum exists in GDALdataset
                 // TODO: if checks, compare band type, offset, scale, unit, etc. with current GDAL dataset
 

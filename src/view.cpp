@@ -15,7 +15,6 @@
 */
 
 #include "view.h"
-#include <boost/regex.hpp>
 
 cube_view cube_view::read(nlohmann::json j) {
     cube_view v;

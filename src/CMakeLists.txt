@@ -39,7 +39,7 @@ endif ()
     set(BOOST_USE_STATIC_LIBS ON)
 #endif ()
 
-find_package(Boost COMPONENTS program_options filesystem system regex date_time REQUIRED)
+find_package(Boost COMPONENTS program_options filesystem system date_time REQUIRED)
 if (Boost_FOUND)
     message(STATUS "Boost found at ${Boost_INCLUDE_DIRS}")
 else ()

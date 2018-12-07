@@ -32,7 +32,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     out->size(size_btyx);
 
     // Fill buffers accordingly
-    out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+    out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
     double *begin = (double *)out->buf();
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);

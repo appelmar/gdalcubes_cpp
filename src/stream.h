@@ -56,7 +56,7 @@ class stream_cube : public cube {
         // do not read original chunk data (which can be expensive) but simply stream a dummy chunk with proper size here
         std::shared_ptr<chunk_data> dummy_chunk = std::make_shared<chunk_data>();
         dummy_chunk->size(csize_in);
-        dummy_chunk->buf(calloc(csize_in[0] * csize_in[1] * csize_in[2] * csize_in[3], sizeof(double)));
+        dummy_chunk->buf(std::calloc(csize_in[0] * csize_in[1] * csize_in[2] * csize_in[3], sizeof(double)));
 
         std::shared_ptr<chunk_data> c0 = stream_chunk_stdin(dummy_chunk);
 

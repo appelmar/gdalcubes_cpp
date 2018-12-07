@@ -62,7 +62,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         in.write((char*)(&str_size), sizeof(int));
         in.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
-    double* dims = (double*)calloc(size[1] + size[2] + size[3], sizeof(double));
+    double* dims = (double*)std::calloc(size[1] + size[2] + size[3], sizeof(double));
     for (int i = 0; i < size[1]; ++i) {
         dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
     }
@@ -73,7 +73,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
     }
     in.write((char*)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
-    free(dims);
+    std::free(dims);
 
     int str_size = proj.size();
     in.write((char*)(&str_size), sizeof(int));
@@ -112,7 +112,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         out->size(out_size);
         // Fill buffers accordingly
         // TODO: check size again
-        out->buf(calloc(out_size[0] * out_size[1] * out_size[2] * out_size[3], sizeof(double)));
+        out->buf(std::calloc(out_size[0] * out_size[1] * out_size[2] * out_size[3], sizeof(double)));
         memcpy(out->buf(), odat.data() + (4 * sizeof(int)), sizeof(double) * out_size[0] * out_size[1] * out_size[2] * out_size[3]);
 
     } else {

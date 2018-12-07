@@ -75,7 +75,7 @@ struct aggregation_state_mean : public aggregation_state {
                 _val_count[b] = std::unordered_map<uint32_t, uint16_t *>();
             }
             if (_val_count[b].find(t) == _val_count[b].end()) {
-                _val_count[b][t] = (uint16_t *)(calloc(_size_btyx[2] * _size_btyx[3], sizeof(uint16_t)));
+                _val_count[b][t] = (uint16_t *)(std::calloc(_size_btyx[2] * _size_btyx[3], sizeof(uint16_t)));
                 // TODO: fill with _img_count[b][t]?????
                 for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
                     _val_count[b][t][i] = _img_count[b][t];
@@ -99,7 +99,7 @@ struct aggregation_state_mean : public aggregation_state {
     void finalize(void *buf) override {
         for (auto it = _val_count.begin(); it != _val_count.end(); ++it) {
             for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
-                if (it2->second) free(it2->second);
+                if (it2->second) std::free(it2->second);
             }
         }
         _val_count.clear();
@@ -115,7 +115,7 @@ struct aggregation_state_median : public aggregation_state {
     aggregation_state_median(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
 
     void init() override {
-        _m_buckets = (std::vector<double> *)calloc(_size_btyx[0] * _size_btyx[1] * _size_btyx[2] * _size_btyx[3], sizeof(std::vector<double>));
+        _m_buckets = (std::vector<double> *)std::calloc(_size_btyx[0] * _size_btyx[1] * _size_btyx[2] * _size_btyx[3], sizeof(std::vector<double>));
     }
 
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
@@ -141,7 +141,7 @@ struct aggregation_state_median : public aggregation_state {
                 ((double *)buf)[i] = (list[list.size() / 2] + list[list.size() / 2 - 1]) / ((double)2);
             }
         }
-        free(_m_buckets);
+        std::free(_m_buckets);
     }
 
    private:
@@ -271,7 +271,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         return out;
 
     // Fill buffers accordingly
-    out->buf(calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+    out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
     double *begin = (double *)out->buf();
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
@@ -311,7 +311,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     agg->init();
 
-    void *img_buf = calloc(size_btyx[3] * size_btyx[2], sizeof(double));
+    void *img_buf = std::calloc(size_btyx[3] * size_btyx[2], sizeof(double));
 
     uint32_t i = 0;
     while (i < datasets.size()) {
@@ -452,7 +452,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     agg->finalize(out->buf());
     delete agg;
 
-    free(img_buf);
+    std::free(img_buf);
 
     return out;
 }

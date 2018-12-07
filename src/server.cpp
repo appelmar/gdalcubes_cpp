@@ -101,7 +101,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                         }
                         std::shared_ptr<chunk_data> dat = server_chunk_cache::instance()->get(std::make_pair(cube_id, chunk_id));
 
-                        uint8_t* rawdata = (uint8_t*)malloc(4 * sizeof(uint32_t) + dat->total_size_bytes());
+                        uint8_t* rawdata = (uint8_t*)std::malloc(4 * sizeof(uint32_t) + dat->total_size_bytes());
                         memcpy((void*)rawdata, (void*)(dat->size().data()), 4 * sizeof(uint32_t));
                         if (!dat->empty()) {
                             memcpy(rawdata + 4 * sizeof(uint32_t), dat->buf(), dat->total_size_bytes());
@@ -110,7 +110,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                         concurrency::streams::basic_istream<uint8_t> is = concurrency::streams::rawptr_stream<uint8_t>::open_istream(rawdata, 4 * sizeof(uint32_t) + dat->total_size_bytes());
                         req.reply(web::http::status_codes::OK, is, 4 * sizeof(uint32_t) + dat->total_size_bytes(), "application/octet-stream").then([&is, &rawdata]() {
                             is.close();
-                            free(rawdata); });
+                            std::free(rawdata); });
                     }
 
                 } else if (cmd == "status") {

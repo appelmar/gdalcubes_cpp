@@ -109,9 +109,9 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         //            int str_size = bands().get(i).name.size();
         //        }
 
-        double *dim_x = (double *)calloc(csize[3], sizeof(double));
-        double *dim_y = (double *)calloc(csize[2], sizeof(double));
-        int *dim_t = (int *)calloc(csize[2], sizeof(int));
+        double *dim_x = (double *)std::calloc(csize[3], sizeof(double));
+        double *dim_y = (double *)std::calloc(csize[2], sizeof(double));
+        int *dim_t = (int *)std::calloc(csize[2], sizeof(int));
 
         if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
             _st_ref->dt().dt_unit = datetime_unit::DAY;
@@ -269,9 +269,9 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    double *dim_x = (double *)calloc(size_x(), sizeof(double));  //TODO: check for free()
-    double *dim_y = (double *)calloc(size_y(), sizeof(double));
-    int *dim_t = (int *)calloc(size_t(), sizeof(int));
+    double *dim_x = (double *)std::calloc(size_x(), sizeof(double));  //TODO: check for std::free()
+    double *dim_y = (double *)std::calloc(size_y(), sizeof(double));
+    int *dim_t = (int *)std::calloc(size_t(), sizeof(int));
 
     if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
         _st_ref->dt().dt_unit = datetime_unit::DAY;

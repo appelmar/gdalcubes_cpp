@@ -59,7 +59,7 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
 
     std::shared_ptr<chunk_data> in = _in_cube->read_chunk(id);
     out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
-    out->buf(calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
+    out->buf(std::calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
 
     // We do not need to fill with NAN because we can be sure that it is completeley filled from the input cube
     //double *begin = (double *)out->buf();

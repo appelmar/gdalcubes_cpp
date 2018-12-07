@@ -97,7 +97,7 @@ struct prod_reducer : public reducer {
  */
 struct mean_reducer : public reducer {
     void init(std::shared_ptr<chunk_data> a) override {
-        _count = (uint32_t *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
+        _count = (uint32_t *)std::calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
         for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
             _count[ibxy] = 0;
             ((double *)a->buf())[ibxy] = 0;
@@ -123,7 +123,7 @@ struct mean_reducer : public reducer {
         for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
             ((double *)a->buf())[ibxy] = _count[ibxy] > 0 ? ((double *)a->buf())[ibxy] / _count[ibxy] : NAN;
         }
-        free(_count);
+        std::free(_count);
     }
 
    private:
@@ -220,7 +220,7 @@ struct count_reducer : public reducer {
  */
 struct median_reducer : public reducer {
     void init(std::shared_ptr<chunk_data> a) override {
-        //_m_buckets = (std::vector<double> *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(std::vector<double>));
+        //_m_buckets = (std::vector<double> *)std::calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(std::vector<double>));
         _m_buckets.resize(a->size()[0] * a->size()[2] * a->size()[3], std::vector<double>());
     }
 
@@ -261,8 +261,8 @@ struct median_reducer : public reducer {
  */
 struct var_reducer : public reducer {
     void init(std::shared_ptr<chunk_data> a) override {
-        _count = (uint32_t *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
-        _mean = (double *)calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
+        _count = (uint32_t *)std::calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
+        _mean = (double *)std::calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
         for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
             _count[ibxy] = 0;
             _mean[ibxy] = 0;
@@ -293,8 +293,8 @@ struct var_reducer : public reducer {
         for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
             ((double *)a->buf())[ibxy] = _count[ibxy] > 1 ? ((double *)a->buf())[ibxy] / (_count[ibxy] - 1) : NAN;
         }
-        free(_count);
-        free(_mean);
+        std::free(_count);
+        std::free(_mean);
     }
 
    protected:
@@ -311,8 +311,8 @@ struct sd_reducer : public var_reducer {
         for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
             ((double *)a->buf())[ibxy] = _count[ibxy] > 1 ? sqrt(((double *)a->buf())[ibxy] / (_count[ibxy] - 1)) : NAN;
         }
-        free(_count);
-        free(_mean);
+        std::free(_count);
+        std::free(_mean);
     }
 };
 

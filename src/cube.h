@@ -178,7 +178,7 @@ class chunk_data {
     chunk_data() : _buf(nullptr), _size({{0, 0, 0, 0}}) {}
 
     ~chunk_data() {
-        if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) free(_buf);
+        if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) std::free(_buf);
     }
 
     /**
@@ -226,10 +226,10 @@ class chunk_data {
      * This method is dangerous and provides direct access to the data buffer. Use with caution and never free any memory /
      * remove / add vector elements if you don't know exactly what you do.
      *
-     * @param b new buffer object, this class takes the ownership, i.e., eventually frees memory automatically in the destructor.
+     * @param b new buffer object, this class takes the ownership, i.e., eventually std::frees memory automatically in the destructor.
      */
     inline void buf(void* b) {
-        if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) free(_buf);
+        if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) std::free(_buf);
         _buf = b;
     }
 

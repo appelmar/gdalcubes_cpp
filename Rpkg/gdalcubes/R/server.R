@@ -10,7 +10,7 @@
 #' @param n number of servers to start, if n > 1 and ports has length 1, port numbers will be increased automatically by one
 #' @export
 gcbs_start_server <- function(port=1111, endpoint = "/gdalcubes/api", whitelist=NULL, threads=1, n=1) {
-  stopifnot(require(processx))
+  stopifnot(requireNamespace("processx", quietly = TRUE))
 
   if (n > 1 && (length(port) != 1 && length(port) != n)) {
     warning(paste("Expected either 1 or n ports, using", paste(port[1]:(port[1]+n-1), collapse=",")))
@@ -47,7 +47,7 @@ gcbs_start_server <- function(port=1111, endpoint = "/gdalcubes/api", whitelist=
 #' Stops all gdalcubes_server processes that have been started within the current R session.
 #' @export
 gcbs_stop_server <- function() {
-  stopifnot(require(processx))
+  stopifnot(requireNamespace("processx", quietly = TRUE))
   x = sum(sapply(.pkgenv$gdalcubes.server_processes, function(x) {
     if (x$is_alive()) {
       x$kill()
@@ -65,7 +65,7 @@ gcbs_stop_server <- function() {
 #' @return a data.frame with detailed status information where each row corresponds to one gdalcubes_server process
 #' @export
 gcbs_server_status <- function() {
-  stopifnot(require(processx))
+  stopifnot(requireNamespace("processx", quietly = TRUE))
 
   processes <- as.data.frame(t(sapply(.pkgenv$gdalcubes.server_processes, function(p) {
     if (p$is_alive())  {

@@ -17,8 +17,8 @@
 #include "image_collection.h"
 
 #include <regex>
-
 #include "config.h"
+#include "external/date.h"
 #include "utils.h"
 
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
@@ -126,17 +126,11 @@ struct image_band {
     std::string nodata;
 };
 
-void image_collection::add(std::vector<std::string> descriptors, bool strict, bool unroll_arch) {
+void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::vector<std::regex> regex_band_pattern;
 
     /* TODO: The following will fail if other applications create image collections and assign ids to bands differently. A better solution would be to load band ids, names, and nums from the database bands table directly
      */
-
-    if (unroll_arch) {
-        std::vector<std::string> unrolled_descriptors;
-        for (uint32_t i = 0; i < descriptors.size(); ++i) {
-        }
-    }
 
     /**
      * TODO: enable .zip, .gz, .tar, .tar.gz...
@@ -275,20 +269,13 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
                 continue;
             }
 
-            std::istringstream is(res_datetime[1]);
-            is.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_input_facet(datetime_format)));
-            boost::posix_time::ptime pt;
-            is >> pt;
-            if (pt.is_not_a_date_time()) {
-                if (strict) throw std::string("ERROR in image_collection::add(): cannot derive datetime from " + *it);
-                GCBS_WARN("Skipping " + *it + " due to failed datetime rule");
-                continue;
-            }
+            std::stringstream os;
+            date::sys_seconds pt;
+            pt = datetime::tryparse(datetime_format, res_datetime[1].str());
+            os << date::format("%Y-%m-%dT%H:%M:%S", pt);
+
 
             // Convert to ISO string including separators (boost::to_iso_string or boost::to_iso_extended_string do not work with SQLite datetime functions)
-            std::stringstream os;
-            os.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%S")));  // ISO8601 with separators to make this readable for SQlite
-            os << pt;
             std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + res_image[1].str() + "','" +
                                            os.str() + "'," +
                                            std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
@@ -341,9 +328,9 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict, bo
     p->finalize();
 }
 
-void image_collection::add(std::string descriptor, bool strict, bool unroll_arch) {
+void image_collection::add(std::string descriptor, bool strict) {
     std::vector<std::string> x{descriptor};
-    return add(x, strict, unroll_arch);
+    return add(x, strict);
 }
 
 void image_collection::write(const std::string filename) {
@@ -450,16 +437,15 @@ void image_collection::filter_bands(std::vector<std::string> bands) {
     }
 }
 
-void image_collection::filter_datetime_range(boost::posix_time::ptime start, boost::posix_time::ptime end) {
+void image_collection::filter_datetime_range(date::sys_seconds start, date::sys_seconds end) {
     // This implementation requires a foreign key constraint for the gdalrefs table with cascade delete
 
-    // TODO: write a helper function to convert ptime to string with given format
     std::ostringstream os;
-    os.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_facet("%Y-%m-%dT%H:%M:%S")));  // ISO8601 with separators to make this readable for SQlite
-    os << start;
+
+    os << date::format("%Y-%m-%dT%H:%M:%S", start);
     std::string start_str = os.str();
     os.clear();
-    os << end;
+    os << date::format("%Y-%m-%dT%H:%M:%S", end);
     std::string end_str = os.str();
 
     std::string sql = "DELETE FROM images WHERE datetime(images.datetime) < datetime('" + start_str + "')  OR datetime(images.datetime) > datetime('" + end_str + "');";

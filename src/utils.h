@@ -84,16 +84,6 @@ class utils {
     }
 
     /**
-     * @brief Platform-independent concatenation of paths using boost::filesystem
-     * @param a path a
-     * @param b path b
-     * @return string representation of the path a/b
-     */
-    static std::string join_path(std::string a, std::string b) {
-        return (boost::filesystem::path{a} / boost::filesystem::path{b}).string();
-    }
-
-    /**
      * Convert a type name to the corresponding GDAL data type
      * @param s type name
      * @return GDAL data type

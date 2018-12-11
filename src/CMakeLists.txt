@@ -18,6 +18,7 @@ configure_file( ${CMAKE_CURRENT_LIST_DIR}/build_info.h.in ${CMAKE_CURRENT_LIST_D
 
 
 ## find GDAL
+find_path(GDAL_INCLUDEDIR "gdal.h" HINTS $ENV{GDAL_INCLUDEDIR} PATH_SUFFIXES gdal  NO_DEFAULT_PATH)
 find_path(GDAL_INCLUDEDIR "gdal.h" HINTS $ENV{GDAL_INCLUDEDIR} PATH_SUFFIXES gdal)
 if (GDAL_INCLUDEDIR-NOTFOUND)
     message(FATAL_ERROR "GDAL headers not found")
@@ -39,7 +40,7 @@ endif ()
     set(BOOST_USE_STATIC_LIBS ON)
 #endif ()
 
-find_package(Boost COMPONENTS program_options filesystem system date_time REQUIRED)
+find_package(Boost COMPONENTS program_options filesystem REQUIRED)
 if (Boost_FOUND)
     message(STATUS "Boost found at ${Boost_INCLUDE_DIRS}")
 else ()
@@ -49,11 +50,13 @@ endif ()
 
 
 ## find SQLite
+find_path(sqlite_INCLUDEDIR "sqlite3.h" HINTS $ENV{SQLITE_INCLUDEDIR} NO_DEFAULT_PATH)
 find_path(sqlite_INCLUDEDIR "sqlite3.h" HINTS $ENV{SQLITE_INCLUDEDIR})
 if (sqlite_INCLUDEDIR-NOTFOUND)
     message(FATAL_ERROR "SQLite headers not found")
 endif ()
 
+find_library(SQLITE_LIBRARY NAMES sqlite sqlite3 HINTS $ENV{SQLITE_LIBDIR} NO_DEFAULT_PATH)
 find_library(SQLITE_LIBRARY NAMES sqlite sqlite3 HINTS $ENV{SQLITE_LIBDIR})
 if (NOT SQLITE_LIBRARY)
     message(FATAL_ERROR "SQLite library not found!")
@@ -68,11 +71,13 @@ find_package(Threads)
 
 
 ## find netcdf C library
+find_path(NETCDF_INCLUDEDIR "netcdf.h" HINTS $ENV{NETCDF_INCLUDEDIR} NO_DEFAULT_PATH)
 find_path(NETCDF_INCLUDEDIR "netcdf.h" HINTS $ENV{NETCDF_INCLUDEDIR})
 if (NETCDF_INCLUDEDIR-NOTFOUND)
     message(FATAL_ERROR "netcdf C library headers not found")
 endif ()
 
+find_library(NETCDF_LIBRARY netcdf HINTS $ENV{NETCDF_LIBDIR} NO_DEFAULT_PATH)
 find_library(NETCDF_LIBRARY netcdf HINTS $ENV{NETCDF_LIBDIR})
 if (NOT NETCDF_LIBRARY)
     message(FATAL_ERROR "netcdf C library not found!")
@@ -83,11 +88,13 @@ endif ()
 
 
 # find libcurl
+find_path(CURL_INCLUDEDIR "curl.h" HINTS $ENV{CURL_INCLUDEDIR} PATH_SUFFIXES curl NO_DEFAULT_PATH)
 find_path(CURL_INCLUDEDIR "curl.h" HINTS $ENV{CURL_INCLUDEDIR} PATH_SUFFIXES curl)
 if (CURL_INCLUDEDIR-NOTFOUND)
     message(FATAL_ERROR "libcurl header not found")
 endif ()
 
+find_library(CURL_LIBRARY NAMES curl curl-dualssl HINTS $ENV{CURL_LIBDIR} NO_DEFAULT_PATH)
 find_library(CURL_LIBRARY NAMES curl curl-dualssl HINTS $ENV{CURL_LIBDIR})
 if (NOT CURL_LIBRARY)
     message(FATAL_ERROR "libcurl not found!")

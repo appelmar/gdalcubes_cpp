@@ -42,20 +42,34 @@ int main(int argc, char *argv[]) {
 
     collection_format fmt("../../test/collection_format_test.json");
 
-    collection_format ftest("Sentinel2_L1C_local");
+    collection_format ftest("Sentinel2_L1C");
 
     auto prsts = collection_format::list_presets();
     for (auto it = prsts.begin(); it != prsts.end(); ++it) {
         std::cout << it->first << "    " << it->second << std::endl;
     }
 
+
+    date::sys_seconds s = datetime::tryparse("%Y.%m", "2018.01");
+
+
     try {
         timer t0;
 
-        image_collection xxxxxx("/home/marius/Desktop/file7329263c65.sqlite");
-        xxxxxx.get_images();
-        xxxxxx.get_bands();
-        xxxxxx.get_gdalrefs();
+        /**************************************************************************/
+        // Test create image collection
+        {
+            collection_format f("Sentinel2_L1C");
+            auto ic = image_collection::create(f, string_list_from_text_file("../../test/test_list.txt"), false);
+            //auto ic = image_collection::create(f,image_collection::unroll_archives(string_list_from_text_file("../test/test_list.txt")), false);
+
+            //            collection_format f("MOD13A3");
+            //            auto ic = image_collection::create(f,std::vector<std::string>{"HDF4_EOS:EOS_GRID:\"/home/marius/Desktop/MODIS/MOD13A3.A2018/MOD13A3.A2018244.h17v03.006.2018295112545.hdf\":MOD_Grid_monthly_1km_VI:1 km monthly NDVI"}, false);
+
+            ic->write("test.db");
+            std::cout << ic->to_string() << std::endl;
+        }
+        /**************************************************************************/
 
         cube_view v = cube_view::read_json("../../test/view2.json");
 

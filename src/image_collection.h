@@ -19,7 +19,7 @@
 
 #include <gdal_priv.h>
 #include <ogr_spatialref.h>
-#include <boost/date_time.hpp>
+#include <iomanip>
 #include "collection_format.h"
 #include "datetime.h"
 
@@ -199,8 +199,8 @@ class image_collection {
 
     std::string to_string();
 
-    void add(std::vector<std::string> descriptors, bool strict = true, bool unroll_arch = true);
-    void add(std::string descriptor, bool strict = true, bool unroll_arch = true);
+    void add(std::vector<std::string> descriptors, bool strict = true);
+    void add(std::string descriptor, bool strict = true);
 
     void write(const std::string filename);
 
@@ -241,15 +241,17 @@ class image_collection {
      * a temporary copy of the database before.
      * @note NOT YET IMPLEMENTED
      */
-    void filter_datetime_range(boost::posix_time::ptime start, boost::posix_time::ptime end);
+    void filter_datetime_range(date::sys_seconds start, date::sys_seconds end);
 
     /**
-     * @see image_collection::filter_datetime_range(boost::posix_time::ptime start, boost::posix_time::ptime end)
+     * @see image_collection::filter_datetime_range(std::tm start, std::tm end)
      * @param start start datetime as ISO8601 string
      * @param end end datetime as ISO8601 string
      */
     void filter_datetime_range(std::string start, std::string end) {
-        filter_datetime_range(boost::posix_time::from_iso_string(start), boost::posix_time::from_iso_string(end));
+        date::sys_seconds tstart = datetime::tryparse("%Y-%m-%dT%H:%M:%S", start);
+        date::sys_seconds tend = datetime::tryparse("%Y-%m-%dT%H:%M:%S", end);
+        filter_datetime_range(tstart, tend);
     }
 
     /**

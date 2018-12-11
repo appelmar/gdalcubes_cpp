@@ -18,9 +18,9 @@
 #define CUBE_H
 
 #include <mutex>
+#include <set>
 #include "config.h"
 #include "view.h"
-#include <set>
 
 typedef std::array<uint32_t, 4> cube_coordinate_btyx;
 typedef std::array<uint32_t, 3> cube_coordinate_tyx;

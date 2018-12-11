@@ -15,7 +15,7 @@
 */
 
 /**
- * Simplistic library for datetime objects that works on top of boost::posix_time.
+ * Simplistic library for datetime objects.
  * The assumption of the library is that durations are only meaningful if given as a single number with a single datetime unit. Whether or not this assumption
  * is valid depends on the application.
  */
@@ -23,9 +23,11 @@
 #ifndef DATETIME_H
 #define DATETIME_H
 
-#include <boost/date_time.hpp>
+//#include <boost/date_time.hpp> // EVENTUALLY REMOVE
+#include <chrono>
 #include <regex>
 #include "error.h"
+#include "external/date.h"
 
 enum class datetime_unit {
     SECOND = 0,
@@ -247,8 +249,8 @@ struct duration {
 class datetime {
    public:
     datetime() : _p(), _unit(datetime_unit::DAY) {}
-    datetime(boost::posix_time::ptime p) : _p(p), _unit(datetime_unit::DAY) {}
-    datetime(boost::posix_time::ptime p, datetime_unit u) : _p(p), _unit(u) {}
+    datetime(date::sys_seconds p) : _p(p), _unit(datetime_unit::DAY) {}
+    datetime(date::sys_seconds p, datetime_unit u) : _p(p), _unit(u) {}
 
     /**
      * Convert to a numeric datetime format as in 20180401123059.
@@ -256,26 +258,30 @@ class datetime {
      * @return
      */
     double to_double() {
-        double out = _p.date().year();
+        auto daypoint = date::floor<date::days>(_p);
+        auto ymd = date::year_month_day(daypoint);
+        auto tod = date::make_time(_p - daypoint);
+
+        double out = int(ymd.year());
         if (_unit <= datetime_unit::MONTH) {
             out *= 100;
-            out += _p.date().month();
+            out += unsigned(ymd.month());
         }
         if (_unit <= datetime_unit::DAY) {
             out *= 100;
-            out += _p.date().day();
+            out += unsigned(ymd.day());
         }
         if (_unit <= datetime_unit::HOUR) {
             out *= 100;
-            out += _p.time_of_day().hours();
+            out += tod.hours().count();
         }
         if (_unit <= datetime_unit::MINUTE) {
             out *= 100;
-            out += _p.time_of_day().minutes();
+            out += tod.minutes().count();
         }
         if (_unit <= datetime_unit::SECOND) {
             out *= 100;
-            out += _p.time_of_day().seconds();
+            out += tod.seconds().count();
         }
         return out;
     }
@@ -286,10 +292,7 @@ class datetime {
      */
     std::string to_string() {
         std::stringstream os;
-        std::string format;
-
-        os.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_facet(datetime_format_for_unit(_unit).c_str())));
-        os << _p;
+        os << date::format(datetime_format_for_unit(_unit).c_str(), _p);
         return os.str();
     }
 
@@ -303,13 +306,58 @@ class datetime {
      */
     std::string to_string(datetime_unit u) {
         std::stringstream os;
-        std::string format;
-
-        os.imbue(std::locale(std::locale::classic(), new boost::posix_time::time_facet(datetime_format_for_unit(u).c_str())));
-        os << _p;
+        os << date::format(datetime_format_for_unit(u).c_str(), _p);
         return os.str();
     }
 
+
+    // Helper function that tries to parse string datetimes according to a given format
+    // tries date::parse first and if this does not work std::get_time
+    static date::sys_seconds tryparse(std::string format, std::string d) {
+        bool success = false;
+        date::sys_seconds out; // TODO: set to invalid?!
+        if (!success) {
+            std::istringstream is(d);
+            is >> date::parse(format, out);
+            if (bool(is))
+                success = true;
+        }
+        if (!success) {
+            std::tm tp;
+            tp.tm_sec = 0;
+            tp.tm_min = 0;
+            tp.tm_hour = 0;
+            tp.tm_mday = 1;
+            tp.tm_mon = 0;
+            tp.tm_year = 0;
+            tp.tm_wday = -1;
+            tp.tm_yday = -1;
+
+            std::istringstream is(d);
+            is >> std::get_time(&tp, format.c_str());
+            if (!is.fail()) {
+
+                if (tp.tm_yday != -1) {
+                    out = date::sys_days{date::year{tp.tm_year + 1900}/1/1} + date::days{tp.tm_yday} +
+                          std::chrono::hours{tp.tm_hour} + std::chrono::minutes{tp.tm_min} + std::chrono::seconds{tp.tm_sec};
+                }
+                else {
+                    out = date::sys_days{date::year{tp.tm_year + 1900}/(tp.tm_mon+1)/tp.tm_mday} +
+                          std::chrono::hours{tp.tm_hour} + std::chrono::minutes{tp.tm_min} + std::chrono::seconds{tp.tm_sec};
+                }
+                success = true;
+            }
+        }
+
+        if (!success) {
+            GCBS_ERROR("Cannot parse datetime string '" + d + "' with format '" + format + "'");
+            throw std::string("Cannot parse datetime string '" + d + "' with format '" + format + "'");
+        }
+        return out;
+
+    }
+
+    // from standard format with variable precision (supports year_month
     static datetime from_string(std::string s) {
         std::istringstream is(s);
 
@@ -325,22 +373,26 @@ class datetime {
             uint16_t i = 2;
             while (!res[i].str().empty() && i < 7) ++i;
             if (i == 2) {
-                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), 1, 1), boost::posix_time::time_duration(0, 0, 0));
+                //date::sys_days d = date::year(std::stoi(res[1].str()));
+                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(1) / date::day(1)};
                 out._unit = datetime_unit::YEAR;
             } else if (i == 3) {
-                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), 1), boost::posix_time::time_duration(0, 0, 0));
+                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(1)};
                 out._unit = datetime_unit::MONTH;
             } else if (i == 4) {
-                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(0, 0, 0));
+                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))};
                 out._unit = datetime_unit::DAY;
             } else if (i == 5) {
-                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), 0, 0));
+                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))} +
+                         std::chrono::hours{std::stoi(res[4].str())};
                 out._unit = datetime_unit::HOUR;
             } else if (i == 6) {
-                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), std::stoi(res[5].str()), 0));
+                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))} +
+                         std::chrono::hours{std::stoi(res[4].str())} + std::chrono::minutes{std::stoi(res[5].str())};
                 out._unit = datetime_unit::MINUTE;
             } else if (i == 7) {
-                out._p = boost::posix_time::ptime(boost::gregorian::date(std::stoi(res[1].str()), std::stoi(res[2].str()), std::stoi(res[3].str())), boost::posix_time::time_duration(std::stoi(res[4].str()), std::stoi(res[5].str()), std::stoi(res[6].str())));
+                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))} +
+                         std::chrono::hours{std::stoi(res[4].str())} + std::chrono::minutes{std::stoi(res[5].str())} + std::chrono::seconds{std::stoi(res[6].str())};
                 out._unit = datetime_unit::SECOND;
             }
         }
@@ -354,35 +406,40 @@ class datetime {
                               const datetime& r) {
         duration out;
         out.dt_unit = std::max(l.unit(), r.unit());  // TODO: warning if not the same unit
+        //GCBS_WARN("datetime objects have different units");
+        // std::tm ltm = l._p;
+        //std::tm rtm = r._p;
+
+        auto dp_l = date::floor<date::days>(l._p);
+        auto ymd_l = date::year_month_day(dp_l);
+        auto dp_r = date::floor<date::days>(r._p);
+        auto ymd_r = date::year_month_day(dp_r);
+
         switch (out.dt_unit) {
             case datetime_unit::NONE:
                 break;
             case datetime_unit::SECOND:
-                out.dt_interval = (l._p - r._p).total_seconds();
+                out.dt_interval = std::chrono::duration_cast<std::chrono::seconds>(l._p - r._p).count();
                 break;
             case datetime_unit::MINUTE:
-                out.dt_interval = (l._p - r._p).total_seconds() / 60;
+                out.dt_interval = std::chrono::duration_cast<std::chrono::minutes>(l._p - r._p).count();
                 break;
             case datetime_unit::HOUR:
-                out.dt_interval = (l._p - r._p).total_seconds() / (3600);
+                out.dt_interval = std::chrono::duration_cast<std::chrono::hours>(l._p - r._p).count();
                 break;
             case datetime_unit::DAY:
-                out.dt_interval = (l._p.date() - r._p.date()).days();
+                out.dt_interval = (dp_l - dp_r).count();
                 break;
             case datetime_unit::WEEK:
-                out.dt_interval = (l._p.date() - r._p.date()).days() / 7;
+                out.dt_interval = (dp_l - dp_r).count() / 7;
                 break;
             case datetime_unit::MONTH: {
-                int yd = l._p.date().year() - r._p.date().year();
-                if (std::abs(yd) >= 1) {
-                    out.dt_interval = yd * 12 + (l._p.date().month() - r._p.date().month());
-                } else if (yd == 0) {
-                    out.dt_interval = (l._p.date().month() - r._p.date().month());
-                }
+                // see https://github.com/HowardHinnant/date/wiki/Examples-and-Recipes#deltamonths
+                out.dt_interval = (ymd_l.year() / ymd_l.month() - ymd_r.year() / ymd_r.month()).count();
                 break;
             }
             case datetime_unit::YEAR:
-                out.dt_interval = l._p.date().year() - r._p.date().year();
+                out.dt_interval = (ymd_l.year() - ymd_r.year()).count();
                 break;
         }
         return out;
@@ -390,73 +447,36 @@ class datetime {
 
     friend bool operator==(const datetime& l, const datetime& r) {
         if (l.unit() != r._unit) return false;  // TODO: warning
-        switch (l.unit()) {
-            case datetime_unit::NONE:
-                return false;
-            case datetime_unit::SECOND:
-                return (l._p.date() == r._p.date() &&
-                        l._p.time_of_day().hours() == r._p.time_of_day().hours() &&
-                        l._p.time_of_day().minutes() == r._p.time_of_day().minutes() &&
-                        l._p.time_of_day().seconds() == r._p.time_of_day().seconds());
-            case datetime_unit::MINUTE:
-                return (l._p.date() == r._p.date() &&
-                        l._p.time_of_day().hours() == r._p.time_of_day().hours() &&
-                        l._p.time_of_day().minutes() == r._p.time_of_day().minutes());
-            case datetime_unit::HOUR:
-                return (l._p.date() == r._p.date() &&
-                        l._p.time_of_day().hours() == r._p.time_of_day().hours());
-            case datetime_unit::DAY:
-                return (l._p.date() == r._p.date());
-            case datetime_unit::WEEK:
-                // TODO: what if the same week overlaps two years?
-                return (l._p.date().year() == r._p.date().year() && l._p.date().week_number() == r._p.date().week_number());
-            case datetime_unit::MONTH:
-                return (l._p.date().year() == r._p.date().year() && l._p.date().month() == r._p.date().month());
-
-            case datetime_unit::YEAR:
-                return (l._p.date().year() == r._p.date().year());
-        }
-        return false;
+        return ((l - r).dt_interval == 0);
+        //        switch (l.unit()) {
+        //            case datetime_unit::NONE:
+        //                return false;
+        //            case datetime_unit::SECOND:
+        //                return ((l - r).dt_interval == 0);
+        //            case datetime_unit::MINUTE:
+        //                return ((l - r).dt_interval == 0);
+        //            case datetime_unit::HOUR:
+        //                return ((l - r).dt_interval == 0);
+        //            case datetime_unit::DAY:
+        //                return ((l - r).dt_interval == 0);
+        //            case datetime_unit::WEEK: {
+        //                return ((l - r).dt_interval == 0);
+        //            }
+        //            case datetime_unit::MONTH:
+        //                return ((l - r).dt_interval == 0);
+        //            case datetime_unit::YEAR:
+        //                return ((l - r).dt_interval == 0);
+        //        }
+        //        return false;
     }
 
     inline friend bool operator!=(const datetime& l, const datetime& r) { return !(l == r); }
 
     friend bool operator<(datetime& l, datetime& r) {
         if (l.unit() != r._unit) return false;
-        switch (l.unit()) {
-            case datetime_unit::NONE:
-                return false;  // TODO: warning
-            case datetime_unit::SECOND:
-                if (l._p.date() < r._p.date()) return true;
-                if (l._p.date() > r._p.date()) return false;
-                return (l._p.time_of_day().total_seconds() < r._p.time_of_day().total_seconds());
-            case datetime_unit::MINUTE:
-                if (l._p.date() < r._p.date()) return true;
-                if (l._p.date() > r._p.date()) return false;
-                if (l._p.time_of_day().hours() < r._p.time_of_day().hours()) return true;
-                if (l._p.time_of_day().hours() > r._p.time_of_day().hours()) return false;
-                return (l._p.time_of_day().hours() < r._p.time_of_day().hours());
-            case datetime_unit::HOUR:
-                if (l._p.date() < r._p.date()) return true;
-                if (l._p.date() > r._p.date()) return false;
-                return (l._p.time_of_day().hours() < r._p.time_of_day().hours());
-            case datetime_unit::DAY:
-                if (l._p.date().year() < r._p.date().year()) return true;
-                if (l._p.date().year() > r._p.date().year()) return false;
-                return (l._p.date().day_of_year() < r._p.date().day_of_year());
-            case datetime_unit::WEEK:
-                // TODO: what if the same week overlaps two years?
-                if (l._p.date().year() < r._p.date().year()) return true;
-                if (l._p.date().year() > r._p.date().year()) return false;
-                return (l._p.date().week_number() < r._p.date().week_number());
-            case datetime_unit::MONTH:
-                if (l._p.date().year() < r._p.date().year()) return true;
-                if (l._p.date().year() > r._p.date().year()) return false;
-                return (l._p.date().month() < r._p.date().month());
-            case datetime_unit::YEAR:
-                return l._p.date().year() < r._p.date().year();
-        }
-        return false;
+
+        if (l.unit() == datetime_unit::NONE) return false;
+        return ((l - r).dt_interval < 0);
     }
     inline friend bool operator>(datetime& l, datetime& r) { return r < l; }
     inline friend bool operator<=(datetime& l, datetime& r) { return !(l > r); }
@@ -464,36 +484,47 @@ class datetime {
 
     friend datetime operator+(datetime l, const duration& r) {
         datetime out(l._p);
+        auto dp = date::floor<date::days>(l._p);
+        auto ymd = date::year_month_day(dp);
+        auto tod = l._p - dp;
         switch (r.dt_unit) {
             case datetime_unit::NONE:
                 break;
             case datetime_unit::SECOND:
-                out._p += boost::posix_time::seconds(r.dt_interval);
+                out._p += std::chrono::seconds{r.dt_interval};
                 break;
             case datetime_unit::MINUTE:
-                out._p += boost::posix_time::minutes(r.dt_interval);
+                out._p += std::chrono::minutes{r.dt_interval};
                 break;
             case datetime_unit::HOUR:
-                out._p += boost::posix_time::hours(r.dt_interval);
+                out._p += std::chrono::hours{r.dt_interval};
                 break;
             case datetime_unit::DAY:
-                out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval));  // ignore time
+                out._p = dp + date::days{r.dt_interval} + tod;
                 break;
             case datetime_unit::WEEK:
-                out = boost::posix_time::ptime(out._p.date() + boost::gregorian::days(r.dt_interval * 7));  // ignore time
+                out._p = dp + date::days{7 * r.dt_interval} + tod;
                 break;
             case datetime_unit::MONTH:
-                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + (long)(r.dt_interval / 12), 1 + (out._p.date().month() - 1 + r.dt_interval) % 12, 1));  // ignore time and day
+                ymd = ymd + date::months{r.dt_interval};
+                if (!ymd.ok()) {
+                    ymd = ymd.year() / ymd.month() / date::last;  // use last day of month if needed
+                }
+                out._p = date::sys_days{ymd} + tod;
                 break;
             case datetime_unit::YEAR:
-                out = boost::posix_time::ptime(boost::gregorian::date(out._p.date().year() + r.dt_interval, 1, 1));  // ignore time, day, and month
+                ymd = ymd + date::years{r.dt_interval};
+                if (!ymd.ok()) {
+                    ymd = ymd.year() / ymd.month() / date::last;  // use last day of month if needed (e.g. 2016-02-29 + 1 YEAR -> 2017-02-28)
+                }
+                out._p = date::sys_days{ymd} + tod;
                 break;
         }
         return out;
     }
 
    private:
-    boost::posix_time::ptime _p;
+    date::sys_seconds _p;
     datetime_unit _unit;
 
     static std::string datetime_format_for_unit(datetime_unit u) {

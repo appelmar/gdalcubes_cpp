@@ -78,12 +78,13 @@ class collection_format {
         namespace fs = boost::filesystem;
 
         fs::path p(filename);
-        if ((!fs::exists(filename) && !p.is_absolute() && p.parent_path().string().empty()) || fs::is_directory(filename))  {
+        if ((!fs::exists(filename) && !p.is_absolute() && p.parent_path().string().empty()) || fs::is_directory(filename)) {
             // simple filename without directories
             GCBS_DEBUG("Couldn't find collection format '" + filename + "', looking for a preset with the same name");
             std::map<std::string, std::string> preset_formats = list_presets();
             if (preset_formats.find(fs::path(filename).stem().string()) != preset_formats.end()) {
                 filename = preset_formats[fs::path(filename).stem().string()];
+                GCBS_DEBUG("Found collection format preset at '" + filename + "'");
             }
         }
         if (!fs::exists(filename) || fs::is_directory(filename))

@@ -19,9 +19,9 @@
  * This file contains the main entry for the command line client.
  */
 
-#include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 #include "build_info.h"
+#include "filesystem.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "reduce.h"
@@ -190,27 +190,23 @@ int main(int argc, char* argv[]) {
 
             std::vector<std::string> in;
 
-            namespace fs = boost::filesystem;
-            fs::path p{input};
-            if (fs::is_directory(p)) {
+            if (filesystem::is_directory(input)) {
                 if (recursive) {
-                    fs::recursive_directory_iterator end;
-                    for (fs::recursive_directory_iterator i(p); i != end; ++i) {
-                        // if is zip, tar, tar, tar.gz, .gz
-                        if (fs::is_regular_file(i->path())) {
-                            in.push_back(fs::absolute((*i).path()).string());
+                    filesystem::iterate_directory_recursive(input, [&in](const std::string& p) {
+                        if (filesystem::is_regular_file(p)) {
+                            in.push_back(filesystem::make_absolute(p));  // TODO make absolute
                         }
-                    }
+                    });
+
                 } else {
-                    fs::directory_iterator end;
-                    for (fs::directory_iterator i(p); i != end; ++i) {
-                        if (fs::is_regular_file(i->path())) {
-                            in.push_back(fs::absolute((*i).path()).string());
+                    filesystem::iterate_directory(input, [&in](const std::string& p) {
+                        if (filesystem::is_regular_file(p)) {
+                            in.push_back(filesystem::make_absolute(p));  // TODO make absolute
                         }
-                    }
+                    });
                 }
-            } else if (fs::is_regular_file(p)) {
-                in = string_list_from_text_file(p.string());
+            } else if (filesystem::is_regular_file(input)) {
+                in = string_list_from_text_file(input);
             } else {
                 throw std::string("ERROR in gdalcubes create_collection: Invalid input, provide a text file or directory.");
             }

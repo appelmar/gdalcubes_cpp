@@ -24,4 +24,33 @@ TEST_CASE("Deriving datetime unit from string", "[datetime]") {
     REQUIRE(datetime::from_string("2002-03-04").unit() == datetime_unit::DAY);
     REQUIRE(datetime::from_string("2002-03").unit() == datetime_unit::MONTH);
     REQUIRE(datetime::from_string("2002").unit() == datetime_unit::YEAR);
+
+    REQUIRE(duration::from_string("PT3S").dt_unit == datetime_unit::SECOND);
+    REQUIRE(duration::from_string("PT3M").dt_unit == datetime_unit::MINUTE);
+    REQUIRE(duration::from_string("PT3H").dt_unit == datetime_unit::HOUR);
+    REQUIRE(duration::from_string("P3D").dt_unit == datetime_unit::DAY);
+    REQUIRE(duration::from_string("P3M").dt_unit == datetime_unit::MONTH);
+    REQUIRE(duration::from_string("P3Y").dt_unit == datetime_unit::YEAR);
+}
+
+TEST_CASE("Datetime arithmetics", "[datetime]") {
+    datetime x = datetime::from_string("2002-03-04");
+    datetime y = datetime::from_string("2002-03-10");
+    duration d = duration::from_string("P5D");
+
+    REQUIRE((x + d).to_string() == "2002-03-09");
+    REQUIRE((x + d).unit() == datetime_unit::DAY);
+    REQUIRE((d * 5).to_string() == "P25D");
+    REQUIRE((y - x).to_string() == "P6D");
+    REQUIRE(x.to_double() == 20020304);
+
+    // TODO test month / year / hours / minutes / seconds / also mixed
+
+    x = datetime::from_string("2002-03");
+    y = datetime::from_string("2002-08");
+    d = duration::from_string("P3M");
+
+    REQUIRE((x + d).unit() == datetime_unit::MONTH);
+    REQUIRE((x + d).to_string() == "2002-06");
+    REQUIRE((x + d).to_double() == 200206);
 }

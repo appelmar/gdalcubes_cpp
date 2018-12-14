@@ -19,16 +19,14 @@
 
 #include <netcdf.h>
 #include "build_info.h"
+#include "filesystem.h"
 
 void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
-    namespace fs = boost::filesystem;
-    fs::path op(dir);
-
-    if (!fs::exists(dir)) {
-        fs::create_directories(op);
+    if (!filesystem::exists(dir)) {
+        filesystem::mkdir_recursive(dir);
     }
 
-    if (!fs::is_directory(dir)) {
+    if (!filesystem::is_directory(dir)) {
         throw std::string("ERROR in chunking::write_gtiff_directory(): output is not a directory.");
     }
 
@@ -40,7 +38,7 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, gtiff_driver](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, gtiff_driver](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
         double affine[6];
         affine[0] = cextent.s.left;
@@ -57,9 +55,9 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
 
         for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
             for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-                fs::path out_file = op / (std::to_string(id) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif");
+                std::string out_file = filesystem::join(dir, (std::to_string(id) + "_" + std::to_string(ib) + "_" + std::to_string(it) + ".tif"));
 
-                GDALDataset *gdal_out = gtiff_driver->Create(out_file.string().c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
+                GDALDataset *gdal_out = gtiff_driver->Create(out_file.c_str(), dat->size()[3], dat->size()[2], 1, GDT_Float64, out_co.List());
                 CPLErr res = gdal_out->GetRasterBand(1)->RasterIO(GF_Write, 0, 0, dat->size()[3], dat->size()[2], ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]), dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
                 if (res != CE_None) {
                     GCBS_WARN("RasterIO (write) failed for band " + _bands.get(ib).name);
@@ -85,22 +83,19 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
 }
 
 void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
-    namespace fs = boost::filesystem;
-    fs::path op(dir);
-
-    if (!fs::exists(dir)) {
-        fs::create_directories(op);
+    if (!filesystem::exists(dir)) {
+        filesystem::mkdir_recursive(dir);
     }
 
-    if (!fs::is_directory(dir)) {
+    if (!filesystem::is_directory(dir)) {
         throw std::string("ERROR in cube::write_netcdf_directory(): output is not a directory.");
     }
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
-        fs::path out_file = op / (std::to_string(id) + ".nc");
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+        std::string out_file = filesystem::join(dir, (std::to_string(id) + ".nc"));
 
         chunk_size_btyx csize = dat->size();
         bounds_nd<uint32_t, 3> climits = chunk_limits(id);
@@ -132,7 +127,7 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
         std::string xname = srs.IsProjected() ? "x" : "longitude";
 
         int ncout;
-        nc_create(out_file.string().c_str(), NC_NETCDF4, &ncout);
+        nc_create(out_file.c_str(), NC_NETCDF4, &ncout);
 
         int d_t, d_y, d_x;
         nc_def_dim(ncout, "time", csize[1], &d_t);
@@ -251,19 +246,17 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
 }
 
 void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> p) {
-    namespace fs = boost::filesystem;
-    fs::path op(path);
-    op = fs::absolute(op);
+    std::string op = filesystem::make_absolute(path);
 
-    if (fs::is_directory(op)) {
+    if (filesystem::is_directory(op)) {
         throw std::string("ERROR in cube::write_netcdf_file(): output already exists and is a directory.");
     }
-    if (fs::is_regular_file(op)) {
-        GCBS_WARN("Existing file '" + op.string() + "' will be overwritten for NetCDF export");
+    if (filesystem::is_regular_file(op)) {
+        GCBS_WARN("Existing file '" + op + "' will be overwritten for NetCDF export");
     }
 
-    if (!fs::exists(op.parent_path())) {
-        fs::create_directories(op.parent_path());
+    if (!filesystem::exists(filesystem::parent(op))) {
+        filesystem::mkdir_recursive(filesystem::parent(op));
     }
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
@@ -292,7 +285,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     std::string xname = srs.IsProjected() ? "x" : "longitude";
 
     int ncout;
-    nc_create(op.string().c_str(), NC_NETCDF4, &ncout);
+    nc_create(op.c_str(), NC_NETCDF4, &ncout);
 
     int d_t, d_y, d_x;
     nc_def_dim(ncout, "time", size_t(), &d_t);

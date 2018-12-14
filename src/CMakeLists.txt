@@ -40,12 +40,6 @@ endif ()
     set(BOOST_USE_STATIC_LIBS ON)
 #endif ()
 
-find_package(Boost COMPONENTS program_options filesystem REQUIRED)
-if (Boost_FOUND)
-    message(STATUS "Boost found at ${Boost_INCLUDE_DIRS}")
-else ()
-    message(FATAL_ERROR "Could not find Boost libraries")
-endif ()
 
 
 
@@ -104,7 +98,18 @@ endif ()
 
 
 
-include_directories (${gdal_INCLUDEDIR} ${Boost_INCLUDE_DIRS} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
+
+# Find Boost header only libraries (process, asio)
+find_package(Boost 1.65)
+if (Boost_FOUND)
+    message(STATUS "Found Boost headers at ${Boost_INCLUDE_DIRS}")
+else()
+    message(FATAL ERROR "Could not find Boost header files boost/process.hpp and  boost/asio.hpp")
+endif()
+
+
+# TODO: what to do with boost inlcude dirs?
+include_directories (${gdal_INCLUDEDIR} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
 
 get_filename_component(LDIR_1  ${NETCDF_LIBRARY} DIRECTORY)
 get_filename_component(LDIR_2  ${SQLITE_LIBRARY} DIRECTORY)
@@ -131,13 +136,13 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 add_library(libgdalcubes_static STATIC  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_static PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${Boost_LIBRARIES} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
 
 
 add_library(libgdalcubes_shared SHARED  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_shared PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${Boost_LIBRARIES} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
 
 
 install(TARGETS libgdalcubes_static libgdalcubes_shared RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
@@ -148,11 +153,6 @@ install(DIRECTORY . DESTINATION include/gdalcubes
         FILES_MATCHING PATTERN "*.h" PATTERN "*.hpp")
 
 
-add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
-target_link_libraries (gdalcubes libgdalcubes_static)
-install(TARGETS gdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
-
-
 file(GLOB TEST_FILES
         "test/*.cpp" "*.h")
 
@@ -160,25 +160,47 @@ add_executable(gdalcubes_test ${TEST_FILES})
 target_link_libraries (gdalcubes_test libgdalcubes_static)
 
 
-find_library(CPPRESTSDK_LIB cpprest)
-find_library(OPENSSL_LIB ssl)
-find_library(CRYPTO_LIB crypto)
-if (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
-    message(WARNING "Skipping build of gdalcubes_worker due to missing libraries.")
+find_package(Boost 1.65 REQUIRED COMPONENTS program_options)
+if (Boost_FOUND)
+    message(STATUS "Found Boost libraries ${Boost_LIBRARIES}")
+
+
+    add_executable(gdalcubes ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
+    target_link_libraries (gdalcubes libgdalcubes_static ${Boost_LIBRARIES})
+    install(TARGETS gdalcubes RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
+    target_include_directories(gdalcubes PRIVATE ${Boost_INCLUDE_DIRS})
+
+
+    add_executable(gdalcubes_example ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
+    target_link_libraries (gdalcubes_example libgdalcubes_static ${Boost_LIBRARIES})
+    target_include_directories(gdalcubes_example PRIVATE ${Boost_INCLUDE_DIRS})
+
+
+    find_library(CPPRESTSDK_LIB cpprest)
+    find_library(OPENSSL_LIB ssl)
+    find_library(CRYPTO_LIB crypto)
+    if (NOT CPPRESTSDK_LIB OR NOT OPENSSL_LIB OR NOT CRYPTO_LIB)
+        message(WARNING "Skipping build of gdalcubes_worker due to missing libraries.")
+    else ()
+        message(STATUS "cpprestsdk library found at ${CPPRESTSDK_LIB}")
+        message(STATUS "openssl library found at ${OPENSSL_LIB}")
+        message(STATUS "crypto library found at ${CRYPTO_LIB}")
+        add_executable(gdalcubes_server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
+        target_link_libraries (gdalcubes_server libgdalcubes_static ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB} ${Boost_LIBRARIES})
+        target_include_directories(gdalcubes_server PRIVATE ${Boost_INCLUDE_DIRS})
+        install(TARGETS gdalcubes_server RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
+    endif ()
+
+
 else ()
-    message(STATUS "cpprestsdk library found at ${CPPRESTSDK_LIB}")
-    message(STATUS "openssl library found at ${OPENSSL_LIB}")
-    message(STATUS "crypto library found at ${CRYPTO_LIB}")
-    add_executable(gdalcubes_server ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
-    target_link_libraries (gdalcubes_server libgdalcubes_static ${CPPRESTSDK_LIB} ${OPENSSL_LIB} ${CRYPTO_LIB})
-    install(TARGETS gdalcubes_server RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
+    message(WARNING "Could not find Boost libraries, skipping build of gdalcubes_server and command line interface")
 endif ()
 
 
 
 
 
-add_executable(gdalcubes_example ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
-target_link_libraries (gdalcubes_example libgdalcubes_static)
+
+
 
 

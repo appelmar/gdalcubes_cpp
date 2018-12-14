@@ -18,13 +18,13 @@
 #define COLLECTION_FORMAT_H
 
 #include <sqlite3.h>
-#include <boost/filesystem.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include "config.h"
 #include "external/json.hpp"
+#include "filesystem.h"
 
 /**
  * The image collection format describes rules how image collections can be build from a simple list of files / URLs.
@@ -46,23 +46,22 @@ class collection_format {
     }
 
     static std::map<std::string, std::string> list_presets() {
-        namespace fs = boost::filesystem;
         std::map<std::string, std::string> out;
 
         std::vector<std::string> dirs = config::instance()->get_collection_format_preset_dirs();
 
         // do not use uint here because of descending iteration
         for (int i = dirs.size() - 1; i >= 0; --i) {
-            fs::directory_iterator end;
-            if (!fs::exists(dirs[i])) {
+            if (!filesystem::exists(dirs[i])) {
                 continue;
             }
-            for (fs::directory_iterator it(fs::path(dirs[i])); it != end; ++it) {
-                if (fs::is_regular_file(it->path()) && it->path().extension().string() == ".json") {
-                    if (out.find(it->path().stem().string()) != out.end()) continue;
-                    out.insert(std::pair<std::string, std::string>(it->path().stem().string(), fs::absolute(it->path()).string()));
+
+            filesystem::iterate_directory(dirs[i], [&out](const std::string& p) {
+                if (filesystem::is_regular_file(p) && filesystem::extension(p) == "json") {
+                    if (out.find(filesystem::stem(p)) == out.end())
+                        out.insert(std::pair<std::string, std::string>(filesystem::stem(p), filesystem::make_absolute(p)));
                 }
-            }
+            });
         }
         return out;
     }
@@ -75,19 +74,17 @@ class collection_format {
      */
     void load_file(std::string filename) {
         _j.clear();
-        namespace fs = boost::filesystem;
 
-        fs::path p(filename);
-        if ((!fs::exists(filename) && !p.is_absolute() && p.parent_path().string().empty()) || fs::is_directory(filename)) {
+        if ((!filesystem::exists(filename) && !filesystem::is_absolute(filename) && filesystem::parent(filename).empty()) || filesystem::is_directory(filename)) {
             // simple filename without directories
             GCBS_DEBUG("Couldn't find collection format '" + filename + "', looking for a preset with the same name");
             std::map<std::string, std::string> preset_formats = list_presets();
-            if (preset_formats.find(fs::path(filename).stem().string()) != preset_formats.end()) {
-                filename = preset_formats[fs::path(filename).stem().string()];
+            if (preset_formats.find(filesystem::stem(filename)) != preset_formats.end()) {
+                filename = preset_formats[filesystem::stem(filename)];
                 GCBS_DEBUG("Found collection format preset at '" + filename + "'");
             }
         }
-        if (!fs::exists(filename) || fs::is_directory(filename))
+        if (!filesystem::exists(filename) || filesystem::is_directory(filename))
             throw std::string("ERROR in collection_format::load_file(): image collection format file does not exist.");
 
         std::ifstream i(filename);

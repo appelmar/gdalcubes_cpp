@@ -19,7 +19,6 @@
 
 #include <cpprest/http_listener.h>
 #include <cpprest/uri_builder.h>
-#include <boost/filesystem.hpp>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -191,35 +190,23 @@ class server_chunk_cache {
  */
 class gdalcubes_server {
    public:
-    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, boost::filesystem::path workdir = boost::filesystem::temp_directory_path() / "gdalcubes_server", std::set<std::string> whitelist = {}) : _listener(),
-                                                                                                                                                                                                                                                                 _port(port),
-                                                                                                                                                                                                                                                                 _host(host),
-                                                                                                                                                                                                                                                                 _basepath(basepath),
-                                                                                                                                                                                                                                                                 _ssl(ssl),
-                                                                                                                                                                                                                                                                 _workdir(workdir),
-                                                                                                                                                                                                                                                                 _cubestore(),
-                                                                                                                                                                                                                                                                 _cur_id(0),
-                                                                                                                                                                                                                                                                 _mutex_id(),
-                                                                                                                                                                                                                                                                 _mutex_cubestore(),
-                                                                                                                                                                                                                                                                 _worker_thread_count(0),
-                                                                                                                                                                                                                                                                 _mutex_chunk_read_requests(),
-                                                                                                                                                                                                                                                                 _chunk_read_requests(),
-                                                                                                                                                                                                                                                                 _chunk_read_requests_set(),
-                                                                                                                                                                                                                                                                 _mutex_chunk_read_executing(),
-                                                                                                                                                                                                                                                                 _chunk_read_executing(),
-                                                                                                                                                                                                                                                                 _worker_threads(),
-                                                                                                                                                                                                                                                                 _mutex_worker_threads(),
-                                                                                                                                                                                                                                                                 _worker_cond(),
-                                                                                                                                                                                                                                                                 _mutex_worker_cond(),
-                                                                                                                                                                                                                                                                 _chunk_cond(),
-                                                                                                                                                                                                                                                                 _whitelist(whitelist) {
-        if (boost::filesystem::exists(_workdir) && boost::filesystem::is_directory(_workdir)) {
+    gdalcubes_server(std::string host, uint16_t port = 1111, std::string basepath = "gdalcubes/api/", bool ssl = false, std::string workdir = filesystem::join(filesystem::get_tempdir(), "gdalcubes_server"), std::set<std::string> whitelist = {}) : _listener(),
+                                                                                                                                                                                                                                                       _port(port),
+                                                                                                                                                                                                                                                       _host(host),
+                                                                                                                                                                                                                                                       _basepath(basepath),
+                                                                                                                                                                                                                                                       _ssl(ssl),
+                                                                                                                                                                                                                                                       _workdir(workdir),
+                                                                                                                                                                                                                                                       _cubestore(),
+                                                                                                                                                                                                                                                       _cur_id(0),
+                                                                                                                                                                                                                                                       _chunk_cond(),
+                                                                                                                                                                                                                                                       _whitelist(whitelist) {
+        if (filesystem::exists(_workdir) && filesystem::is_directory(_workdir)) {
             // boost::filesystem::remove_all(_workdir); // TODO: uncomment after testing
-        } else if (boost::filesystem::exists(_workdir) && !boost::filesystem::is_directory(_workdir)) {
+        } else if (filesystem::exists(_workdir) && !filesystem::is_directory(_workdir)) {
             throw std::string("ERROR in gdalcubes_server::gdalcubes_server(): working directory for gdalcubes_server is an existing file.");
         }
-        boost::filesystem::create_directory(_workdir);
-        boost::filesystem::current_path(_workdir);
+
+        filesystem::mkdir(_workdir);
 
         std::string url = ssl ? "https://" : "http://";
         url += host + ":" + std::to_string(port);
@@ -257,7 +244,7 @@ class gdalcubes_server {
     const std::string _host;
     const std::string _basepath;
     const bool _ssl;
-    const boost::filesystem::path _workdir;
+    const std::string _workdir;
 
     std::map<uint32_t, std::shared_ptr<cube>> _cubestore;
 

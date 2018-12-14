@@ -21,6 +21,18 @@ typedef exprtk::symbol_table<double> symbol_table_t;
 typedef exprtk::expression<double> expression_t;
 typedef exprtk::parser<double> parser_t;
 
+template <typename T>
+struct isnan_func : public exprtk::ifunction<T> {
+    isnan_func() : exprtk::ifunction<T>(1) {}
+    T operator()(const T& v1) { return T(isnan(double(v1))); }
+};
+
+template <typename T>
+struct isfinite_func : public exprtk::ifunction<T> {
+    isfinite_func() : exprtk::ifunction<T>(1) {}
+    T operator()(const T& v1) { return T(isfinite(double(v1))); }
+};
+
 std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     GCBS_DEBUG("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
     if (id < 0 || id >= count_chunks())
@@ -40,6 +52,10 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
         symbol_table.add_variable(_in_cube->bands().get(i).name, values[i]);
     }
     symbol_table.add_constants();
+    symbol_table.add_constant("NAN", nan(""));
+    isnan_func<double> f_isnan;
+    isfinite_func<double> f_isfinite;
+    symbol_table.add_function("isfinite", f_isfinite);
 
     std::vector<expression_t> expr;
     for (uint16_t i = 0; i < _bands.count(); ++i) {

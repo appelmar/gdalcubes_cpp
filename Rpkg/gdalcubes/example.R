@@ -89,16 +89,16 @@ plot(gcbs_cube(x, v) %>% gcbs_select_bands(c("B04","B08"))  %>% gcbs_apply_pixel
 bri = gcbs_cube(x, v) %>% gcbs_select_bands(c("B08","B12"))  %>% gcbs_apply_pixel(c("(B08-B12)/(B08+B12)"))
 
 f <- function() {
-  x = read_stream_as_array()
-  out <- reduce_time_multiband(x, function(x) {
+  x = gcbs_read_stream_as_array()
+  out <- reduce_time(x, function(x) {
     if (all(is.na(x[1,]))) return(NA)
     xx = max(x[1,],na.rm=TRUE) - min(x[1,], na.rm=T) 
     return(xx)
   })
-  write_stream_from_array(out)
+  gcbs_write_stream_from_array(out)
 }
 
-dif.bri = gcbs_stream(bri, f)
+dif.bri = gcbs_chunk_apply(bri, f)
 plot(dif.bri, key.pos=1)
 
 

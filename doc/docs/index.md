@@ -1,10 +1,12 @@
 # Earth observation data cubes from GDAL image collections
 
 
-![](gdalcubes_logo_1_small.png)
+![](gdalcubes_logo_1_medium.png)
 
-**gdalcubes** is a library and toolkit to represent collections of Earth Observation (EO) images
-as on-demand data cubes (or _multidimensional arrays_). It presents a single model how multitemporal and multispectral 
+## Introduction
+
+**gdalcubes** is a library to represent collections of Earth Observation (EO) images
+as on-demand data cubes (or _multidimensional arrays_). It presents a model how multitemporal and multispectral 
 imagery can be processed and streamed into external programs such as R or Python on local computers or distributed cloud environments. 
 gdalcubes is not a database, i.e., it does not need to store additional copies of the imagery but instead
 simply links to and indexes existing files / GDAL datasets. It is written in C++ and includes a command line interface as well as a package for R. A python package is

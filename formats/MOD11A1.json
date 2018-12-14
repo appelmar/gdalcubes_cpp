@@ -5,7 +5,7 @@
     "pattern" : "HDF4_EOS:EOS_GRID:\"(.+)\\.hdf.*"
   },
   "datetime" : {
-    "pattern" : ".*M[OY]D11A2\\.A(.{7}).*",
+    "pattern" : ".*M[OY]D11A1\\.A(.{7}).*",
     "format" : "%Y%j"
   },
   "bands" : {
@@ -30,14 +30,6 @@
     "NIGHT_VIEW_TIME" : {
       "pattern" : ".+Night_view_time$",
       "nodata" : 255
-    },
-    "EMIS_31" : {
-      "pattern" : ".+Emis_31$",
-      "nodata" : 0
-    },
-    "EMIS_32" : {
-      "pattern" : ".+Emis_32$",
-      "nodata" : 0
     }
   }
 }

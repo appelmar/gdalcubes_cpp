@@ -39,9 +39,12 @@ if (!file.exists("MOD11A2.zip"))
   download.file("https://uni-muenster.sciebo.de/s/NSUNrX0Q3UcJRKq/download", destfile="MOD11A2.zip",method=dl.method,mode = "wb")
 if (!file.exists("MOD13A3.zip"))
   download.file("https://uni-muenster.sciebo.de/s/qsy2zAV9TyjWlCG/download", method=dl.method, destfile="MOD13A3.zip",mode = "wb")
+if (!file.exists("CHIRPS_MONTHLY.zip"))
+  download.file("https://uni-muenster.sciebo.de/s/G5KIlTO5TmNrLby/download", method=dl.method, destfile="CHIRPS_MONTHLY.zip",mode = "wb")
 
 unzip("MOD11A2.zip", exdir = "MOD11A2")
 unzip("MOD13A3.zip", exdir = "MOD13A3")
+unzip("CHIRPS_MONTHLY.zip", exdir = "CHIRPS_MONTHLY")
 ```
 
 Will generate two directories, each comprising a set of HDF4 files
@@ -72,8 +75,7 @@ file_subdatasets = expand.grid(file=list.files("MOD11A2", pattern=".hdf$", full.
 
 gdal_datasets = paste("HDF4_EOS:EOS_GRID:\"", file_subdatasets$file, "\":MODIS_Grid_8Day_1km_LST:",file_subdatasets$subdataset, sep="")
 
-
-gcbs_create_image_collection(gdal_datasets, "MOD11A2_local", "MOD11A2.db")
+gcbs_create_image_collection(gdal_datasets, "MOD11A2", "MOD11A2.db")
 ```
 
 # Creating a data cube
@@ -138,7 +140,7 @@ file_subdatasets = expand.grid(file=list.files("MOD13A3", pattern=".hdf$", full.
 gdal_datasets = paste("HDF4_EOS:EOS_GRID:\"", file_subdatasets$file, "\":MOD_Grid_monthly_1km_VI:",file_subdatasets$subdataset, sep="")
 
 
-gcbs_create_image_collection(gdal_datasets, "MOD13A3_local", "MOD13A3.db")
+gcbs_create_image_collection(gdal_datasets, "MOD13A3", "MOD13A3.db")
 
 
 # create data cubes using the same view
@@ -159,8 +161,19 @@ plot(cube, t=1)
 plot(gcbs_reduce(cube, "median"))
 
 ```
+# TODO: Join CHIRPS precipitation data
+
+
+# TODO: fit a model like NDVI ~ temp last month or last month diff DAY-NIGHT or CHIRS
 
 
 
+```{r}
 
+gcbs_create_image_collection(list.files("CHIRPS_MONTHLY", "*.tif", full.names = TRUE), "CHIRPS_v2_0_monthly_p05_tif", "CHIRPS_MONTHLY.db")
+
+plot(gcbs_cube(gcbs_image_collection("CHIRPS_MONTHLY.db")), key.pos=1, t=1)
+
+
+```
 

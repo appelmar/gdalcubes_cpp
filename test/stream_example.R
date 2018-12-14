@@ -1,7 +1,7 @@
 library(gdalcubes)
-x = read_stream_as_array()
+x = gcbs_read_stream_as_array()
 
-out <- reduce_time_multiband(x, function(x) {
+out <- reduce_time(x, function(x) {
     ndvi <- (x[8,]-x[4,])/(x[8,]+x[4,])
     if (all(is.na(x))) return(NA)
     xx = max(ndvi,na.rm=TRUE) - min(ndvi, na.rm=T)
@@ -10,10 +10,6 @@ out <- reduce_time_multiband(x, function(x) {
 
 #out = (x[8,,,,drop=FALSE] - x[4,,,,drop=FALSE]) / (x[8,,,,drop=FALSE] + x[4,,,,drop=FALSE])
 
-
-
-
-
-write_stream_from_array(out)
+gcbs_write_stream_from_array(out)
 
 

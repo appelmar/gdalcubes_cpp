@@ -15,6 +15,7 @@
 */
 
 #include "view.h"
+#include "filesystem.h"
 
 cube_view cube_view::read(nlohmann::json j) {
     cube_view v;
@@ -98,8 +99,7 @@ cube_view cube_view::read(nlohmann::json j) {
 }
 
 cube_view cube_view::read_json(std::string filename) {
-    namespace fs = boost::filesystem;
-    if (!fs::exists(filename))
+    if (!filesystem::exists(filename))
         throw std::string("ERROR in cube_view::read_json(): image_collection_cube view file does not exist.");
     std::ifstream i(filename);
     nlohmann::json j;

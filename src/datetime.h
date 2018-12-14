@@ -310,12 +310,11 @@ class datetime {
         return os.str();
     }
 
-
     // Helper function that tries to parse string datetimes according to a given format
     // tries date::parse first and if this does not work std::get_time
     static date::sys_seconds tryparse(std::string format, std::string d) {
         bool success = false;
-        date::sys_seconds out; // TODO: set to invalid?!
+        date::sys_seconds out;  // TODO: set to invalid?!
         if (!success) {
             std::istringstream is(d);
             is >> date::parse(format, out);
@@ -336,13 +335,11 @@ class datetime {
             std::istringstream is(d);
             is >> std::get_time(&tp, format.c_str());
             if (!is.fail()) {
-
                 if (tp.tm_yday != -1) {
-                    out = date::sys_days{date::year{tp.tm_year + 1900}/1/1} + date::days{tp.tm_yday} +
+                    out = date::sys_days{date::year{tp.tm_year + 1900} / 1 / 1} + date::days{tp.tm_yday} +
                           std::chrono::hours{tp.tm_hour} + std::chrono::minutes{tp.tm_min} + std::chrono::seconds{tp.tm_sec};
-                }
-                else {
-                    out = date::sys_days{date::year{tp.tm_year + 1900}/(tp.tm_mon+1)/tp.tm_mday} +
+                } else {
+                    out = date::sys_days{date::year{tp.tm_year + 1900} / (tp.tm_mon + 1) / tp.tm_mday} +
                           std::chrono::hours{tp.tm_hour} + std::chrono::minutes{tp.tm_min} + std::chrono::seconds{tp.tm_sec};
                 }
                 success = true;
@@ -354,10 +351,9 @@ class datetime {
             throw std::string("Cannot parse datetime string '" + d + "' with format '" + format + "'");
         }
         return out;
-
     }
 
-    // from standard format with variable precision (supports year_month
+    // from standard format with variable precision (
     static datetime from_string(std::string s) {
         std::istringstream is(s);
 
@@ -487,6 +483,7 @@ class datetime {
         auto dp = date::floor<date::days>(l._p);
         auto ymd = date::year_month_day(dp);
         auto tod = l._p - dp;
+        out._unit = r.dt_unit;
         switch (r.dt_unit) {
             case datetime_unit::NONE:
                 break;

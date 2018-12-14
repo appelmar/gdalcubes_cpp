@@ -19,6 +19,7 @@
 #include <regex>
 #include "config.h"
 #include "external/date.h"
+#include "filesystem.h"
 #include "utils.h"
 
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
@@ -85,8 +86,8 @@ image_collection::image_collection(collection_format format) : _format(format), 
 }
 
 image_collection::image_collection(std::string filename) : _format(), _filename(filename), _db(nullptr) {
-    if (!boost::filesystem::exists(boost::filesystem::path{filename})) {
-        throw std::string("ERROR inimage_collection::image_collection(): input collection '" + filename + "' does not exist.");
+    if (!filesystem::exists(filename)) {
+        throw std::string("ERROR in image_collection::image_collection(): input collection '" + filename + "' does not exist.");
     }
     if (sqlite3_open_v2(filename.c_str(), &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL) != SQLITE_OK) {
         std::string msg = "ERROR in image_collection::image_collection(): cannot open existing image collection file.";
@@ -273,7 +274,6 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             date::sys_seconds pt;
             pt = datetime::tryparse(datetime_format, res_datetime[1].str());
             os << date::format("%Y-%m-%dT%H:%M:%S", pt);
-
 
             // Convert to ISO string including separators (boost::to_iso_string or boost::to_iso_extended_string do not work with SQLite datetime functions)
             std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + res_image[1].str() + "','" +
@@ -675,7 +675,6 @@ bool image_collection::is_aligned() {
 
 std::vector<std::string> image_collection::unroll_archives(std::vector<std::string> descriptors) {
     std::vector<std::string> out;
-    namespace fs = boost::filesystem;
 
     for (uint32_t i = 0; i < descriptors.size(); ++i) {
         std::string s = descriptors[i];
@@ -684,7 +683,7 @@ std::vector<std::string> image_collection::unroll_archives(std::vector<std::stri
             char** x = y;
             if (x != NULL) {
                 while (*x != NULL) {
-                    out.push_back("/vsizip/" + (fs::path(s) / fs::path(*x)).string());
+                    out.push_back("/vsizip/" + filesystem::join(s, *x));
                     ++x;
                 }
                 CSLDestroy(y);
@@ -699,7 +698,7 @@ std::vector<std::string> image_collection::unroll_archives(std::vector<std::stri
             char** x = y;
             if (x != NULL) {
                 while (*x != NULL) {
-                    out.push_back("/vsitar/" + (fs::path(s) / fs::path(*x)).string());
+                    out.push_back("/vsitar/" + filesystem::join(s, *x));
                     ++x;
                 }
                 CSLDestroy(y);

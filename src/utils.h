@@ -18,7 +18,6 @@
 #define UTILS_H
 
 #include <gdal_priv.h>
-#include <boost/filesystem.hpp>
 #include <iomanip>
 #include <iostream>
 #include <sstream>

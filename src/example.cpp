@@ -40,6 +40,9 @@ int main(int argc, char *argv[]) {
     config::instance()->set_error_handler(error_handler::error_handler_debug);
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
 
+    datetime ttt = datetime::from_string("2018-11-08T09:32:09");
+    std::cout << ttt.to_double() << std::endl;
+
     collection_format fmt("../../test/collection_format_test.json");
 
     collection_format ftest("Sentinel2_L1C");
@@ -48,10 +51,6 @@ int main(int argc, char *argv[]) {
     for (auto it = prsts.begin(); it != prsts.end(); ++it) {
         std::cout << it->first << "    " << it->second << std::endl;
     }
-
-
-    date::sys_seconds s = datetime::tryparse("%Y.%m", "2018.01");
-
 
     try {
         timer t0;

@@ -15,7 +15,6 @@
 */
 
 #include "swarm.h"
-#include <boost/filesystem.hpp>
 #include <thread>
 
 size_t post_file_read_callback(char *buffer, size_t size, size_t nitems, void *userdata) {
@@ -42,7 +41,7 @@ void gdalcubes_swarm::post_file(std::string path, uint16_t server_index) {
         curl_easy_reset(_server_handles[server_index]);
 
         // Step 1: send a HEAD HTTP request to check whether the file already exists on the server
-        curl_easy_setopt(_server_handles[server_index], CURLOPT_URL, (_server_uris[server_index] + "/file" + "?name=" + path + "&size=" + std::to_string(boost::filesystem::file_size(path))).c_str());
+        curl_easy_setopt(_server_handles[server_index], CURLOPT_URL, (_server_uris[server_index] + "/file" + "?name=" + path + "&size=" + std::to_string(filesystem::file_size(path))).c_str());
         curl_easy_setopt(_server_handles[server_index], CURLOPT_CUSTOMREQUEST, "HEAD");
         curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, config::instance()->get_swarm_curl_verbose() ? 1L : 0L);
 
@@ -81,7 +80,7 @@ void gdalcubes_swarm::post_file(std::string path, uint16_t server_index) {
             curl_easy_setopt(_server_handles[server_index], CURLOPT_READDATA, &is);
             curl_easy_setopt(_server_handles[server_index], CURLOPT_READFUNCTION, &post_file_read_callback);
 
-            curl_easy_setopt(_server_handles[server_index], CURLOPT_INFILESIZE_LARGE, (curl_off_t)boost::filesystem::file_size(path));
+            curl_easy_setopt(_server_handles[server_index], CURLOPT_INFILESIZE_LARGE, (curl_off_t)filesystem::file_size(path));
 
             curl_easy_setopt(_server_handles[server_index], CURLOPT_VERBOSE, config::instance()->get_swarm_curl_verbose() ? 1L : 0L);
 
@@ -98,21 +97,21 @@ void gdalcubes_swarm::post_file(std::string path, uint16_t server_index) {
 }
 
 void gdalcubes_swarm::push_execution_context(bool recursive) {
-    boost::filesystem::path p = boost::filesystem::current_path();
+    std::string p = filesystem::get_working_dir();
 
     std::vector<std::string> file_list;
     if (recursive) {
-        boost::filesystem::recursive_directory_iterator end;
-        for (boost::filesystem::recursive_directory_iterator i(p); i != end; ++i) {
-            if (boost::filesystem::is_regular_file(*i))
-                file_list.push_back(boost::filesystem::relative((*i).path(), p).string());
-        }
+        filesystem::iterate_directory_recursive(p, [&file_list](const std::string &p) {
+            if (filesystem::is_regular_file(p)) {
+                file_list.push_back(p);
+            }
+        });
     } else {
-        boost::filesystem::directory_iterator end;
-        for (boost::filesystem::directory_iterator i(p); i != end; ++i) {
-            if (boost::filesystem::is_regular_file(*i))
-                file_list.push_back(boost::filesystem::relative((*i).path(), p).string());
-        }
+        filesystem::iterate_directory(p, [&file_list](const std::string &p) {
+            if (filesystem::is_regular_file(p)) {
+                file_list.push_back(p);
+            }
+        });
     }
 
     // TODO: parallel upload

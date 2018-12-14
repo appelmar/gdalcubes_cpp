@@ -167,17 +167,17 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
 
     if (!path.empty()) {
         if (path[0] == "file") {
-            GCBS_DEBUG("POST /file" + req.remote_address());
+            GCBS_DEBUG("POST /file " + req.remote_address());
             std::string fname;
             if (query_pars.find("name") != query_pars.end()) {
                 fname = query_pars["name"];
             } else {
                 fname = utils::generate_unique_filename();
             }
-            fname = (_workdir / fname).string();
-            if (boost::filesystem::exists(fname)) {
+            fname = filesystem::join(_workdir, fname);
+            if (filesystem::exists(fname)) {
                 if (req.headers().has("Content-Length")) {
-                    if (req.headers().content_length() == boost::filesystem::file_size(fname)) {
+                    if (req.headers().content_length() == filesystem::file_size(fname)) {
                         req.reply(web::http::status_codes::OK);
                     } else {
                         req.reply(web::http::status_codes::Conflict);
@@ -186,7 +186,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
                     req.reply(web::http::status_codes::Conflict);
                 }
             } else {
-                boost::filesystem::create_directories(boost::filesystem::path(fname).parent_path());
+                filesystem::mkdir_recursive(filesystem::parent(fname));
                 auto fstream = std::make_shared<concurrency::streams::ostream>();
                 pplx::task<void> t = concurrency::streams::fstream::open_ostream(fname).then(
                     [fstream, &req](concurrency::streams::ostream outFile) {
@@ -331,10 +331,10 @@ void gdalcubes_server::handle_head(web::http::http_request req) {
         std::string fname;
         if (query_pars.find("name") != query_pars.end()) {
             fname = query_pars["name"];
-            fname = (_workdir / fname).string();
-            if (boost::filesystem::exists(fname)) {
+            fname = filesystem::join(_workdir, fname);
+            if (filesystem::exists(fname)) {
                 if (query_pars.find("size") != query_pars.end()) {
-                    if (std::stoi(query_pars["size"]) == (int)boost::filesystem::file_size(fname)) {
+                    if (std::stoi(query_pars["size"]) == (int)filesystem::file_size(fname)) {
                         req.reply(web::http::status_codes::OK);  // File exists and has the same size
                     } else {
                         req.reply(web::http::status_codes::Conflict);  // File exists but has different size
@@ -379,7 +379,7 @@ int main(int argc, char* argv[]) {
     // see https://stackoverflow.com/questions/15541498/how-to-implement-subcommands-using-boost-program-options
 
     po::options_description global_args("Options");
-    global_args.add_options()("help,h", "")("version", "")("debug,d", "")("basepath,b", po::value<std::string>()->default_value("/gdalcubes/api"), "")("port,p", po::value<uint16_t>()->default_value(1111), "")("ssl", "")("worker_threads,t", po::value<uint16_t>()->default_value(1), "")("dir,D", po::value<std::string>()->default_value((boost::filesystem::temp_directory_path() / "gdalcubes").string()), "")("whitelist,w", po::value<std::string>(), "");
+    global_args.add_options()("help,h", "")("version", "")("debug,d", "")("basepath,b", po::value<std::string>()->default_value("/gdalcubes/api"), "")("port,p", po::value<uint16_t>()->default_value(1111), "")("ssl", "")("worker_threads,t", po::value<uint16_t>()->default_value(1), "")("dir,D", po::value<std::string>()->default_value((filesystem::join(filesystem::get_tempdir(), "gdalcubes")), ""))("whitelist,w", po::value<std::string>(), "");
 
     po::variables_map vm;
 

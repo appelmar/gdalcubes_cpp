@@ -18,6 +18,7 @@
 
 #include "apply_pixel.h"
 #include "external/json.hpp"
+#include "filesystem.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
 #include "reduce.h"
@@ -62,7 +63,7 @@ std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "image_collection", [](nlohmann::json& j) {
-            if (!boost::filesystem::exists(j["file"].get<std::string>())) {
+            if (!filesystem::exists(j["file"].get<std::string>())) {
                 throw std::string("ERROR in cube_generators[\"image_collection\"](): image collection file does not exist.");
             }
             cube_view v = cube_view::read_json_string(j["view"].dump());

@@ -1,5 +1,5 @@
 
-# Tutorial: Landsat 8 image collection for pre- and post- earthquake mapping
+# Tutorial 1: Landsat 8 image collection for pre- and post- earthquake mapping
 
 TODO: Docker demo image 
 
@@ -248,3 +248,69 @@ write_stream_from_array(out)
 ```
 gdalcubes stream --exec="Rscript --vanilla stream.R" -r median -v "view.json" -t 2 -c "16 256 256" L08.db stream.tif
 ```
+
+
+
+# Tutorial 2: Analysing the global CHIRPS precipitation dataset in R
+
+
+```
+gdalcubes create_collection -R -f collection_format.json . CHIRPS.db
+> IMAGE COLLECTION 'CHIRPS.db' has 13787 images with 1 bands from 13787 GDAL dataset references
+```
+
+```
+ls -lh CHIRPS.db
+> -rw-r--r-- 1 root root 3.9M Oct 31 09:44 CHIRPS.db
+```
+
+```
+gdalcubes info CHIRPS.db
+> IMAGE COLLECTION 'CHIRPS.db' has 13787 images with 1 bands from 13787 GDAL dataset references
+> DIMENSIONS: 
+>   BANDS:       (precipitation)
+>   DATETIME:    (1981-01-01T00:00:00 - 2018-09-30T00:00:00)
+>   Y / LAT:     (-50 - 50)
+>   X / LON:     (-180 - 180)
+```
+
+
+What is the maximum daily precipitation in 2015?
+
+view_max_2015.json
+```
+{
+  "aggregation" : "none",
+  "resampling" : "bilinear",
+  "space" :
+  {
+    "left" : -180,
+    "right" : 180,
+    "top" : 50,
+    "bottom" : -50,
+    "proj" : "EPSG:4326",
+    "nx" : 1800,
+    "ny" : 500
+  },
+  "time" :
+  {
+    "t0" : "2015-01-01",
+    "t1" : "2015-01-31",
+    "dt" : "P1D"
+  }
+}
+```
+
+
+```
+gdalcubes reduce -r "max" -v view_max_2015.json CHIRPS.db max_2015.tif
+```
+
+
+https://uni-muenster.sciebo.de/s/akVSnlT2z6dFiZX/download
+
+![](tutorial_chirps_all_max.png)
+
+
+
+

@@ -44,27 +44,16 @@ make
 make install
 ```
 
-You might need to install a few libraries before compiling gdalcubes successfully. For the core library, you need to install.
+You might need to install a few libraries before compiling gdalcubes successfully. For the core library, you need to install development versions for:
 
-- [GDAL](https://www.gdal.org/)
-- [SQLite](https://www.sqlite.org/): A self-contained, high-reliability, embedded, full-featured, public-domain, SQL database engine**
-- [netCDF](https://www.unidata.ucar.edu/software/netcdf)
-- [CURL](https://curl.haxx.se/)
-
-
-If you want to compile the command line interface, you will furthermore need
-
-- [Boost.Program_options](https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html).
-
-
-gdalcubes_server additionally builds on
-- [cpprestsdk](https://github.com/Microsoft/cpprestsdk).
-
+On Ubuntu `apt install libgdal-dev libnetcdf-dev libcurl4-openssl-dev libsqlite3-dev` will install all libraries needed to compile 
+the core gdalcubes library. If you want to compile the command line interface, you will furthermore need `apt install libboost-program-options-dev libboost-system-dev`
+and running gdalcubes as a server additionally requires `apt install libcpprest-dev`.
 
 
 ## Docker image
 This repository includes a Docker image which you can use either to run the gdalcubes command line interface interactively
-or to run gdalcubes_server as a service for distribute processing. The commands below demonstrate how to build the image and run a container.
+or to run gdalcubes_server as a service for distributed processing. The commands below demonstrate how to build the image and run a container.
  
 
 ```
@@ -74,7 +63,7 @@ docker run -d -p 11111:1111 appelmar/gdalcubes # runs gdalcubes_server as a deam
 docker run appelmar/gdalcubes /bin/bash # get a command line where you can run gdalcubes 
 ``` 
 
-The demo directory furthermore runs [RStudio Server](https://www.rstudio.com/products/rstudio-server/) with the gdalcubes R package.
+The Dockerfile at `demo/Dockerfile` furthermore runs [RStudio Server](https://www.rstudio.com/products/rstudio-server/) with the gdalcubes R package.
 
 
 # R package
@@ -92,3 +81,32 @@ Further documentation including a tutorial with different datasets can be found 
 
 
 
+
+
+# Credits
+
+gdalcubes uses the following great open source libraries:
+
+**[GDAL](https://www.gdal.org/):  A translator library for raster and vector geospatial data formats**
+
+**[json](https://github.com/nlohmann/json): JSON for Modern C++**
+
+**[SQLite](https://www.sqlite.org/): A self-contained, high-reliability, embedded, full-featured, public-domain, SQL database engine**
+
+**[CURL](https://curl.haxx.se/): Command line tool and library for transferring data with URLs**
+
+**[ExprTk](http://www.partow.net/programming/exprtk/): A C++ Mathematical Expression Parsing and Evaluation Library**
+ 
+**[netCDF](https://www.unidata.ucar.edu/software/netcdf): The Unidata network Common Data Form C library**
+   
+**[tiny-process-library](https://gitlab.com/eidheim/tiny-process-library): A small platform independent library making it simple to create and stop new processes in C++**
+
+**[Catch](https://www.gdal.org/): A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
+       
+**[Date](https://github.com/HowardHinnant/date): A date and time library based on the C++11/14/17 <chrono> header**   
+
+**[cpprestsdk](https://github.com/Microsoft/cpprestsdk)**
+
+**[Boost.Filesystem](https://www.boost.org/doc/libs/1_68_0/libs/filesystem/doc/index.htm)**
+
+**[Boost.Program_options](https://www.boost.org/doc/libs/1_68_0/doc/html/program_options.html)**

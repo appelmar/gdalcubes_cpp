@@ -84,15 +84,14 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         }
     } }, true);
 
-    std::stringstream bytestream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 
     // Write to stdin
     std::string proj = _in_cube->st_reference()->proj();
-    bytestream.write((char *)(size), sizeof(int) * 4);
+    process.write((char *)(size), sizeof(int) * 4);
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         int str_size = _in_cube->bands().get(i).name.size();
-        bytestream.write((char *)(&str_size), sizeof(int));
-        bytestream.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
+        process.write((char *)(&str_size), sizeof(int));
+        process.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
     for (int i = 0; i < size[1]; ++i) {
@@ -104,16 +103,14 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
         dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
     }
-    bytestream.write((char *)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
+    process.write((char *)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
     std::free(dims);
 
     int str_size = proj.size();
-    bytestream.write((char *)(&str_size), sizeof(int));
-    bytestream.write(proj.c_str(), sizeof(char) * str_size);
-    bytestream.write(((char *)(data->buf())), sizeof(double) * data->size()[0] * data->size()[1] * data->size()[2] * data->size()[3]);
+    process.write((char *)(&str_size), sizeof(int));
+    process.write(proj.c_str(), sizeof(char) * str_size);
+    process.write(((char *)(data->buf())), sizeof(double) * data->size()[0] * data->size()[1] * data->size()[2] * data->size()[3]);
 
-    std::string buf = bytestream.str();
-    process.write(buf.c_str(), buf.size());
     process.close_stdin();  // needed?
 
     auto exit_status = process.get_exit_status();

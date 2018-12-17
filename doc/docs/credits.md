@@ -25,7 +25,7 @@ by the core library.
      - gdalcubes may statically or dynamically link to the sqlite library depending on compilation flags
     
 - **[CURL](https://curl.haxx.se/): Command line tool and library for transferring data with URLs**
-     - Copyright (c) 1996 - 2018, Daniel Stenberg, <daniel@haxx.se>
+     - Copyright (c) 1996 - 2018, Daniel Stenberg
      - License: [curl license](https://curl.haxx.se/docs/copyright.html) 
      - gdalcubes may statically or dynamically link to the libcurl library depending on compilation flags
       
@@ -40,17 +40,17 @@ by the core library.
     - DOI: http://doi.org/10.5065/D6H70CW6
     - gdalcubes may statically or dynamically link to the NetCDF C library depending on compilation flags
 
+- **[tiny-process-library](https://gitlab.com/eidheim/tiny-process-library): A small platform independent library making it simple to create and stop new processes in C++**
+    - Copyright (c) 2015-2018 Ole Christian Eidheim
+    - License:  [MIT license](https://opensource.org/licenses/MIT)      
+    - gdalcubes_server includes may statically or dynamically link to the cpprestsdk library depending on compilation flags 
+    - gdalcubes distributes an unmodified version of the library under `src/external/tiny-process-library`                    
 
 - **[Catch](https://www.gdal.org/): A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
     - Copyright (c) 2010 Two Blue Cubes Ltd
     - License:  [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt)
     - gdalcubes distributes an unmodified version of the library under `src/external/catch.hpp`
     
-- **[Boost.Date_time](https://www.boost.org/doc/libs/1_68_0/doc/html/date_time.html): A set of date-time libraries based on generic programming concepts**
-    - Copyright (c)2001-2005 CrystalClear Software, Inc
-    - License:  [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt)          
-    - gdalcubes may statically or dynamically link to the Boost.Date_time library depending on compilation flags       
-       
 - **[Boost.Filesystem](https://www.boost.org/doc/libs/1_68_0/libs/filesystem/doc/index.htm)**
     - Copyright (c) Beman Dawes, 2011
     - License:  [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt)
@@ -60,18 +60,7 @@ by the core library.
     - Copyright (c) 2002-2004 Vladimir Prus
     - License:  [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt)       
     - gdalcubes may statically or dynamically link to the Boost.Program_options library depending on compilation flags         
-       
-- **[Boost.Process](https://www.boost.org/doc/libs/1_68_0/doc/html/process.html): A library to manage system processes**
-    - Copyright (c) 2006-2012 Julio M. Merino Vidal, Ilya Sokolov, Felipe Tanus, Jeff Flinn, Boris Schaeling
-    - Copyright (c) 2016 Klemens D. Morgenstern
-    - License:  [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt)       
-    - gdalcubes includes header files in stream.h / stream.cpp         
-               
-- **[Boost.Asio](https://www.boost.org/doc/libs/1_68_0/doc/html/boost_asio.html): A cross-platform C++ library for network and low-level I/O programming**
-    - Copyright (c) 2003-2018 Christopher M. Kohlhoff
-    - License:  [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt)       
-    - gdalcubes includes header files in stream.h / stream.cpp / server.h / server.cpp        
-                                      
+                      
 - **[Date](https://github.com/HowardHinnant/date): A date and time library based on the C++11/14/17 <chrono> header**   
     - Copyright (c) 2015, 2016, 2017 Howard Hinnant
     - Copyright (c) 2016 Adrian Colomitchi
@@ -87,4 +76,7 @@ by the core library.
     - gdalcubes_server includes may statically or dynamically link to the cpprestsdk library depending on compilation flags 
 
 
-Derived work such as R or Python packages may use further external software (see their repositories or root directories).  
+
+
+
+Derived work such as R or Python packages may use further external software (see their documentation).  

@@ -25,6 +25,7 @@
 
 //#include <boost/date_time.hpp> // EVENTUALLY REMOVE
 #include <chrono>
+#include <iomanip>
 #include <regex>
 #include "error.h"
 #include "external/date.h"
@@ -333,7 +334,7 @@ class datetime {
             tp.tm_yday = -1;
 
             std::istringstream is(d);
-            is >> std::get_time(&tp, format.c_str());
+            is >> std::get_time(&tp, format.c_str());  // works only from GCC > 5
             if (!is.fail()) {
                 if (tp.tm_yday != -1) {
                     out = date::sys_days{date::year{tp.tm_year + 1900} / 1 / 1} + date::days{tp.tm_yday} +

@@ -128,7 +128,24 @@ class filesystem {
     }
 
     static void mkdir_recursive(std::string p) {
-        VSIMkdirRecursive(p.c_str(), 0777);
+        //VSIMkdirRecursive(p.c_str(), 0777); // available from GDAL 2.3
+
+        if (p.empty()) return;
+
+        if (is_directory(p)) {
+            return;
+        }
+
+        std::string par = parent(p);
+
+        if (par == p || par.length() >= p.length()) {
+            return;
+        }
+
+        if (!exists(par)) {
+            mkdir_recursive(par);
+        }
+        mkdir(p);
     }
 
     static bool is_relative(std::string p) {

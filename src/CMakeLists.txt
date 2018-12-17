@@ -108,8 +108,8 @@ else()
 endif()
 
 
-# TODO: what to do with boost inlcude dirs?
-include_directories (${gdal_INCLUDEDIR} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
+
+include_directories (${GDAL_INCLUDEDIR} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR} ${Boost_INCLUDE_DIRS})
 
 get_filename_component(LDIR_1  ${NETCDF_LIBRARY} DIRECTORY)
 get_filename_component(LDIR_2  ${SQLITE_LIBRARY} DIRECTORY)
@@ -160,7 +160,7 @@ add_executable(gdalcubes_test ${TEST_FILES})
 target_link_libraries (gdalcubes_test libgdalcubes_static)
 
 
-find_package(Boost 1.65 REQUIRED COMPONENTS program_options)
+find_package(Boost 1.65 COMPONENTS program_options)
 if (Boost_FOUND)
     message(STATUS "Found Boost libraries ${Boost_LIBRARIES}")
 

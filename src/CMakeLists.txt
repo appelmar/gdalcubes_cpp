@@ -99,17 +99,8 @@ endif ()
 
 
 
-# Find Boost header only libraries (process, asio)
-find_package(Boost 1.65)
-if (Boost_FOUND)
-    message(STATUS "Found Boost headers at ${Boost_INCLUDE_DIRS}")
-else()
-    message(FATAL ERROR "Could not find Boost header files boost/process.hpp and  boost/asio.hpp")
-endif()
 
-
-
-include_directories (${GDAL_INCLUDEDIR} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR} ${Boost_INCLUDE_DIRS})
+include_directories (${GDAL_INCLUDEDIR} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
 
 get_filename_component(LDIR_1  ${NETCDF_LIBRARY} DIRECTORY)
 get_filename_component(LDIR_2  ${SQLITE_LIBRARY} DIRECTORY)
@@ -127,6 +118,11 @@ file(GLOB SOURCE_FILES
     "*.cpp" "*.h"
 )
 
+
+add_subdirectory("external/tiny-process-library")
+
+
+
 list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)
 list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/gdalcubes.cpp)
 list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
@@ -136,13 +132,13 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 add_library(libgdalcubes_static STATIC  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_static PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY} tiny-process-library)
 
 
 add_library(libgdalcubes_shared SHARED  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_shared PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY} tiny-process-library)
 
 
 install(TARGETS libgdalcubes_static libgdalcubes_shared RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)
@@ -160,7 +156,7 @@ add_executable(gdalcubes_test ${TEST_FILES})
 target_link_libraries (gdalcubes_test libgdalcubes_static)
 
 
-find_package(Boost 1.65 COMPONENTS program_options)
+find_package(Boost 1.65 COMPONENTS program_options system) # system is required for error codes
 if (Boost_FOUND)
     message(STATUS "Found Boost libraries ${Boost_LIBRARIES}")
 

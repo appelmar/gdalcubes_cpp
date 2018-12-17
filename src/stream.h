@@ -17,7 +17,6 @@
 #ifndef STREAM_H
 #define STREAM_H
 
-#include <boost/process.hpp>
 #include "cube.h"
 
 /**
@@ -117,7 +116,6 @@ class stream_cube : public cube {
 
    private:
     std::shared_ptr<chunk_data> stream_chunk_stdin(std::shared_ptr<chunk_data> data);
-
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         _st_ref->win() = stref->win();
         _st_ref->proj() = stref->proj();

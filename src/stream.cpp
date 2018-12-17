@@ -15,7 +15,7 @@
 */
 
 #include "stream.h"
-#include <boost/asio.hpp>
+#include "external/tiny-process-library/process.hpp"
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     GCBS_DEBUG("stream_cube::read_chunk(" + std::to_string(id) + ")");
@@ -41,53 +41,35 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         return out;
     }
 
-    boost::process::opstream in;
+    // 1. new process with env "GDALCUBES_STREAMING=1"
+    std::string errstr;
+    // TODO: must _cmd be splitted by arguments as vector?
 
-    boost::asio::io_service ios;
-    std::future<std::vector<char>> outdata;
-    std::future<std::vector<char>> outerr;
+    uint32_t databytes_read = 0;
+    TinyProcessLib::Process process(_cmd, "", {{"GDALCUBES_STREAMING", "1"}}, [out, &databytes_read](const char *bytes, std::size_t n) {
 
-    boost::process::environment e = boost::this_process::environment();
-    e.set("GDALCUBES_STREAMING", "1");
-    //e["GDALCUBES_STREAMING"] = "1"; // this produces buffer overflows according to ASAN
-
-    boost::process::child c(_cmd, boost::process::std_out > outdata, ios, boost::process::std_in<in, boost::process::std_err> outerr, e);
-
-    std::string proj = _in_cube->st_reference()->proj();
-
-    in.write((char*)(size), sizeof(int) * 4);
-
-    for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
-        int str_size = _in_cube->bands().get(i).name.size();
-        in.write((char*)(&str_size), sizeof(int));
-        in.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
-    }
-    double* dims = (double*)std::calloc(size[1] + size[2] + size[3], sizeof(double));
-    for (int i = 0; i < size[1]; ++i) {
-        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
-    }
-    for (int i = size[1]; i < size[1] + size[2]; ++i) {
-        dims[i] = _in_cube->st_reference()->win().bottom + i * _in_cube->st_reference()->dy();
-    }
-    for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
-        dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
-    }
-    in.write((char*)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
-    std::free(dims);
-
-    int str_size = proj.size();
-    in.write((char*)(&str_size), sizeof(int));
-    in.write(proj.c_str(), sizeof(char) * str_size);
-    in.write(((char*)(data->buf())), sizeof(double) * data->size()[0] * data->size()[1] * data->size()[2] * data->size()[3]);
-    in.flush();
-
-    ios.run();
-    c.wait();
-
-    std::vector<char> odat = outdata.get();
-
-    std::vector<char> oerr = outerr.get();
-    std::string errstr(oerr.begin(), oerr.end());
+        if (databytes_read == 0) {
+            // Assumption is that at least 4 integers with chunk size area always contained in the first call of this function
+            if (n >= 4 * sizeof(int)) {
+                chunk_size_btyx out_size = {(uint32_t)(((int *)bytes)[0]), (uint32_t)(((int *)bytes)[1]),
+                                            (uint32_t)(((int *)bytes)[2]), (uint32_t)(((int *)bytes)[3])};
+                out->size(out_size);
+                // Fill buffers accordingly
+                out->buf(std::calloc(out_size[0] * out_size[1] * out_size[2] * out_size[3], sizeof(double)));
+                memcpy(out->buf(), bytes + (4 * sizeof(int)), n -  4 * sizeof(int));
+                databytes_read += n - (4 * sizeof(int));
+            } else {
+                GCBS_WARN("Cannot read streaming result, returning empty chunk");
+                databytes_read = std::numeric_limits<uint32_t>::max(); // prevent further calls to write anything into the chunk buffer
+            }
+        } else {
+            // buffer overflow check
+            if ((char*)(out->buf()) + databytes_read + n <= (char*)(out->buf()) + out->size()[0] * out->size()[1] * out->size()[2] * out->size()[3] * sizeof(double)) {
+                memcpy((char*)(out->buf()) + databytes_read, bytes, n);
+                databytes_read += n;
+            }
+        } }, [&errstr, this](const char *bytes, std::size_t n) {
+    errstr = std::string(bytes, n);
     if (_log_output == "stdout") {
         std::cout << errstr << std::endl;
     } else if (_log_output == "stderr") {
@@ -100,23 +82,45 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
             flog << errstr;
             flog.close();
         }
+    } }, true);
+
+    std::stringstream bytestream(std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+
+    // Write to stdin
+    std::string proj = _in_cube->st_reference()->proj();
+    bytestream.write((char *)(size), sizeof(int) * 4);
+    for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
+        int str_size = _in_cube->bands().get(i).name.size();
+        bytestream.write((char *)(&str_size), sizeof(int));
+        bytestream.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
-    if (c.exit_code() != 0) {
-        GCBS_ERROR("Child process failed with exit code " + std::to_string(c.exit_code()));
+    double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
+    for (int i = 0; i < size[1]; ++i) {
+        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
+    }
+    for (int i = size[1]; i < size[1] + size[2]; ++i) {
+        dims[i] = _in_cube->st_reference()->win().bottom + i * _in_cube->st_reference()->dy();
+    }
+    for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
+        dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
+    }
+    bytestream.write((char *)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
+    std::free(dims);
+
+    int str_size = proj.size();
+    bytestream.write((char *)(&str_size), sizeof(int));
+    bytestream.write(proj.c_str(), sizeof(char) * str_size);
+    bytestream.write(((char *)(data->buf())), sizeof(double) * data->size()[0] * data->size()[1] * data->size()[2] * data->size()[3]);
+
+    std::string buf = bytestream.str();
+    process.write(buf.c_str(), buf.size());
+    process.close_stdin();  // needed?
+
+    auto exit_status = process.get_exit_status();
+    if (exit_status != 0) {
+        GCBS_ERROR("Child process failed with exit code " + std::to_string(exit_status));
         GCBS_ERROR("Child process output: " + errstr);
-        throw std::string("ERROR in stream_cube::read_chunk(): external program returned exit code " + std::to_string(c.exit_code()));
-    }
-
-    if (odat.size() >= 4 * sizeof(int)) {
-        chunk_size_btyx out_size = {(uint32_t)(((int*)odat.data())[0]), (uint32_t)(((int*)odat.data())[1]), (uint32_t)(((int*)odat.data())[2]), (uint32_t)(((int*)odat.data())[3])};
-        out->size(out_size);
-        // Fill buffers accordingly
-        // TODO: check size again
-        out->buf(std::calloc(out_size[0] * out_size[1] * out_size[2] * out_size[3], sizeof(double)));
-        memcpy(out->buf(), odat.data() + (4 * sizeof(int)), sizeof(double) * out_size[0] * out_size[1] * out_size[2] * out_size[3]);
-
-    } else {
-        GCBS_WARN("Cannot read streaming result, returning empty chunk");
+        throw std::string("ERROR in stream_cube::read_chunk(): external program returned exit code " + std::to_string(exit_status));
     }
     return out;
 }

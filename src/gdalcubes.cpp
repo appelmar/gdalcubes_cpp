@@ -19,6 +19,7 @@
  * This file contains the main entry for the command line client.
  */
 
+#include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 #include "build_info.h"
 #include "filesystem.h"

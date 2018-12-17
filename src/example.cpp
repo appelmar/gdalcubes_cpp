@@ -89,23 +89,30 @@ int main(int argc, char *argv[]) {
         //        /**************************************************************************/
 
         /**************************************************************************/
-        // Test apply_pixel
-        {
-            auto c = image_collection_cube::create("test.db", v);
-            //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
-            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
-            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
-            // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
+        //        // Test apply_pixel
+        //        {
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
+        //            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
+        //            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
+        //            // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
+        //
+        //            auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
+        //
+        //            auto cr = reduce_cube::create(capply, "median");
+        //            // cr->write_gdal_image("test_apply_reduce.tif");
+        //            cr->write_netcdf_file("test_apply_reduce.nc");
+        //        }
 
-            auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
-
-            auto cr = reduce_cube::create(capply, "median");
-            // cr->write_gdal_image("test_apply_reduce.tif");
-            cr->write_netcdf_file("test_apply_reduce.nc");
-        }
         /**************************************************************************/
-
-        // TODO: add streaming test
+        // test streaming
+        {
+            // test streaming
+            auto c = image_collection_cube::create("test.db", v);
+            auto sc = stream_cube::create(c, "Rscript --vanilla stream_example.R", "stdout");
+            auto cr = reduce_cube::create(sc, "median");
+            cr->write_gdal_image("test_stream.tif");
+        }
 
         //
         //        /******************************************/

@@ -115,7 +115,7 @@ struct aggregation_state_median : public aggregation_state {
     aggregation_state_median(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
 
     void init() override {
-        _m_buckets = (std::vector<double> *)std::calloc(_size_btyx[0] * _size_btyx[1] * _size_btyx[2] * _size_btyx[3], sizeof(std::vector<double>));
+        _m_buckets.resize(_size_btyx[0] * _size_btyx[1] * _size_btyx[2] * _size_btyx[3]);
     }
 
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
@@ -141,11 +141,10 @@ struct aggregation_state_median : public aggregation_state {
                 ((double *)buf)[i] = (list[list.size() / 2] + list[list.size() / 2 - 1]) / ((double)2);
             }
         }
-        std::free(_m_buckets);
     }
 
    private:
-    std::vector<double> *_m_buckets;
+    std::vector<std::vector<double>> _m_buckets;
 };
 
 struct aggregation_state_first : public aggregation_state {

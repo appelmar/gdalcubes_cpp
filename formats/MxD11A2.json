@@ -1,5 +1,5 @@
 {
-  "description" : "Collection format for selected bands from the MODIS MOD11A2 v006 Land Surface Temperature product",
+  "description" : "Collection format for selected bands from the MODIS MxD11A2 (Aqua and Terra) v006 Land Surface Temperature product",
   "pattern" : ".*\\.hdf.*",
   "images" : {
     "pattern" : "HDF4_EOS:EOS_GRID:\"(.+)\\.hdf.*"

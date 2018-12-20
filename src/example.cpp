@@ -18,6 +18,7 @@
 #include <iostream>
 #include "apply_pixel.h"
 #include "collection_format.h"
+#include "cube_factory.h"
 #include "error.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
@@ -72,37 +73,37 @@ int main(int argc, char *argv[]) {
 
         cube_view v = cube_view::read_json("../../test/view2.json");
 
-        //        /**************************************************************************/
-        //        // test reduction
-        //        {
-        //            auto c = image_collection_cube::create("test.db", v);
-        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-        //            cb->write_netcdf_file("band_select.nc");
-        //            auto cr = reduce_cube::create(cb, "max");
-        //            cr->write_gdal_image("test_A.tif");
-        //
-        //            c = image_collection_cube::create("test.db", v);
-        //            cr = reduce_cube::create(c, "max");
-        //            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
-        //            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
-        //        }
-        //        /**************************************************************************/
+        /**************************************************************************/
+        // test reduction
+        {
+            auto c = image_collection_cube::create("test.db", v);
+            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+            cb->write_netcdf_file("band_select.nc");
+            auto cr = reduce_cube::create(cb, "mean");
+            cr->write_gdal_image("test_A.tif");
+
+            c = image_collection_cube::create("test.db", v);
+            cr = reduce_cube::create(c, "max");
+            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
+            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
+        }
+        /**************************************************************************/
 
         /**************************************************************************/
-        //        // Test apply_pixel
-        //        {
-        //            auto c = image_collection_cube::create("test.db", v);
-        //            //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
-        //            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
-        //            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
-        //            // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
-        //
-        //            auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
-        //
-        //            auto cr = reduce_cube::create(capply, "median");
-        //            // cr->write_gdal_image("test_apply_reduce.tif");
-        //            cr->write_netcdf_file("test_apply_reduce.nc");
-        //        }
+        // Test apply_pixel
+        {
+            auto c = image_collection_cube::create("test.db", v);
+            //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
+            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
+            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
+            // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
+
+            auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
+
+            auto cr = reduce_cube::create(capply, "median");
+            // cr->write_gdal_image("test_apply_reduce.tif");
+            cr->write_netcdf_file("test_apply_reduce.nc");
+        }
 
         /**************************************************************************/
         // test streaming

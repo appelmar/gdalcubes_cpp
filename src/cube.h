@@ -661,7 +661,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param c the data cube this cube depends on
      */
     inline void add_parent_cube(std::shared_ptr<cube> c) {
-        _pre.push_back(c);
+        _pre.push_back(std::weak_ptr<cube>(c));
     }
 
     /**
@@ -669,7 +669,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param c derived data cube
      */
     inline void add_child_cube(std::shared_ptr<cube> c) {
-        _succ.push_back(c);
+        _succ.push_back(std::weak_ptr<cube>(c));
     }
 
     /**
@@ -698,12 +698,12 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * @brief List of cube instances this cube takes as input (predecessor)
      */
-    std::vector<std::shared_ptr<cube>> _pre;
+    std::vector<std::weak_ptr<cube>> _pre;
 
     /**
      * @brief List of cube instances that take this object as input (successors)
      */
-    std::vector<std::shared_ptr<cube>> _succ;
+    std::vector<std::weak_ptr<cube>> _succ;
 
     /**
      * @brief Set the spatiotemporal reference for this instance only (but not for connected cubes)
@@ -724,12 +724,14 @@ class cube : public std::enable_shared_from_this<cube> {
         cset.insert(shared_from_this());
 
         for (uint16_t i = 0; i < _pre.size(); ++i) {
-            if (_pre[i])
-                _pre[i]->update_st_reference_recursion(stref, cset);
+            std::shared_ptr<cube> p = _pre[i].lock();
+            if (p)
+                p->update_st_reference_recursion(stref, cset);
         }
         for (uint16_t i = 0; i < _succ.size(); ++i) {
-            if (_succ[i])
-                _succ[i]->update_st_reference_recursion(stref, cset);
+            std::shared_ptr<cube> p = _succ[i].lock();
+            if (p)
+                p->update_st_reference_recursion(stref, cset);
         }
     }
 };

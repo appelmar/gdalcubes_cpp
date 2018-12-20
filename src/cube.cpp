@@ -390,6 +390,10 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     nc_put_var(ncout, v_y, (void *)dim_y);
     nc_put_var(ncout, v_x, (void *)dim_x);
 
+    if (dim_t) std::free(dim_t);
+    if (dim_y) std::free(dim_y);
+    if (dim_x) std::free(dim_x);
+
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         chunk_size_btyx csize = dat->size();
         bounds_nd<uint32_t, 3> climits = chunk_limits(id);

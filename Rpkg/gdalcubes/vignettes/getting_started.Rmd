@@ -39,18 +39,13 @@ The vignette will use two different  MODIS datasets, which will be eventually co
 The code below downloads and unzips the data to the current working directory. 
 
 ```{r data_download, echo=TRUE, results='hide'}
-dl.method = ifelse(nchar(Sys.which("curl")) == 0, "auto" ,"curl")
-
 if (!file.exists("MOD11A2.zip"))
-  download.file("https://uni-muenster.sciebo.de/s/NSUNrX0Q3UcJRKq/download", destfile="MOD11A2.zip",method=dl.method,mode = "wb")
+  download.file("https://uni-muenster.sciebo.de/s/NSUNrX0Q3UcJRKq/download", destfile="MOD11A2.zip",mode = "wb")
 if (!file.exists("MOD13A3.zip"))
-  download.file("https://uni-muenster.sciebo.de/s/qsy2zAV9TyjWlCG/download", method=dl.method, destfile="MOD13A3.zip",mode = "wb")
-#if (!file.exists("CHIRPS_MONTHLY.zip"))
-#  download.file("https://uni-muenster.sciebo.de/s/G5KIlTO5TmNrLby/download", method=dl.method, destfile="CHIRPS_MONTHLY.zip",mode = "wb")
+  download.file("https://uni-muenster.sciebo.de/s/qsy2zAV9TyjWlCG/download", destfile="MOD13A3.zip",mode = "wb")
 
 unzip("MOD11A2.zip", exdir = "MOD11A2")
 unzip("MOD13A3.zip", exdir = "MOD13A3")
-#unzip("CHIRPS_MONTHLY.zip", exdir = "CHIRPS_MONTHLY")
 ```
 
 As a result, this will generate two directories MOD11A2 and MOD13A3 with HDF files from the corresponding MODIS product.
@@ -82,7 +77,7 @@ file_subdatasets = expand.grid(file=list.files("MOD11A2", pattern=".hdf$", full.
 
 gdal_datasets = paste("HDF4_EOS:EOS_GRID:\"", file_subdatasets$file, "\":MODIS_Grid_8Day_1km_LST:", file_subdatasets$subdataset, sep="")
 
-gcbs_create_image_collection(gdal_datasets, "MOD11A2", "MOD11A2.db")
+gcbs_create_image_collection(gdal_datasets, "MxD11A2", "MOD11A2.db")
 ```
 
 # Creating a data cube
@@ -121,7 +116,7 @@ MOD11A2.cube
 
 # Data cube operations
 
-The package comes with a few operations on data cubes to (i) select bands (`gcbs_select_bands`), (ii) apply pixel wise arithmetic expressions (`gcbs_apply_pixel`), (iii) reduce data cubes over time (`gcbs_reduce`), (iv) applyan R function over chunks of a data cube (`gcbs_apply_chunk`), and (v) join bands of identically shaped data cubes (`gcbs_join_bands`). 
+The package comes with a few operations on data cubes to (i) select bands (`gcbs_select_bands`), (ii) apply pixel wise arithmetic expressions (`gcbs_apply_pixel`), (iii) reduce data cubes over time (`gcbs_reduce`), (iv) apply an R function over chunks of a data cube (`gcbs_apply_chunk`), and (v) join bands of identically shaped data cubes (`gcbs_join_bands`). 
 
 The following code demonstrates the first three of these oprations and how results can be plotted.
 
@@ -161,7 +156,7 @@ file_subdatasets = expand.grid(file=list.files("MOD13A3", pattern=".hdf$", full.
                         "1 km monthly blue reflectance","1 km monthly MIR reflectance"))
 
 gdal_datasets = paste("HDF4_EOS:EOS_GRID:\"", file_subdatasets$file, "\":MOD_Grid_monthly_1km_VI:",file_subdatasets$subdataset, sep="")
-gcbs_create_image_collection(gdal_datasets, "MOD13A3", "MOD13A3.db")
+gcbs_create_image_collection(gdal_datasets, "MxD13A3", "MOD13A3.db")
 
 
 
@@ -213,6 +208,5 @@ gdalcubes supports multithreaded evaluation of data cube operations. You just ne
 
 
 # Future work
-This vignette presented a very simple example with a small dataset. Future vignettes will demonstrate how to process larger imagery as from Sentinel 2. 
-
+This vignette presented a very simple first example with a small dataset. Future vignettes will demonstrate how to process larger imagery as from Sentinel 2 and how to run gdalcubes in the cloud. 
 

@@ -322,6 +322,8 @@ class datetime {
             if (bool(is))
                 success = true;
         }
+
+#if !defined __GNUC__ || __GNUC__ >= 5 // gcc 4.9x misses std::get_time
         if (!success) {
             std::tm tp;
             tp.tm_sec = 0;
@@ -346,6 +348,7 @@ class datetime {
                 success = true;
             }
         }
+#endif
 
         if (!success) {
             GCBS_ERROR("Cannot parse datetime string '" + d + "' with format '" + format + "'");

@@ -76,7 +76,7 @@ docker run -d -p 8787:8787 appelmar/gdalcubes_demo
 
 ## R package
 You can install the current R package version directly from GitHub using the `devtools` package as shown below.
-
+Notice that this works only if you have successfully installed the gdalcubes library on your system before.
 
 ```
 library(devtools)

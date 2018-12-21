@@ -1,5 +1,6 @@
 {
-  "description" : "Image collection format for Sentinel 2 Level 1C data as downloaded from the Copernicus Open Access Hub, expects a list of file paths as input. The format should work on original ZIP compressed as well as uncompressed imagery.",
+  "description" : "Image collection format for Sentinel 2 Level 1C data as downloaded from the Copernicus Open Access Hub, expects a list of file paths as input. The format works on original ZIP compressed as well as uncompressed imagery.",
+  "tags" : ["Sentinel", "Copernicus", "ESA", "TOA"],
   "pattern" : ".+/IMG_DATA/.+\\.jp2",
   "images" : {
     "pattern" : ".*/(.+)\\.SAFE.*"

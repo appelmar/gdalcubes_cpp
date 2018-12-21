@@ -6,10 +6,10 @@ edit_uri: ""
 site_author: Marius Appel
 nav:
     - Home: index.md
-    - Getting started: getting_started.md
+    - Installation: installation.md
     - Basic concepts: concepts.md
     - R package: R.md
-    - Tutorial: tutorial.md
+#    - Tutorial: tutorial.md
     - C++ API: cpp-api.md
     - Server API: server-api.md
     - Credits: credits.md

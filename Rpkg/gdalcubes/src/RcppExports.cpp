@@ -44,6 +44,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// libgdalcubes_datetime_values
+Rcpp::StringVector libgdalcubes_datetime_values(SEXP pin);
+RcppExport SEXP _gdalcubes_libgdalcubes_datetime_values(SEXP pinSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type pin(pinSEXP);
+    rcpp_result_gen = Rcpp::wrap(libgdalcubes_datetime_values(pin));
+    return rcpp_result_gen;
+END_RCPP
+}
 // libgdalcubes_cube_info
 Rcpp::List libgdalcubes_cube_info(SEXP pin);
 RcppExport SEXP _gdalcubes_libgdalcubes_cube_info(SEXP pinSEXP) {
@@ -234,6 +245,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_gdalcubes_libgdalcubes_version", (DL_FUNC) &_gdalcubes_libgdalcubes_version, 0},
     {"_gdalcubes_libgdalcubes_init", (DL_FUNC) &_gdalcubes_libgdalcubes_init, 0},
     {"_gdalcubes_libgdalcubes_cleanup", (DL_FUNC) &_gdalcubes_libgdalcubes_cleanup, 0},
+    {"_gdalcubes_libgdalcubes_datetime_values", (DL_FUNC) &_gdalcubes_libgdalcubes_datetime_values, 1},
     {"_gdalcubes_libgdalcubes_cube_info", (DL_FUNC) &_gdalcubes_libgdalcubes_cube_info, 1},
     {"_gdalcubes_libgdalcubes_get_cube_view", (DL_FUNC) &_gdalcubes_libgdalcubes_get_cube_view, 1},
     {"_gdalcubes_libgdalcubes_update_cube_view", (DL_FUNC) &_gdalcubes_libgdalcubes_update_cube_view, 2},

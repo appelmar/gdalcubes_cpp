@@ -17,6 +17,10 @@ libgdalcubes_cleanup <- function() {
     invisible(.Call('_gdalcubes_libgdalcubes_cleanup', PACKAGE = 'gdalcubes'))
 }
 
+libgdalcubes_datetime_values <- function(pin) {
+    .Call('_gdalcubes_libgdalcubes_datetime_values', PACKAGE = 'gdalcubes', pin)
+}
+
 libgdalcubes_cube_info <- function(pin) {
     .Call('_gdalcubes_libgdalcubes_cube_info', PACKAGE = 'gdalcubes', pin)
 }

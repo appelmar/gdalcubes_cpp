@@ -167,6 +167,19 @@ void libgdalcubes_cleanup() {
 }
 
 // [[Rcpp::export]]
+Rcpp::StringVector libgdalcubes_datetime_values(SEXP pin) {
+  Rcpp::XPtr<std::shared_ptr<cube>> aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pin);
+  std::shared_ptr<cube> x = *aa;
+  
+  Rcpp::CharacterVector out(x->size_t());
+  
+  for (uint32_t i = 0; i < x->size_t(); ++i) {
+    out[i] = (x->st_reference()->t0() + ( x->st_reference()->dt() * i)).to_string();
+  }
+  return out;
+}
+
+// [[Rcpp::export]]
 Rcpp::List libgdalcubes_cube_info( SEXP pin) {
 
   Rcpp::XPtr<std::shared_ptr<cube>> aa = Rcpp::as<Rcpp::XPtr<std::shared_ptr<cube>>>(pin);
@@ -222,7 +235,7 @@ Rcpp::List libgdalcubes_cube_info( SEXP pin) {
 
   Rcpp::DataFrame bands =
     Rcpp::DataFrame::create(Rcpp::Named("name")=b_names,
-                            Rcpp::Named("type")=b_type,
+                           // Rcpp::Named("type")=b_type,
                             Rcpp::Named("offset")=b_offset,
                             Rcpp::Named("scale")=b_scale,
                             Rcpp::Named("nodata")=b_nodata,

@@ -29,6 +29,8 @@ gcbs_read_stream_as_array <-function(with.dimnames=TRUE) {
   proj.length = readBin(f, integer(), n=1)
   proj = readChar(f, nchars = proj.length)
   buf <- readBin(f, double(), n = prod(s))
+  #message("Input chunk size is ", s[1], "x",s[2], "x",s[3], "x",s[4])
+  #message(paste("RECEIVED", length(buf), "/", prod(s) , "values"))
 
   # row major -> column major
   x <- array(buf, dim=s)

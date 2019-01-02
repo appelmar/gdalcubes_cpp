@@ -39,6 +39,7 @@ if (MINGW)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj") # for apply_pixel object due to exprtk library
 endif ()
 
+add_definitions(-DONLY_C_LOCALE) # fix for gcc < 5 due to missing std::time_get and std::time_put (needed by date library)
 
 
 # cppcheck
@@ -101,3 +102,13 @@ endif()
 
 
 add_subdirectory(src)
+
+# cpack stuff
+set(CPACK_PACKAGE_NAME "gdalcubes")
+set(CPACK_PACKAGE_VENDOR "Marius Appel <marius.appel@uni-muenster.de>")
+set(CPACK_PACKAGE_CONTACT "Marius Appel <marius.appel@uni-muenster.de>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "gdalcubes - Earth observation data cubes from GDAL image collections")
+set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+set(CPACK_RESOURCE_FILE_README ${CMAKE_CURRENT_SOURCE_DIR}/README.md)
+
+include(CPack)

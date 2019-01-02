@@ -24,13 +24,13 @@ typedef exprtk::parser<double> parser_t;
 template <typename T>
 struct isnan_func : public exprtk::ifunction<T> {
     isnan_func() : exprtk::ifunction<T>(1) {}
-    T operator()(const T& v1) { return T(isnan(double(v1))); }
+    T operator()(const T& v1) { return T(std::isnan(double(v1))); }
 };
 
 template <typename T>
 struct isfinite_func : public exprtk::ifunction<T> {
     isfinite_func() : exprtk::ifunction<T>(1) {}
-    T operator()(const T& v1) { return T(isfinite(double(v1))); }
+    T operator()(const T& v1) { return T(std::isfinite(double(v1))); }
 };
 
 std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {

@@ -26,6 +26,10 @@
 #include "select_bands.h"
 #include "stream.h"
 
+
+
+#include "external/tinyexpr/tinyexpr.h"
+
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
 
@@ -59,15 +63,15 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // Test create image collection
         {
-            collection_format f("Sentinel2_L1C");
-            auto ic = image_collection::create(f, string_list_from_text_file("../../test/test_list.txt"), false);
-            //auto ic = image_collection::create(f,image_collection::unroll_archives(string_list_from_text_file("../test/test_list.txt")), false);
-
-            //            collection_format f("MOD13A3");
-            //            auto ic = image_collection::create(f,std::vector<std::string>{"HDF4_EOS:EOS_GRID:\"/home/marius/Desktop/MODIS/MOD13A3.A2018/MOD13A3.A2018244.h17v03.006.2018295112545.hdf\":MOD_Grid_monthly_1km_VI:1 km monthly NDVI"}, false);
-
-            ic->write("test.db");
-            std::cout << ic->to_string() << std::endl;
+//            collection_format f("Sentinel2_L1C");
+//            auto ic = image_collection::create(f, string_list_from_text_file("../../test/test_list.txt"), false);
+//            //auto ic = image_collection::create(f,image_collection::unroll_archives(string_list_from_text_file("../test/test_list.txt")), false);
+//
+//            //            collection_format f("MOD13A3");
+//            //            auto ic = image_collection::create(f,std::vector<std::string>{"HDF4_EOS:EOS_GRID:\"/home/marius/Desktop/MODIS/MOD13A3.A2018/MOD13A3.A2018244.h17v03.006.2018295112545.hdf\":MOD_Grid_monthly_1km_VI:1 km monthly NDVI"}, false);
+//
+//            ic->write("test.db");
+//            std::cout << ic->to_string() << std::endl;
         }
         /**************************************************************************/
 
@@ -75,18 +79,18 @@ int main(int argc, char *argv[]) {
 
         /**************************************************************************/
         // test reduction
-        {
-            auto c = image_collection_cube::create("test.db", v);
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            cb->write_netcdf_file("band_select.nc");
-            auto cr = reduce_cube::create(cb, "mean");
-            cr->write_gdal_image("test_A.tif");
-
-            c = image_collection_cube::create("test.db", v);
-            cr = reduce_cube::create(c, "max");
-            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
-            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
-        }
+//        {
+//            auto c = image_collection_cube::create("test.db", v);
+//            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+//            cb->write_netcdf_file("band_select.nc");
+//            auto cr = reduce_cube::create(cb, "mean");
+//            cr->write_gdal_image("test_A.tif");
+//
+//            c = image_collection_cube::create("test.db", v);
+//            cr = reduce_cube::create(c, "max");
+//            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
+//            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
+//        }
         /**************************************************************************/
 
         /**************************************************************************/
@@ -108,11 +112,11 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // test streaming
         {
-            // test streaming
-            auto c = image_collection_cube::create("test.db", v);
-            auto sc = stream_cube::create(c, "Rscript --vanilla stream_example.R", "stdout");
-            auto cr = reduce_cube::create(sc, "median");
-            cr->write_gdal_image("test_stream.tif");
+//            // test streaming
+//            auto c = image_collection_cube::create("test.db", v);
+//            auto sc = stream_cube::create(c, "Rscript --vanilla stream_example.R", "stdout");
+//            auto cr = reduce_cube::create(sc, "median");
+//            cr->write_gdal_image("test_stream.tif");
         }
 
         //
@@ -137,10 +141,10 @@ int main(int argc, char *argv[]) {
         //        /******************************************/
         // Test NetCDF export
         {
-            chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
-            auto cc = image_collection_cube::create("MOD13A3.db");
-            cc->view()->aggregation_method() = aggregation::aggregation_type::AGG_MEDIAN;
-            cc->write_netcdf_file("full.nc");
+//            chdir("/home/marius/Desktop/MODIS/MOD13A3.A2018");
+//            auto cc = image_collection_cube::create("MOD13A3.db");
+//            cc->view()->aggregation_method() = aggregation::aggregation_type::AGG_MEDIAN;
+//            cc->write_netcdf_file("full.nc");
         }
 
         /******************************************/

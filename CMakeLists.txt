@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(gdalcubes LANGUAGES CXX VERSION 0.0.1)
+project(gdalcubes LANGUAGES CXX C VERSION 0.0.1)
 
 #set(COLLECTION_FORMAT_VERSION_MAJOR 0)
 #set(COLLECTION_FORMAT_VERSION_MINOR 0)
@@ -31,15 +31,20 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 #add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 #add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
+
+if (DEFINED USE_EXPRTK)
+    add_definitions(-DUSE_EXPRTK)
+endif()
+
+
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DCURL_STATICLIB")
 endif ()
-if (MINGW)
+if (MINGW AND USE_EXPRTK)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj") # for apply_pixel object due to exprtk library
 endif ()
 
-add_definitions(-DONLY_C_LOCALE) # fix for gcc < 5 due to missing std::time_get and std::time_put (needed by date library)
 
 
 # cppcheck

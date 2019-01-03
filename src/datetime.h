@@ -25,7 +25,7 @@
 
 // gcc 4.9x misses std::time_get and std::time_put, which is used in the date library
 #if defined __GNUC__ && __GNUC__ < 5
-#define ONLY_C_LOCALE
+#define ONLY_C_LOCALE 1
 #endif
 
 

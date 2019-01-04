@@ -104,6 +104,8 @@ gdalcubes uses the following great open source libraries. Detailed licensing and
 
 **[CURL](https://curl.haxx.se/): Command line tool and library for transferring data with URLs**
 
+**[TinyExpr](https://github.com/codeplea/tinyexpr): A very small recursive descent parser and evaluation engine for math expressions**
+
 **[ExprTk](http://www.partow.net/programming/exprtk/): A C++ Mathematical Expression Parsing and Evaluation Library**
  
 **[netCDF](https://www.unidata.ucar.edu/software/netcdf): The Unidata network Common Data Form C library**

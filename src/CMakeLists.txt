@@ -34,12 +34,6 @@ endif ()
 
 
 
-#set(Boost_DEBUG ON)
-## find boost
-#if (WIN32)
-    set(BOOST_USE_STATIC_LIBS ON)
-#endif ()
-
 
 
 
@@ -122,7 +116,15 @@ if (NOT DEFINED USE_EXPRTK)
     list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyexpr/tinyexpr.c)
 endif()
 
-add_subdirectory("external/tiny-process-library")
+
+
+#add_subdirectory("external/tiny-process-library")
+if(WIN32)
+    list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/tiny-process-library/process_win.cpp)
+else()
+    list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/tiny-process-library/process_unix.cpp)
+endif()
+list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/tiny-process-library/process.cpp)
 
 
 
@@ -135,13 +137,13 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 add_library(libgdalcubes_static STATIC  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_static PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY} tiny-process-library)
+target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
 
 
 add_library(libgdalcubes_shared SHARED  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_shared PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY} tiny-process-library)
+target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
 
 
 install(TARGETS libgdalcubes_static libgdalcubes_shared RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)

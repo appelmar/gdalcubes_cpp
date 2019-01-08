@@ -16,6 +16,7 @@
 
 #include "stream.h"
 #include "external/tiny-process-library/process.hpp"
+#include <stdlib.h>
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     GCBS_DEBUG("stream_cube::read_chunk(" + std::to_string(id) + ")");
@@ -46,7 +47,14 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     // TODO: must _cmd be splitted by arguments as vector?
 
     uint32_t databytes_read = 0;
-    TinyProcessLib::Process process(_cmd, "", {{"GDALCUBES_STREAMING", "1"}}, [out, &databytes_read](const char *bytes, std::size_t n) {
+
+#ifdef _WIN32
+    _put_env("GDALCUBES_STREAMING=1");
+#else
+    setenv("GDALCUBES_STREAMING","1",1);
+#endif
+
+    TinyProcessLib::Process process(_cmd, "", [out, &databytes_read](const char *bytes, std::size_t n) {
 
         if (databytes_read == 0) {
             // Assumption is that at least 4 integers with chunk size area always contained in the first call of this function

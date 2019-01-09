@@ -65,7 +65,7 @@ find_program (CLANG_FORMAT NAMES clang-format)
 if(NOT CLANG_FORMAT)
     message(WARNING "could not find clang-format, skipping automated source code formatting.")
 else ()
-    file(GLOB_RECURSE ALL_SOURCE_FILES  src/*.cpp src/*.h)
+    file(GLOB ALL_SOURCE_FILES  src/*.cpp src/*.h  src/test/*.cpp src/test/*.h)
     # clang-format -i -style=file $
     add_custom_target(clangformat ALL
                       COMMAND ${CLANG_FORMAT} -i -style=file ${ALL_SOURCE_FILES}

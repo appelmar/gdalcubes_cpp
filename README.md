@@ -8,12 +8,12 @@ implements simple operations to reduce data cubes over time, to apply pixel-wise
 
 gdalcubes is not a database, i.e., it does not need to store additional copies of the imagery but instead
 simply links to and indexes existing files / GDAL datasets. Using [GDAL virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html), it can directly access
-data in cloud storage and run computations in distributed environments with `gdalcubes_server`. 
+data in cloud storage and run computations in distributed environments with `gdalcubes_server` and Docker. 
 
-The library is written in C++ and includes a basic command line interface as well as a package for R. A python package is
+The library is written in C++ and includes a basic command line interface and an [R package]((https://github.com/appelmar/gdalcubes_R)). A python package is
 planned for the future. gdalcubes is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
-## Core features:
+# Core features:
 
 - Create image collections that link to and index existing imagery from local files or cloud storage 
 - Read multitemporal, multispectral image collections as on demand data cubes with desired spatiotemporal resolution, extent, and map projection
@@ -72,28 +72,19 @@ docker run -d -p 8787:8787 appelmar/gdalcubes_demo
 ``` 
 
 
-
-
-## R package
-You can install the current R package version directly from GitHub using the `devtools` package as shown below.
-Notice that this works only if you have successfully installed the gdalcubes library on your system before.
-
-```
-library(devtools)
-install_github("appelmar/gdalcubes", subdir="Rpkg/gdalcubes")
-```
-
-The package includes a vignette that illustrates the basic ideas on a small MODIS dataset.
+# R package
+The [gdalcubes R package](https://github.com/appelmar/gdalcubes_R) is hosted on https://github.com/appelmar/gdalcubes_R.
 
 
 # Documentation
 More detailed information can be found at the documentation page under https://appelmar.github.io/gdalcubes. 
 
-
+# Warning
+The library is still in an early development version. Major changes are possible to make gdalcubes more user-friendly, more stable, faster, and more robust.
+The documentation is also preliminary and not yet complete.
 
 # Credits
-
-gdalcubes uses the following great open source libraries. Detailed licensing and copyright information can be found at https://appelmar.github.io/gdalcubes/credits.html.
+gdalcubes uses the following open source libraries. Detailed licensing and copyright information can be found at https://appelmar.github.io/gdalcubes/credits.html and in LICENSE_THIRDPARTY.
 
 
 **[GDAL](https://www.gdal.org/):  A translator library for raster and vector geospatial data formats**

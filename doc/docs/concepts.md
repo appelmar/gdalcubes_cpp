@@ -11,8 +11,8 @@ Images have a spatial footprint and a recording date/time. Values of the bands f
 or in several files and bands may also differ in their spatial resolution. Two different images in a collection may have 
 different map projections.  
   
- The figure below illustrates the basic structure: an image collection has $n$ images, images each have a spatial extent, recording date/time, and a map projection and in this case 9 bands, where the band data come from three files per image.
- ![](ic_structure.png)
+The figure below illustrates the basic structure: the image collection has 3 images, images each have a spatial extent, recording date/time, and a map projection and in this case 9 bands, where the band data come from three files per image.
+![](ic_structure.png)
 
 For example, Landsat imagery comes in a very simple format where one image consist of a set of GeoTIFF files with a one to one relationship between files and bands.
 MODIS data in contrast come as one HDF4 file per image that contains all bands.
@@ -22,13 +22,14 @@ but actually can be anything that [the `gdalinfo` command](https://www.gdal.org/
 cloud storage, databases, and archive files (see below) through [GDAL virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html). 
 Examples for valid GDAL dataset references include `/vsizip/archive.zip/xyz.tif` (a GeoTIFF file in a .zip archive), 
 `test.tif` (a simple local GeoTIFF file), `SENTINEL2_L1C:S2A_OPER_MTD_SAFL1C_PDMC_20150818T101440_R022_V20150813T102406_20150813T102406.xml:10m:EPSG_32632` (higher level GDAL Sentinel 2 datasets),
-`/vsicurl/https://download.osgeo.org/geotiff/samples/spot/chicago/UTM2GTIF.TIF` (file on an HTTP server). Instead of _files_ we therefore often use the terms _GDAL dataset reference_ or _GDAL dataset descriptor_.
+`/vsicurl/https://download.osgeo.org/geotiff/samples/spot/chicago/UTM2GTIF.TIF` (file on an HTTP server). 
+Instead of _files_ we therefore often use the terms _GDAL dataset reference_ or _GDAL dataset descriptor_.
 
 
 Images, bands, and GDAL dataset references are indexed by gdalcubes in a single image collection file. This file is a 
 simple [SQLite](https://www.sqlite.org/index.html) database, which stores links to all GDAL dataset references and how they
 relate to images and bands. To allow fast filtering, the collection file additionally stores the spatial extent, the 
-aquisition date/time, and the spatial reference system of images. Further imageary metadata is currently not included but
+aquisition date/time, and the spatial reference system of images. Further imagary metadata is currently not included but
 future releases will do so, e.g. to filter images in a collection by cloud cover.
 
 
@@ -79,9 +80,7 @@ formats. An example format for Sentinel 2 level 1C data can is presented below.
 ```
 
 
-gdalcubes then automatically creates the image collection file from a set of input datasets and a collection format.
-
-
+gdalcubes then automatically creates the image collection file from a set of input datasets and a collection format. A few predefined collection formats are included in the library (see https://github.com/appelmar/gdalcubes/tree/master/formats).
 
 
 
@@ -92,12 +91,11 @@ Data cubes are multidimensional arrays with dimensions band, datetime, y (latitu
 all have the same size in space and time with regard to a defined spatial reference system. Data cubes are different from image collections. 
 Image collections are irregular in time, may contain gaps, and do not have a globally valid projection.
 
-
 To create data cubes from image collections, we define a _data cube view_ (or simply _view_). Data cube views convert an image collection to a data cube by defining the 
-basic shape of the cube, i.e. how we look at the data. It includes
+basic shape of the cube, i.e. how we look at the data from an image collection. The data cube view includes
  
 - the spatiotemporal extent, 
-- the spatial reference / map projection, 
+- the spatial reference system / map projection, 
 - the spatiotemporal resolution either by number of or by the size of cells,
 - a resampling algorithm used in [`gdalwarp`](https://www.gdal.org/gdalwarp.html), and 
 - an aggregation algorithm that combines values of several images if they are located in the same cell of the target cube 
@@ -105,7 +103,6 @@ basic shape of the cube, i.e. how we look at the data. It includes
 Views can be serialized as simple JSON object as in the example below. Note that there is no single correct view for a specific image collections. Instead, they are 
 useful e.g. to run analysis an small subsets during model development before running on the full-resolution data.
   
-example_view.json
 ```
 {
   "aggregation" : "min",
@@ -129,7 +126,27 @@ example_view.json
 }
 ```
 
-# Operations on data cubes
+Data from images in a collection are read on-the-fly with regard to a specific data cube view. The target data cube is 
+read chunk-wise, where chunk sizes in all directions _can_ be defined by the user. The procedure to read data of one chunk
+is the following:
+
+1. Find all GDAL datasets of the collection that are located within the spatiotemporal extent of the chunk
+2. Iterate over all found datasets and do the following steps:
+     1. Apply [gdalwarp](https://www.gdal.org/gdalwarp.html) to crop, reproject / transform, and resample the current dataset according to the spatiotemporal
+extent of the current chunk and the data cube view.
+     2. Store the result as an [in-memory GDAL dataset](https://www.gdal.org/frmt_mem.html).
+     2. Copy the result to the in-memory chunk buffer (a four-dimensional array) at the correct temporal slice and the correct bands.
+     3. If the chunk buffer already contains values at the target position, feed a pixel-wise aggregator (e.g. mean, median, min, max ) to combine
+        pixel values from multiple images which are located at the same cell in the data cube.
+3. Finalize the pixel-wise aggregator if needed (e.g. divide pixel values by $n$ for mean aggregation). 
+
+Internally, chunk buffers are arrays of type double. Image data is however read according to their orgininal data type. gdalwarp 
+does the type conversion automatically, i.e. only the size of the chunk buffer in memory is larger but not the data that is transferred over the network for remotely stored imagery.
+If input images contain lower-resolution overviews, these are used automatically by gdalwarp depending on the target resolution of the cube.
+
+
+
+## Operations on data cubes
 
 Currently, gdalcubes includes operations on data cubes to
 
@@ -141,10 +158,10 @@ Currently, gdalcubes includes operations on data cubes to
 
 Internally, all of the processes inherit from the same data cube type but take one or more
 existing data cubes as input arguments. Once data cube operation objects are created, only the shape of the result
-cube will be derived but no values will be calculated or read from input cubes. Data cube objects are primarily _ proxy_ 
-objects and follow the concept of lazy evaluation.This also applies to chains of operations. 
+cube will be derived but no values will be calculated or read from input cubes. Data cube objects are primarily _proxy_ 
+objects and follow the concept of lazy evaluation. This also applies to chains of operations. 
 
-Data cube objects can be serialized as a simple directed acyclich graph in JSON format. Below a data cube operation chain
+Data cube objects can be serialized as a simple JSON formatted directed acyclich graph. Below, a data cube operation chain
 that selects two bands of an image collection, computes differences between the bands, and finally computes the median 
 differences over time is serialized as a graph. This graph can be used to recreate the same operation chain.  
   
@@ -202,16 +219,16 @@ differences over time is serialized as a graph. This graph can be used to recrea
 
 
 
-# Distributed data cube processing
+## Distributed data cube processing
 
 The library comes with a server executable `gdalcubes_server` that listens on a given port for incoming HTTP requests to 
 a REST-like API.  
 
-This feature is still rather experimental. The general idea is that:
+This feature is still highly experimental. The general idea is that:
 
-- Clients define a _swarm_ with gdalcubes server instances that are used to evaluate a data cube operation.
-- Processing of the result cube is then distributed to swarm members by chunk.
-- The client shared its execution context, i.e. all files within the working direcotry by uploading files to all swarm members.
+- Clients define a _swarm_ of gdalcubes server instances that are used to evaluate a data cube operation.
+- Processing of the result cube is then distributed to swarm members by chunks.
+- The client shares its execution context, i.e. all files within the working directory by uploading files to all swarm members.
 - GDAL dataset references in image collection files must be globally valid (i.e. accessible for all swarm members). Though this is 
   a strong assumption, it should work well for cloud processing where imagery has global object identifers (such as S3 buckets).
 

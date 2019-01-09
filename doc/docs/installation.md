@@ -1,11 +1,11 @@
-# Getting started
+# Installation
 
 
-## Installation
+## Installation from sources
 
-### Linux source builds
-gdalcubes can be compiled from sources via [CMake](https://cmake.org/). CMake automatically checks whether all dependencies (Boost, GDAL, NetCDF, SQLite, and cpprestsdk libraries) are available and 
-reports if not. The following commands install gdalcubes from sources. 
+## Linux 
+gdalcubes can be compiled from sources via [CMake](https://cmake.org/). CMake automatically checks for mandatory and optional dependencies and adapts
+the build configuration. The following commands install gdalcubes from sources. 
 
 ```
 git clone https://github.com/appelmar/gdalcubes && cd gdalcubes
@@ -13,16 +13,26 @@ mkdir -p build
 cd build 
 cmake -DCMAKE_BUILD_TYPE=Release ../ 
 make 
-make install
+sudo make install
 ```
 
-### Windows
-All used libraries work under Windows. However, we have not yet tested the compilation on Windows and therefore cannot provide 
-detailed instructions or binaries at the moment. You can still use the provided Docker image to run gdalcubes.
+If any of required libraries are not available on your system, please use your package manager to install these before.
+Using Ubuntu, `sudo apt-get install libgdal-dev libnetcdf-dev libcurl4-openssl-dev libsqlite3-dev` will install the libraries needed to compile 
+the core gdalcubes library. If you want to compile the command line interface, you will furthermore need `sudo apt-get install libboost-program-options-dev libboost-system-dev`
+and running gdalcubes as a server additionally requires `sudo apt-get install libcpprest-dev`.
 
 
 
-### Docker
+
+### Windows 
+The core library has been successfully compiled with a MinGW-w64 toolchain. The R package on Windows e.g. links to
+prebuild dependencies from [rwinlib](https://github.com/rwinlib). Detailed instructions will be added soon. To use the R package,
+however, you do not need to build the gdalcubes library before.
+
+We have not yet tried to compile gdalcubes with Microsoft Visual Studio.
+
+
+## Docker
 The `Dockerfile` at the root of the project is built on a minimal Ubuntu installation but installs all dependencies and compiles 
 gdalcubes from sources automatically. 
 
@@ -45,9 +55,6 @@ A small (approx. 24 GB ) sample dataset with 20 Landsat images can be downloaded
 
 
 
-## Next steps
-
-To try out gdalcubes, we recommend reading the [tutorial](tutorial.md).
 
 
 

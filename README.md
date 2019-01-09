@@ -36,7 +36,7 @@ mkdir -p build
 cd build 
 cmake -DCMAKE_BUILD_TYPE=Release ../ -DCMAKE_INSTALL_PREFIX=/usr
 make 
-make install
+sudo make install
 ```
 
 You might need to install a few libraries before compiling gdalcubes successfully. On Ubuntu `apt install libgdal-dev libnetcdf-dev libcurl4-openssl-dev libsqlite3-dev` will install all libraries needed to compile 
@@ -60,21 +60,10 @@ docker run -d -p 11111:1111 appelmar/gdalcubes # runs gdalcubes_server as a deam
 docker run appelmar/gdalcubes /bin/bash # get a command line where you can run gdalcubes 
 ``` 
 
-The Dockerfile at `demo/Dockerfile` furthermore runs [RStudio Server](https://www.rstudio.com/products/rstudio-server/) with the gdalcubes R package.
-
-
-```
-# Make sure that you have successfully built the docker image above before
-docker build -t appelmar/gdalcubes_demo .
-docker run -d -p 8787:8787 appelmar/gdalcubes_demo 
-
-# -> open http://localhost:8787 in a browser and login with user/password rstudio/rstudio.
-``` 
-
 
 # R package
 The [gdalcubes R package](https://github.com/appelmar/gdalcubes_R) is hosted on https://github.com/appelmar/gdalcubes_R.
-
+It includes a Dockerfile that runs [RStudio Server](https://www.rstudio.com/products/rstudio-server/) with the gdalcubes R package.
 
 # Documentation
 More detailed information can be found at the documentation page under https://appelmar.github.io/gdalcubes. 

@@ -19,7 +19,7 @@ data in cloud environments with [GDAL virtual file systems](https://www.gdal.org
 The library is written in C++ and includes a command line interface as well as a package for R. A python package is
 planned for the future. gdalcubes is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 
-## Features:
+## Features
 
 - Create image collections that link to and index existing imagery from local files or cloud storage 
 - Read multitemporal, multispectral image collections as on demand data cubes with desired spatiotemporal resolution, extent, and map projection

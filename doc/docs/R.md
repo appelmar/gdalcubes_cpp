@@ -20,4 +20,4 @@ install_git("https://github.com/appelmar/gdalcubes_R", args="--recursive")
 ```
 
 ## Getting started
-The package includes a vignette that illustrates the basic concepts and funcitonality on a small (a few hundred megabytes) MODIS dataset (see `vignettes/getting_started.Rmd`).
+The package includes a vignette that illustrates the basic concepts and funcitonality on a small (< 1 GB) MODIS dataset (see `vignettes/getting_started.Rmd`).

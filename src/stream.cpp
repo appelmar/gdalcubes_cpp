@@ -15,8 +15,8 @@
 */
 
 #include "stream.h"
-#include "external/tiny-process-library/process.hpp"
 #include <stdlib.h>
+#include "external/tiny-process-library/process.hpp"
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     GCBS_DEBUG("stream_cube::read_chunk(" + std::to_string(id) + ")");
@@ -51,7 +51,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
 #ifdef _WIN32
     put_env("GDALCUBES_STREAMING=1");
 #else
-    setenv("GDALCUBES_STREAMING","1",1);
+    setenv("GDALCUBES_STREAMING", "1", 1);
 #endif
 
     TinyProcessLib::Process process(_cmd, "", [out, &databytes_read](const char *bytes, std::size_t n) {

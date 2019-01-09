@@ -16,9 +16,6 @@
 
 #include "apply_pixel.h"
 
-
-
-
 #ifdef USE_EXPRTK
 #include "external/exprtk.hpp"
 
@@ -43,11 +40,7 @@ struct isfinite_func : public exprtk::ifunction<T> {
 
 #endif
 
-
-
 std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
-
-
 #ifdef USE_EXPRTK
     GCBS_DEBUG("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
 
@@ -130,18 +123,18 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
 
     std::vector<te_variable> vars;
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
-        char * varname = new char [_in_cube->bands().get(i).name.length()+1];
+        char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
         std::string temp_name = _in_cube->bands().get(i).name;
         std::transform(temp_name.begin(), temp_name.end(), temp_name.begin(), ::tolower);
-        std::strcpy (varname, temp_name.c_str());
+        std::strcpy(varname, temp_name.c_str());
         vars.push_back({varname, &values[i]});
     }
-//
-//    symbol_table.add_constants();
-//    symbol_table.add_constant("NAN", nan(""));
-//    isnan_func<double> f_isnan;
-//    isfinite_func<double> f_isfinite;
-//    symbol_table.add_function("isfinite", f_isfinite);
+    //
+    //    symbol_table.add_constants();
+    //    symbol_table.add_constant("NAN", nan(""));
+    //    isnan_func<double> f_isnan;
+    //    isfinite_func<double> f_isfinite;
+    //    symbol_table.add_function("isfinite", f_isfinite);
 
     std::vector<te_expr*> expr;
     for (uint16_t i = 0; i < _bands.count(); ++i) {
@@ -153,12 +146,11 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
             GCBS_ERROR(msg);
 
             // free other expressions
-            for (uint16_t j=0; j<expr.size(); ++j) {
+            for (uint16_t j = 0; j < expr.size(); ++j) {
                 te_free(expr[j]);
             }
             return out;
-        }
-        else {
+        } else {
             expr.push_back(x);
         }
     }
@@ -186,11 +178,11 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     }
 
     // free expressions
-    for (uint16_t j=0; j<expr.size(); ++j) {
+    for (uint16_t j = 0; j < expr.size(); ++j) {
         te_free(expr[j]);
     }
     // free varnames
-    for (uint16_t i=0; i<vars.size(); ++i) {
+    for (uint16_t i = 0; i < vars.size(); ++i) {
         delete[] vars[i].name;
     }
 
@@ -199,10 +191,7 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
 #endif
 }
 
-
-
 bool apply_pixel_cube::parse_expressions() {
-
 #ifdef USE_EXPRTK
     bool res = true;
     std::vector<double> dummy_values;
@@ -238,32 +227,29 @@ bool apply_pixel_cube::parse_expressions() {
     std::vector<te_variable> vars;
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         dummy_values.push_back(1.0);
-        char * varname = new char [_in_cube->bands().get(i).name.length()+1];
+        char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
         std::string temp_name = _in_cube->bands().get(i).name;
         std::transform(temp_name.begin(), temp_name.end(), temp_name.begin(), ::tolower);
-        std::strcpy (varname, temp_name.c_str());
+        std::strcpy(varname, temp_name.c_str());
         vars.push_back({varname, &dummy_values[i]});
     }
 
     int err = 0;
     for (uint16_t i = 0; i < _bands.count(); ++i) {
-        te_expr *expr = te_compile(_expr[i].c_str(), vars.data(), vars.size(), &err);
-        if (expr){
+        te_expr* expr = te_compile(_expr[i].c_str(), vars.data(), vars.size(), &err);
+        if (expr) {
             te_free(expr);
-        }
-        else {
+        } else {
             res = false;
             std::string msg = "Cannot parse expression for " + _bands.get(i).name + " '" + _expr[i] + "': error at token " + std::to_string(err);
             GCBS_ERROR(msg);
             // Continue anyway to process all expressions
         }
     }
-    for (uint16_t i=0; i<vars.size(); ++i) {
+    for (uint16_t i = 0; i < vars.size(); ++i) {
         delete[] vars[i].name;
     }
     return res;
 
 #endif
-
-
 }

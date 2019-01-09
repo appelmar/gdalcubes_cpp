@@ -28,7 +28,6 @@
 #define ONLY_C_LOCALE 1
 #endif
 
-
 #include <chrono>
 #include <iomanip>
 #include <regex>
@@ -328,7 +327,7 @@ class datetime {
                 success = true;
         }
 
-#if !defined __GNUC__ || __GNUC__ >= 5 // gcc 4.9x misses std::get_time
+#if !defined __GNUC__ || __GNUC__ >= 5  // gcc 4.9x misses std::get_time
         if (!success) {
             std::tm tp;
             tp.tm_sec = 0;

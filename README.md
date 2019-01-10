@@ -1,5 +1,7 @@
 # gdalcubes - Earth observation data cubes from GDAL image collections
 
+[![Build Status](https://travis-ci.org/appelmar/gdalcubes.svg?branch=master)](https://travis-ci.org/appelmar/gdalcubes)
+
 **gdalcubes** is a library to represent collections of Earth Observation (EO) images
 as _on demand_ data cubes (or _multidimensional arrays_). Users define data cubes by spatiotemporal extent, resolution, and 
 spatial reference system and let gdalcubes read only relevant parts of the data and simultaneously apply reprojection, resampling, and cropping (using [gdalwarp](https://www.gdal.org/gdalwarp.html)).

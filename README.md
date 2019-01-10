@@ -1,12 +1,9 @@
-# gdalcubes - Earth observation data cubes from GDAL image collections
+# gdalcubes - Earth observation data cubes from GDAL image collections 
 
 [![Build Status](https://travis-ci.org/appelmar/gdalcubes.svg?branch=master)](https://travis-ci.org/appelmar/gdalcubes)
 
-**gdalcubes** is a library to represent collections of Earth Observation (EO) images
-as _on demand_ data cubes (or _multidimensional arrays_). Users define data cubes by spatiotemporal extent, resolution, and 
-spatial reference system and let gdalcubes read only relevant parts of the data and simultaneously apply reprojection, resampling, and cropping (using [gdalwarp](https://www.gdal.org/gdalwarp.html)).
-Data cubes may be simply exported as NetCDF files or directly streamed chunk-wise into external software such as R or Python. The library furthermore
-implements simple operations to reduce data cubes over time, to apply pixel-wise arithmetic expressions, and to filter by space, time, and bands.
+<a href="https://appelmar.github.io/gdalcubes"><img src="doc/docs/gdalcubes_logo_1_small.png" align="right" height="180"/></a>
+**gdalcubes** is a library to represent collections of Earth Observation (EO) images as _on demand_ data cubes (or _multidimensional arrays_). Users define data cubes by spatiotemporal extent, resolution, and spatial reference system and let gdalcubes read only relevant parts of the data and simultaneously apply reprojection, resampling, and cropping (using [gdalwarp](https://www.gdal.org/gdalwarp.html)). Data cubes may be simply exported as NetCDF files or directly streamed chunk-wise into external software such as R or Python. The library furthermore implements simple operations to reduce data cubes over time, to apply pixel-wise arithmetic expressions, and to filter by space, time, and bands. 
 
 gdalcubes is not a database, i.e., it does not need to store additional copies of the imagery but instead
 simply links to and indexes existing files / GDAL datasets. Using [GDAL virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html), it can directly access

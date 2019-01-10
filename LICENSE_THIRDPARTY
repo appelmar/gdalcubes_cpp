@@ -44,7 +44,7 @@ gdalcubes makes use of the following third party software.
     - gdalcubes_server includes may statically or dynamically link to the cpprestsdk library depending on compilation flags
     - gdalcubes distributes an unmodified version of the library under `src/external/tiny-process-library`
 
-**[Catch](https://www.gdal.org/): A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
+**[Catch2](https://github.com/catchorg/Catch2: A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
     - Copyright (c) 2010 Two Blue Cubes Ltd
     - License:  [Boost Software License 1.0](https://www.boost.org/LICENSE_1_0.txt)
     - gdalcubes distributes an unmodified version of the library under `src/external/catch.hpp`

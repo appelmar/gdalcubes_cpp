@@ -92,7 +92,7 @@ gdalcubes uses the following open source libraries. Detailed licensing and copyr
    
 **[tiny-process-library](https://gitlab.com/eidheim/tiny-process-library): A small platform independent library making it simple to create and stop new processes in C++**
 
-**[Catch](https://www.gdal.org/): A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
+**[Catch2](https://github.com/catchorg/Catch2): A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
        
 **[Date](https://github.com/HowardHinnant/date): A date and time library based on the C++11/14/17 <chrono> header**   
 

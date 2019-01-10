@@ -10,6 +10,7 @@ install:
   - sudo apt-get update
   - sudo apt-get install -y libsqlite3-dev libboost-system-dev libboost-program-options-dev libnetcdf-dev libcurl4-openssl-dev libcpprest-dev doxygen graphviz libgdal-dev python-pip
   - sudo pip install mkdocs
+  - sudo pip install mkdocs-material
 
 
 script:

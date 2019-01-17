@@ -28,6 +28,12 @@ planned for the future. gdalcubes is licensed under the [Apache License 2.0](htt
 - Scale computations on data cubes in distributed environments with `gdalcubes_server` and Docker (experimental)
 
 
+## Limitations
+
+- Currently, gdalcubes can only read GDAL datasets that have an affine transformation and a reference system. It does not work with e.g. Sentinel 1 data that have ground control points or with geolocation arrays (curvilinear grids). At the moment, you have to warp these datasets manually (e.g. with a VRT dataset) before they can be used in gdalcubes. It is planned to solve this by adding custom gdalwarp parameters to be used when images are read as data cubes.  
+- There is no functionaliy to read NetCDF data that have been created from gdalcubes. Loading data is currently only possible with GDAL. This will be addressed in a future release.
+- There is no Python package yet. 
+
 ## Warning
 The library is still in an early development version. Major changes are possible to make gdalcubes more user-friendly, more stable, faster, and more robust.
 The documentation is also preliminary and far from being complete.

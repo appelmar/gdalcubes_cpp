@@ -130,7 +130,7 @@ Data from images in a collection are read on-the-fly with regard to a specific d
 read chunk-wise, where chunk sizes in all directions _can_ be defined by the user. The procedure to read data of one chunk
 is the following:
 
-1. Find all GDAL datasets of the collection that are located within the spatiotemporal extent of the chunk
+1. Find all GDAL datasets of the collection that intersect with the spatiotemporal extent of the chunk.
 2. Iterate over all found datasets and do the following steps:
      1. Apply [gdalwarp](https://www.gdal.org/gdalwarp.html) to crop, reproject / transform, and resample the current dataset according to the spatiotemporal
 extent of the current chunk and the data cube view.
@@ -140,7 +140,7 @@ extent of the current chunk and the data cube view.
         pixel values from multiple images which are located at the same cell in the data cube.
 3. Finalize the pixel-wise aggregator if needed (e.g. divide pixel values by $n$ for mean aggregation). 
 
-Internally, chunk buffers are arrays of type double. Image data is however read according to their orgininal data type. gdalwarp 
+Internally, chunk buffers are arrays of type double. Image data is however read according to their original data type. gdalwarp 
 does the type conversion automatically, i.e. only the size of the chunk buffer in memory is larger but not the data that is transferred over the network for remotely stored imagery.
 If input images contain lower-resolution overviews, these are used automatically by gdalwarp depending on the target resolution of the cube.
 
@@ -151,7 +151,7 @@ If input images contain lower-resolution overviews, these are used automatically
 Currently, gdalcubes includes operations on data cubes to
 
 * select bands,
-* apply pixel wise arithmetic expressions,
+* apply pixel-wise arithmetic expressions,
 * reduce data cubes over time,
 * join identically shaped cubes, and
 * stream chunks of data cubes to external software (such as R or Python).

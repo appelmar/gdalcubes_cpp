@@ -27,6 +27,7 @@
 #include "join_bands.h"
 #include "progress.h"
 #include "reduce.h"
+#include "reduce_time.h"
 #include "select_bands.h"
 #include "stream.h"
 #include "swarm.h"

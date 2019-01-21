@@ -32,6 +32,7 @@
 #include "stream.h"
 
 #include "external/tinyexpr/tinyexpr.h"
+#include "reduce_time.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -94,6 +95,16 @@ int main(int argc, char *argv[]) {
         //            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
         //            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
         //        }
+        /**************************************************************************/
+
+        /**************************************************************************/
+        // test new reduction
+        {
+            auto c = image_collection_cube::create("test.db", v);
+            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"mean", "B04"}});
+            cr->write_gdal_image("test_reduce_new.tif");
+        }
         /**************************************************************************/
 
         /**************************************************************************/

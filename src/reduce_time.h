@@ -14,17 +14,16 @@
    limitations under the License.
 */
 
-#ifndef REDUCE_H
-#define REDUCE_H
+#ifndef REDUCE_TIME_H
+#define REDUCE_TIME_H
 
 #include "cube.h"
 
 /**
- * @brief A data cube that applies a reducer function to another data cube over time
- * @deprecated This class will be eventually replace by the more flexible reduce_time_cube, which allows to apply
- * different reducers to different bands of the input cube
+ * @brief A data cube that applies reducer functions over selected bands of a data cube over time
+ * @note This is a reimplementation of reduce_cube. The new implementation allows to apply different reducers to different bands instead of just one reducer to all bands of the input data cube
  */
-class reduce_cube : public cube {
+class reduce_time_cube : public cube {
    public:
     /**
      * @brief Create a data cube that applies a reducer function on a given input data cube over time
@@ -34,15 +33,15 @@ class reduce_cube : public cube {
      * @param reducer reducer function
      * @return a shared pointer to the created data cube instance
      */
-    static std::shared_ptr<reduce_cube> create(std::shared_ptr<cube> in, std::string reducer = "mean") {
-        std::shared_ptr<reduce_cube> out = std::make_shared<reduce_cube>(in, reducer);
+    static std::shared_ptr<reduce_time_cube> create(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) {
+        std::shared_ptr<reduce_time_cube> out = std::make_shared<reduce_time_cube>(in, reducer_bands);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
     }
 
    public:
-    reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer(reducer) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    reduce_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         assert(_st_ref->nt() == 1);
@@ -50,28 +49,36 @@ class reduce_cube : public cube {
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
 
-        for (uint16_t ib = 0; ib < in->bands().count(); ++ib) {
-            band b = in->bands().get(ib);
+        // TODO: check for duplicate band, reducer pairs?
+
+        for (uint16_t i = 0; i < reducer_bands.size(); ++i) {
+            std::string reducerstr = reducer_bands[i].first;
+            std::string bandstr = reducer_bands[i].second;
+            if (!(reducerstr == "min" ||
+                  reducerstr == "max" ||
+                  reducerstr == "mean" ||
+                  reducerstr == "median" ||
+                  reducerstr == "count" ||
+                  reducerstr == "var" ||
+                  reducerstr == "sd" ||
+                  reducerstr == "prod" ||
+                  reducerstr == "sum"))
+                throw std::string("ERROR in reduce_time_cube::reduce_time_cube(): Unknown reducer '" + reducerstr + "'");
+
+            if (!(in->bands().has(bandstr))) {
+                throw std::string("ERROR in reduce_time_cube::reduce_time_cube(): Input data cube has no band '" + bandstr + "'");
+            }
+
+            band b = in->bands().get(bandstr);
             if (in->size_t() > 1) {
-                b.name = b.name + "_" + reducer;  // Change name only if input is not yet reduced
+                b.name = b.name + "_" + reducerstr;  // Change name only if input is not yet reduced
             }
             _bands.add(b);
         }
-
-        if (!(reducer == "min" ||
-              reducer == "max" ||
-              reducer == "mean" ||
-              reducer == "median" ||
-              reducer == "count" ||
-              reducer == "var" ||
-              reducer == "sd" ||
-              reducer == "prod" ||
-              reducer == "sum"))
-            throw std::string("ERROR in reduce_cube::reduce_cube(): Unknown reducer given");
     }
 
    public:
-    ~reduce_cube() {}
+    ~reduce_time_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
@@ -86,18 +93,17 @@ class reduce_cube : public cube {
 
     nlohmann::json make_constructible_json() override {
         nlohmann::json out;
-        out["cube_type"] = "reduce";
-        out["reducer"] = _reducer;
+        out["cube_type"] = "reduce_time";
+        out["reducer_bands"] = _reducer_bands;
         out["in_cube"] = _in_cube->make_constructible_json();
         return out;
     }
 
    private:
     std::shared_ptr<cube> _in_cube;
-    std::string _reducer;
+    std::vector<std::pair<std::string, std::string>> _reducer_bands;
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        std::cout << "ENTERING reduce_cube::set_st_reference()" << std::endl;
         // copy fields from st_reference type
         _st_ref->win() = stref->win();
         _st_ref->proj() = stref->proj();
@@ -110,8 +116,7 @@ class reduce_cube : public cube {
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         //assert(_st_ref->nt() == 1);
-        std::cout << "EXITING reduce_cube::set_st_reference()" << std::endl;
     }
 };
 
-#endif  //REDUCE_H
+#endif  // REDUCE_TIME_H

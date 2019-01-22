@@ -41,6 +41,12 @@ std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
             return x;
         }));
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "reduce_space", [](nlohmann::json& j) {
+            // std::vector<std::pair<std::string, std::string>> band_reducers = j["reducer_bands"].get<std::vector<std::pair<std::string, std::string>>>();
+            auto x = reduce_time_cube::create(create_from_json(j["in_cube"]), j["reducer_bands"].get<std::vector<std::pair<std::string, std::string>>>());
+            return x;
+        }));
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "select_bands", [](nlohmann::json& j) {
             auto x = select_bands_cube::create(create_from_json(j["in_cube"]), j["bands"].get<std::vector<std::string>>());
             return x;

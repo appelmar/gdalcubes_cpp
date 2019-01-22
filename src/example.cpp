@@ -32,6 +32,7 @@
 #include "stream.h"
 
 #include "external/tinyexpr/tinyexpr.h"
+#include "reduce_space.h"
 #include "reduce_time.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
@@ -98,13 +99,24 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
 
         /**************************************************************************/
-        // test new reduction
+        // test reduction over time
         {
             auto c = image_collection_cube::create("test.db", v);
             auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"mean", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
-
+            auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
+            //auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"var", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
             cr->write_gdal_image("test_reduce_new.tif");
+        }
+        /**************************************************************************/
+
+        /**************************************************************************/
+        // test reduction over space
+        {
+            auto c = image_collection_cube::create("test.db", v);
+            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+            auto cr = reduce_space_cube::create(cb, {{"count", "B04"}, {"mean", "B04"}});
+            //auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"var", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
+            cr->write_netcdf_file("test_reduce_space.nc");
         }
         /**************************************************************************/
 

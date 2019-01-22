@@ -49,7 +49,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     uint32_t databytes_read = 0;
 
 #ifdef _WIN32
-    put_env("GDALCUBES_STREAMING=1");
+    _putenv("GDALCUBES_STREAMING=1");
 #else
     setenv("GDALCUBES_STREAMING", "1", 1);
 #endif

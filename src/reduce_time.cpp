@@ -391,7 +391,7 @@ struct var_reducer_singleband : public reducer_singleband {
         _band_idx_in = band_idx_in;
         _band_idx_out = band_idx_out;
         _count = (uint32_t *)std::calloc(a->size()[2] * a->size()[3], sizeof(uint32_t));
-        _mean = (double *)std::calloc(a->size()[2] * a->size()[3], sizeof(uint32_t));
+        _mean = (double *)std::calloc(a->size()[2] * a->size()[3], sizeof(double));
         for (uint32_t ixy = 0; ixy < a->size()[2] * a->size()[3]; ++ixy) {
             _count[ixy] = 0;
             _mean[ixy] = 0;
@@ -457,7 +457,7 @@ std::shared_ptr<chunk_data> reduce_time_cube::read_chunk(chunkid_t id) {
     }
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
-    coords_nd<uint32_t, 4> size_btyx = {_reducer_bands.size(), 1, size_tyx[1], size_tyx[2]};
+    coords_nd<uint32_t, 4> size_btyx = {uint32_t(_reducer_bands.size()), 1, size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
     // Fill buffers accordingly

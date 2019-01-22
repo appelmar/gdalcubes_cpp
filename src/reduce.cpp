@@ -259,7 +259,7 @@ struct median_reducer : public reducer {
 struct var_reducer : public reducer {
     void init(std::shared_ptr<chunk_data> a) override {
         _count = (uint32_t *)std::calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
-        _mean = (double *)std::calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(uint32_t));
+        _mean = (double *)std::calloc(a->size()[0] * a->size()[2] * a->size()[3], sizeof(double));
         for (uint32_t ibxy = 0; ibxy < a->size()[0] * a->size()[2] * a->size()[3]; ++ibxy) {
             _count[ibxy] = 0;
             _mean[ibxy] = 0;

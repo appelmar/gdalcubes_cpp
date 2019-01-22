@@ -102,7 +102,8 @@ int main(int argc, char *argv[]) {
         {
             auto c = image_collection_cube::create("test.db", v);
             auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"mean", "B04"}});
+            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"mean", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
+
             cr->write_gdal_image("test_reduce_new.tif");
         }
         /**************************************************************************/

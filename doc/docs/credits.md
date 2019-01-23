@@ -37,7 +37,7 @@ by the core library.
 - **[TinyExpr](https://github.com/codeplea/tinyexpr): A very small recursive descent parser and evaluation engine for math expressions**
     - Copyright (c) 2015-2018 Lewis Van Winkle
     - License:  [zlib license](https://opensource.org/licenses/Zlib) 
-    - gdalcubes distributes an unmodified version of the library under `src/external/tinyexpr`
+    - gdalcubes distributes a *modified* version of the library under `src/external/tinyexpr`, modifications include the implementation of logical and bit-wise operators.
 
 - **[netCDF](https://www.unidata.ucar.edu/software/netcdf): The Unidata network Common Data Form C library**
     - Copyright (c) 1993-2017 University Corporation for Atmospheric Research/Unidata

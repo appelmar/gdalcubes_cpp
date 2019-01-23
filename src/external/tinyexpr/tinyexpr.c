@@ -22,6 +22,16 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
+
+/*
+ * THIS FILE INCLUDES THE FOLLOWING MODIFICATIONS (c) 2019 Marius Appel:
+ * - added logical infix operators <, <=, >, >=, ==, !=, &&, || and logical not !
+ * - added bitwise infix operators &, |, <<, >> and bitwise not ~
+ * - added isnan(), isfinite(), and iif() functions
+ */
+
+
+
 /* COMPILE TIME OPTIONS */
 
 /* Exponentiation associativity:
@@ -117,6 +127,27 @@ void te_free(te_expr *n) {
 }
 
 
+// new functions (added by Marius Appel on Jan 23, 2019)
+static double lt(double a, double b) { return a < b; }
+static double lte(double a, double b) { return a <= b; }
+static double gte(double a, double b) { return a >= b; }
+static double gt(double a, double b) { return a > b; }
+static double eq(double a, double b) { return a == b; }
+static double neq(double a, double b) { return a != b; }
+static double land(double a, double b) { return (int)(a) && (int)(b); }
+static double lor(double a, double b) { return (int)(a) || (int)(b); }
+static double lnot(double a) { return !(int)(a); }
+static double shr(double a, double b) { return (int)(a) >> (int)(b); }
+static double shl(double a, double b) { return (int)(a) << (int)(b); }
+static double band(double a, double b) { return (int)(a) & (int)(b); }
+static double bor(double a, double b) { return (int)(a) | (int)(b); }
+static double bnot(double a) { return ~(int)(a); }
+static double is_nan(double a) { return isnan(a); }
+static double is_finite(double a) { return isfinite(a); }
+static double iif(double a, double b, double c) { return (int)(a)? b : c;}
+// end of new functions
+
+
 static double pi(void) {return 3.14159265358979323846;}
 static double e(void) {return 2.71828182845904523536;}
 static double fac(double a) {/* simplest version of fac */
@@ -179,6 +210,13 @@ static const te_variable functions[] = {
     {"sqrt", sqrt,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"tan", tan,      TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"tanh", tanh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
+
+    // new functions (added by Marius Appel on Jan 23, 2019)
+    {"isnan", is_nan,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
+    {"isfinite", is_finite,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
+    {"iif", iif,    TE_FUNCTION3 | TE_FLAG_PURE, 0},
+    // end of new functions
+
     {0, 0, 0, 0}
 };
 
@@ -224,6 +262,8 @@ static double mul(double a, double b) {return a * b;}
 static double divide(double a, double b) {return a / b;}
 static double negate(double a) {return -a;}
 static double comma(double a, double b) {(void)a; return b;}
+
+
 
 
 void next_token(state *s) {
@@ -273,19 +313,107 @@ void next_token(state *s) {
                 }
 
             } else {
-                /* Look for an operator or special character. */
-                switch (s->next++[0]) {
-                    case '+': s->type = TOK_INFIX; s->function = add; break;
-                    case '-': s->type = TOK_INFIX; s->function = sub; break;
-                    case '*': s->type = TOK_INFIX; s->function = mul; break;
-                    case '/': s->type = TOK_INFIX; s->function = divide; break;
-                    case '^': s->type = TOK_INFIX; s->function = pow; break;
-                    case '%': s->type = TOK_INFIX; s->function = fmod; break;
-                    case '(': s->type = TOK_OPEN; break;
-                    case ')': s->type = TOK_CLOSE; break;
-                    case ',': s->type = TOK_SEP; break;
-                    case ' ': case '\t': case '\n': case '\r': break;
-                    default: s->type = TOK_ERROR; break;
+
+                if (strncmp(s->next, "||", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = lor;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, "&&", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = land;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, "<=", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = lte;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, ">=", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = gte;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, "==", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = eq;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, "!=", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = neq;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, "<<", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = shl;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, ">>", 2) == 0) {
+                    s->type = TOK_INFIX; s->function = shr;
+                    s->next += 2;
+                }
+                else if (strncmp(s->next, "+", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = add;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "-", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = sub;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "*", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = mul;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "/", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = divide;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "^", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = pow;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "%", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = fmod;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "(", 1) == 0) {
+                    s->type = TOK_OPEN;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, ")", 1) == 0) {
+                    s->type = TOK_CLOSE;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, ",", 1) == 0) {
+                    s->type = TOK_SEP;
+                    s->next += 1;
+                }
+                else if (s->next[0] == ' ' || s->next[0] == '\t' || s->next[0] == '\n' || s->next[0] == '\r' ) {
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "<", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = lt;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, ">", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = gt;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "|", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = bor;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "&", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = band;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "~", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = bnot;
+                    s->next += 1;
+                }
+                else if (strncmp(s->next, "!", 1) == 0) {
+                    s->type = TOK_INFIX; s->function = lnot;
+                    s->next += 1;
+                }
+
+
+
+                else {
+                    s->type = TOK_ERROR;
                 }
             }
         }
@@ -395,7 +523,7 @@ static te_expr *base(state *s) {
 static te_expr *power(state *s) {
     /* <power>     =    {("-" | "+")} <base> */
     int sign = 1;
-    while (s->type == TOK_INFIX && (s->function == add || s->function == sub)) {
+    while (s->type == TOK_INFIX && (s->function == add || s->function == sub || s->function == lnot || s->function == bnot)) {
         if (s->function == sub) sign = -sign;
         next_token(s);
     }
@@ -488,7 +616,20 @@ static te_expr *expr(state *s) {
     /* <expr>      =    <term> {("+" | "-") <term>} */
     te_expr *ret = term(s);
 
-    while (s->type == TOK_INFIX && (s->function == add || s->function == sub)) {
+    while (s->type == TOK_INFIX && (s->function == add ||
+            s->function == sub ||
+            s->function == lt ||
+            s->function == lte ||
+            s->function == gt ||
+            s->function == gte ||
+            s->function == eq ||
+            s->function == neq ||
+            s->function == lor ||
+            s->function == land ||
+            s->function == band ||
+            s->function == bor ||
+            s->function == shr ||
+            s->function == shl)) {
         te_fun2 t = s->function;
         next_token(s);
         ret = NEW_EXPR(TE_FUNCTION2 | TE_FLAG_PURE, ret, term(s));

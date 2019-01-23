@@ -25,15 +25,14 @@
 #include "collection_format.h"
 #include "cube_factory.h"
 #include "error.h"
+#include "filter_predicate.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "reduce.h"
-#include "select_bands.h"
-#include "stream.h"
-
-#include "external/tinyexpr/tinyexpr.h"
 #include "reduce_space.h"
 #include "reduce_time.h"
+#include "select_bands.h"
+#include "stream.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -99,26 +98,37 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
 
         /**************************************************************************/
-        // test reduction over time
+        // test filter predicate over time
         {
             auto c = image_collection_cube::create("test.db", v);
             auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
-            //auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"var", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
-            cr->write_gdal_image("test_reduce_new.tif");
+            auto cf = filter_predicate_cube::create(cb, "B04 < 1000");
+            auto cr = reduce_time_cube::create(cf, {{"max", "B04"}, {"count", "B04"}});
+            cr->write_gdal_image("test_filter_predicate_2.tif");
         }
         /**************************************************************************/
 
-        /**************************************************************************/
-        // test reduction over space
-        {
-            auto c = image_collection_cube::create("test.db", v);
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            auto cr = reduce_space_cube::create(cb, {{"count", "B04"}, {"mean", "B04"}});
-            //auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"var", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
-            cr->write_netcdf_file("test_reduce_space.nc");
-        }
-        /**************************************************************************/
+        //        /**************************************************************************/
+        //        // test reduction over time
+        //        {
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //            auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
+        //            //auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"var", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
+        //            cr->write_gdal_image("test_reduce_new.tif");
+        //        }
+        //        /**************************************************************************/
+
+        //        /**************************************************************************/
+        //        // test reduction over space
+        //        {
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //            auto cr = reduce_space_cube::create(cb, {{"count", "B04"}, {"mean", "B04"}});
+        //            //auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"var", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
+        //            cr->write_netcdf_file("test_reduce_space.nc");
+        //        }
+        //        /**************************************************************************/
 
         /**************************************************************************/
         // Test apply_pixel
@@ -138,13 +148,13 @@ int main(int argc, char *argv[]) {
 
         /**************************************************************************/
         // test streaming
-        {
-            // test streaming
-            auto c = image_collection_cube::create("test.db", v);
-            auto sc = stream_cube::create(c, "Rscript --vanilla stream_example.R", "stdout");
-            auto cr = reduce_cube::create(sc, "median");
-            cr->write_gdal_image("test_stream.tif");
-        }
+        //        {
+        //            // test streaming
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            auto sc = stream_cube::create(c, "Rscript --vanilla stream_example.R", "stdout");
+        //            auto cr = reduce_cube::create(sc, "median");
+        //            cr->write_gdal_image("test_stream.tif");
+        //        }
 
         //
         //        /******************************************/

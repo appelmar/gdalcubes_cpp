@@ -19,6 +19,7 @@
 #include "apply_pixel.h"
 #include "external/json.hpp"
 #include "filesystem.h"
+#include "filter_predicate.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
 #include "reduce.h"
@@ -49,6 +50,12 @@ std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "select_bands", [](nlohmann::json& j) {
             auto x = select_bands_cube::create(create_from_json(j["in_cube"]), j["bands"].get<std::vector<std::string>>());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "filter_predicate", [](nlohmann::json& j) {
+            auto x = filter_predicate_cube::create(create_from_json(j["in_cube"]), j["predicate"].get<std::string>());
             return x;
         }));
 

@@ -25,7 +25,7 @@ gdalcubes makes use of the following third party software.
 **[TinyExpr](https://github.com/codeplea/tinyexpr): A very small recursive descent parser and evaluation engine for math expressions**
     - Copyright (c) 2015-2018 Lewis Van Winkle
     - License:  [zlib license](https://opensource.org/licenses/Zlib)
-    - gdalcubes distributes an unmodified version of the library under `src/external/tinyexpr`
+    - gdalcubes distributes a *modified* version of the library under `src/external/tinyexpr`, modifications include the implementation of logical and bit-wise operators.
 
 **[ExprTk](http://www.partow.net/programming/exprtk/): A C++ Mathematical Expression Parsing and Evaluation Library**
     - Copyright (c) Arash Partow (1999-2018)

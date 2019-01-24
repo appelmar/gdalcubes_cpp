@@ -97,7 +97,6 @@ class reduce_cube : public cube {
     std::string _reducer;
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        std::cout << "ENTERING reduce_cube::set_st_reference()" << std::endl;
         // copy fields from st_reference type
         _st_ref->win() = stref->win();
         _st_ref->proj() = stref->proj();
@@ -110,7 +109,6 @@ class reduce_cube : public cube {
         _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         //assert(_st_ref->nt() == 1);
-        std::cout << "EXITING reduce_cube::set_st_reference()" << std::endl;
     }
 };
 

@@ -298,8 +298,8 @@ struct var_reducer_singleband_s : public reducer_singleband_s {
             for (uint32_t ixy = 0; ixy < b->size()[2] * b->size()[3]; ++ixy) {
                 double &v = ((double *)b->buf())[_band_idx_in * b->size()[1] * b->size()[2] * b->size()[3] + it * b->size()[2] * b->size()[3] + ixy];
                 if (!std::isnan(v)) {
-                    double &mean = _mean[ixy];
-                    uint32_t &count = _count[ixy];
+                    double &mean = _mean[it];
+                    uint32_t &count = _count[it];
                     ++count;
                     double delta = v - mean;
                     mean += delta / count;

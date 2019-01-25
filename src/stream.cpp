@@ -148,21 +148,17 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
 
 #ifdef _WIN32
     _putenv("GDALCUBES_STREAMING=1");
-    _putenv((std::string("GDALCUBES_STREAMING_DIR") + "=" + config::instance()->get_streaming_dir().c_str()).c_str());
-    _putenv((std::string("GDALCUBES_STREAMING_FILE_IN")    + "=" +  f_in.c_str());
-    _putenv((std::string("GDALCUBES_STREAMING_FILE_OUT")   + "=" +  f_out.c_str());
+    //_putenv((std::string("GDALCUBES_STREAMING_DIR") + "=" + config::instance()->get_streaming_dir().c_str()).c_str());
+    _putenv((std::string("GDALCUBES_STREAMING_FILE_IN") + "=" + f_in.c_str()).c_str());
+    _putenv((std::string("GDALCUBES_STREAMING_FILE_OUT") + "=" + f_out.c_str()).c_str());
 #else
     setenv("GDALCUBES_STREAMING", "1", 1);
-    setenv("GDALCUBES_STREAMING_DIR", config::instance()->get_streaming_dir().c_str(), 1);
+    // setenv("GDALCUBES_STREAMING_DIR", config::instance()->get_streaming_dir().c_str(), 1);
     setenv("GDALCUBES_STREAMING_FILE_IN", f_in.c_str(), 1);
     setenv("GDALCUBES_STREAMING_FILE_OUT", f_out.c_str(), 1);
 #endif
 
-
-
-
-    std::string errstr; // capture error string
-
+    std::string errstr;  // capture error string
 
     // write input data
     std::ofstream f_in_stream(f_in, std::ios::out | std::ios::binary | std::ios::trunc);
@@ -197,14 +193,10 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
     f_in_stream.write(((char *)(data->buf())), sizeof(double) * data->size()[0] * data->size()[1] * data->size()[2] * data->size()[3]);
     f_in_stream.close();
 
-
-
-
     // start process
     TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {}, [&errstr](const char *bytes, std::size_t n) {
         errstr = std::string(bytes, n);
-        GCBS_DEBUG(errstr);
-        }, false);
+        GCBS_DEBUG(errstr); }, false);
     auto exit_status = process.get_exit_status();
     filesystem::remove(f_in);
     if (exit_status != 0) {
@@ -214,12 +206,10 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
             filesystem::remove(f_out);
         }
         throw std::string("ERROR in stream_cube::read_chunk(): external program returned exit code " + std::to_string(exit_status));
-
     }
 
-
     // read output data
-    std::ifstream f_out_stream(f_out, std::ios::in | std::ios::binary) ;
+    std::ifstream f_out_stream(f_out, std::ios::in | std::ios::binary);
     if (!f_out_stream.is_open()) {
         GCBS_ERROR("Cannot read streaming output data from file '" + f_out + "'");
         throw std::string("ERROR in stream_cube::stream_chunk_file(): cannot read streaming output data from file '" + f_out + "'");
@@ -227,9 +217,9 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
 
     f_out_stream.seekg(0, f_out_stream.end);
     int length = f_out_stream.tellg();
-    f_out_stream.seekg (0, f_out_stream.beg);
-    char * buffer = (char*)std::calloc(length, sizeof(char));
-    f_out_stream.read (buffer,length);
+    f_out_stream.seekg(0, f_out_stream.beg);
+    char *buffer = (char *)std::calloc(length, sizeof(char));
+    f_out_stream.read(buffer, length);
     f_out_stream.close();
 
     chunk_size_btyx out_size = {(uint32_t)(((int *)buffer)[0]), (uint32_t)(((int *)buffer)[1]),
@@ -238,7 +228,6 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
     out->buf(std::calloc(out_size[0] * out_size[1] * out_size[2] * out_size[3], sizeof(double)));
     std::memcpy(out->buf(), buffer + (4 * sizeof(int)), length - 4 * sizeof(int));
     std::free(buffer);
-
 
     if (filesystem::exists(f_out)) {
         filesystem::remove(f_out);

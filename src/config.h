@@ -124,6 +124,11 @@ class config {
     inline bool get_swarm_curl_verbose() { return _swarm_curl_verbose; }
     inline void set_swarm_curl_verbose(bool verbose) { _swarm_curl_verbose = verbose; }
 
+    // Get / set directory where to store chunk data for file-based streaming. This
+    // should ideally fast storage like a ramdisk such as /dev/shm
+    inline std::string get_streaming_dir() { return _streaming_dir; }
+    inline void set_streaming_dir(std::string dir) { _streaming_dir = dir; }
+
     inline bool get_gdal_debug() { return _gdal_debug; }
     inline void set_gdal_debug(bool debug) {
         _gdal_debug = debug;
@@ -150,7 +155,7 @@ class config {
         CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
         curl_global_init(CURL_GLOBAL_ALL);
         CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
-        srand(time(NULL));
+        //srand(time(NULL)); // R will complain if calling srand...
         CPLSetErrorHandler(CPLQuietErrorHandler);
 
         // Add default locations where to look for collection format presets
@@ -187,6 +192,11 @@ class config {
             if (filesystem::exists(candidate_dirs[i])) {
                 config::instance()->add_collection_format_preset_dir(candidate_dirs[i]);
             }
+        }
+
+        // use /dev/shm for file streaming if exists
+        if (filesystem::exists("/dev/shm")) {
+            config::instance()->set_streaming_dir("/dev/shm");
         }
     }
 
@@ -232,6 +242,7 @@ class config {
     bool _swarm_curl_verbose;
     uint16_t _gdal_num_threads;
     bool _gdal_debug;
+    std::string _streaming_dir;
     std::vector<std::string> _collection_format_preset_dirs;
 
    private:

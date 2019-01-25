@@ -207,7 +207,7 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
                 // we do not use cpprest JSON library here
                 uint32_t id;
                 req.extract_string(true).then([&id, this](std::string s) {
-                                            std::shared_ptr<cube> c = cube_factory::create_from_json(nlohmann::json::parse(s));
+                                            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(nlohmann::json::parse(s));
                                             id = get_unique_id();
                                             _mutex_cubestore.lock();
                                             _cubestore.insert(std::make_pair(id, c));

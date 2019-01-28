@@ -34,5 +34,6 @@
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"
+#include "window_time.h"
 
 #endif  //GDALCUBES_H

@@ -33,6 +33,7 @@
 #include "reduce_time.h"
 #include "select_bands.h"
 #include "stream.h"
+#include "window_time.h"
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -52,10 +53,6 @@ int main(int argc, char *argv[]) {
     datetime ttt = datetime::from_string("2018-11-08T09:32:09");
     std::cout << ttt.to_double() << std::endl;
 
-    collection_format fmt("../../test/collection_format_test.json");
-
-    collection_format ftest("Sentinel2_L1C");
-
     auto prsts = collection_format::list_presets();
     for (auto it = prsts.begin(); it != prsts.end(); ++it) {
         std::cout << it->first << "    " << it->second << std::endl;
@@ -67,55 +64,51 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // Test create image collection
         {
-            //            collection_format f("Sentinel2_L1C");
-            //            auto ic = image_collection::create(f, string_list_from_text_file("../../test/test_list.txt"), false);
-            //            //auto ic = image_collection::create(f,image_collection::unroll_archives(string_list_from_text_file("../test/test_list.txt")), false);
-            //
-            //            //            collection_format f("MOD13A3");
-            //            //            auto ic = image_collection::create(f,std::vector<std::string>{"HDF4_EOS:EOS_GRID:\"/home/marius/Desktop/MODIS/MOD13A3.A2018/MOD13A3.A2018244.h17v03.006.2018295112545.hdf\":MOD_Grid_monthly_1km_VI:1 km monthly NDVI"}, false);
-            //
-            //            ic->write("test.db");
-            //            std::cout << ic->to_string() << std::endl;
+            //                collection_format f("Sentinel2_L2A");
+            //                auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
+            //                ic->write("test.db");
+            //                std::cout << ic->to_string() << std::endl;
+            //                std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
         }
         /**************************************************************************/
 
-        cube_view v = cube_view::read_json("../../test/view2.json");
+        cube_view v = cube_view::read_json("view.json");
 
         /**************************************************************************/
         // test reduction
-        //        {
-        //            auto c = image_collection_cube::create("test.db", v);
-        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-        //            cb->write_netcdf_file("band_select.nc");
-        //            auto cr = reduce_cube::create(cb, "mean");
-        //            cr->write_gdal_image("test_A.tif");
+        //                {
+        //                    auto c = image_collection_cube::create("test.db", v);
+        //                    auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //                    cb->write_netcdf_file("band_select.nc");
+        //                    auto cr = reduce_cube::create(cb, "median");
+        //                    cr->write_gdal_image("test_A.tif");
         //
-        //            c = image_collection_cube::create("test.db", v);
-        //            cr = reduce_cube::create(c, "max");
-        //            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
-        //            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
-        //        }
+        //                    c = image_collection_cube::create("test.db", v);
+        //                    cr = reduce_cube::create(c, "max");
+        //                    cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
+        //                    reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
+        //                }
         /**************************************************************************/
 
         /**************************************************************************/
         // test filter predicate over time
         {
-            auto c = image_collection_cube::create("test.db", v);
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            auto cf = filter_predicate_cube::create(cb, "B04 < 1000");
-            auto cr = reduce_time_cube::create(cf, {{"max", "B04"}, {"count", "B04"}});
-            cr->write_gdal_image("test_filter_predicate_2.tif");
+            //            auto c = image_collection_cube::create("test.db", v);
+            //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+            //            auto cf = filter_predicate_cube::create(cb, "B04 < 1000");
+            //            auto cr = reduce_time_cube::create(cf, {{"max", "B04"}, {"count", "B04"}});
+            //            cr->write_gdal_image("test_filter_predicate_2.tif");
         }
         /**************************************************************************/
 
         //        /**************************************************************************/
         //        // test reduction over time
         //        {
-        //            auto c = image_collection_cube::create("test.db", v);
-        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-        //            auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
-        //            //auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"var", "B04"}, {"which_min", "B04"}, {"which_max", "B04"}});
-        //            cr->write_gdal_image("test_reduce_new.tif");
+        //                    auto c = image_collection_cube::create("test.db", v);
+        //                    auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //                   // auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
+        //                    auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
+        //                    cr->write_gdal_image("test_reduce_new.tif");
         //        }
         //        /**************************************************************************/
 
@@ -129,6 +122,16 @@ int main(int argc, char *argv[]) {
         //            cr->write_netcdf_file("test_reduce_space.nc");
         //        }
         //        /**************************************************************************/
+
+        //        /**************************************************************************/
+        //        // test window time over space
+        {
+            auto c = image_collection_cube::create("test.db", v);
+            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04"});
+            auto cw = window_time_cube::create(cb, {{"mean", "B04"}}, 1, 1);
+            cw->write_netcdf_file("test_window_time.nc");
+        }
+        //      /**************************************************************************/
 
         /**************************************************************************/
         // Test apply_pixel

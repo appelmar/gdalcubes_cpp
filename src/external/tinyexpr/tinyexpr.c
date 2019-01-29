@@ -28,6 +28,7 @@
  * - added logical infix operators <, <=, >, >=, ==, !=, &&, || and logical not !
  * - added bitwise infix operators &, |, <<, >> and bitwise not ~
  * - added isnan(), isfinite(), and iif() functions
+ * - commented out pn() and te_print()
  */
 
 
@@ -763,32 +764,34 @@ double te_interp(const char *expression, int *error) {
     return ret;
 }
 
-static void pn (const te_expr *n, int depth) {
-    int i, arity;
-    printf("%*s", depth, "");
-
-    switch(TYPE_MASK(n->type)) {
-    case TE_CONSTANT: printf("%f\n", n->value); break;
-    case TE_VARIABLE: printf("bound %p\n", n->bound); break;
-
-    case TE_FUNCTION0: case TE_FUNCTION1: case TE_FUNCTION2: case TE_FUNCTION3:
-    case TE_FUNCTION4: case TE_FUNCTION5: case TE_FUNCTION6: case TE_FUNCTION7:
-    case TE_CLOSURE0: case TE_CLOSURE1: case TE_CLOSURE2: case TE_CLOSURE3:
-    case TE_CLOSURE4: case TE_CLOSURE5: case TE_CLOSURE6: case TE_CLOSURE7:
-         arity = ARITY(n->type);
-         printf("f%d", arity);
-         for(i = 0; i < arity; i++) {
-             printf(" %p", n->parameters[i]);
-         }
-         printf("\n");
-         for(i = 0; i < arity; i++) {
-             pn(n->parameters[i], depth + 1);
-         }
-         break;
-    }
-}
 
 
-void te_print(const te_expr *n) {
-    pn(n, 0);
-}
+//static void pn (const te_expr *n, int depth) {
+//    int i, arity;
+//    printf("%*s", depth, "");
+//
+//    switch(TYPE_MASK(n->type)) {
+//    case TE_CONSTANT: printf("%f\n", n->value); break;
+//    case TE_VARIABLE: printf("bound %p\n", n->bound); break;
+//
+//    case TE_FUNCTION0: case TE_FUNCTION1: case TE_FUNCTION2: case TE_FUNCTION3:
+//    case TE_FUNCTION4: case TE_FUNCTION5: case TE_FUNCTION6: case TE_FUNCTION7:
+//    case TE_CLOSURE0: case TE_CLOSURE1: case TE_CLOSURE2: case TE_CLOSURE3:
+//    case TE_CLOSURE4: case TE_CLOSURE5: case TE_CLOSURE6: case TE_CLOSURE7:
+//         arity = ARITY(n->type);
+//         printf("f%d", arity);
+//         for(i = 0; i < arity; i++) {
+//             printf(" %p", n->parameters[i]);
+//         }
+//         printf("\n");
+//         for(i = 0; i < arity; i++) {
+//             pn(n->parameters[i], depth + 1);
+//         }
+//         break;
+//    }
+//}
+
+
+//void te_print(const te_expr *n) {
+//    pn(n, 0);
+//}

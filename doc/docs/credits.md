@@ -17,7 +17,7 @@ by the core library.
 - **[json](https://github.com/nlohmann/json): JSON for Modern C++**
      - Copyright (c) 2013-2018 Niels Lohmann
      - License: [MIT license](https://opensource.org/licenses/MIT) 
-     - gdalcubes distributes an unmodified version of the library under `src/external/json.hpp`
+     - gdalcubes distributes a **modified** version of the library under `src/external/json.hpp`, modifications are limited to commenting out diagnostic pragmas (see https://github.com/appelmar/gdalcubes/commit/9e936155489a97c5bb211e13e757236762ee1d96)
      
 - **[SQLite](https://www.sqlite.org/): A self-contained, high-reliability, embedded, full-featured, public-domain, SQL database engine**
      - Copyright:  _public domain_
@@ -73,7 +73,7 @@ by the core library.
     - Copyright (c) 2017 Paul Thompson
     - Copyright (c) 2018 Tomasz Kamiński    
     - License: [MIT license](https://opensource.org/licenses/MIT)       
-    - gdalcubes distributes an unmodified version of the library under `src/external/date.h`
+    - gdalcubes distributes a **modified** version of the library under `src/external/date.h`, modifications are limited to commenting out diagnostic pragmas (see https://github.com/appelmar/gdalcubes/commit/9e936155489a97c5bb211e13e757236762ee1d96)
  
 - **[cpprestsdk](https://github.com/Microsoft/cpprestsdk)**
     - Copyright (c) Microsoft Corporation

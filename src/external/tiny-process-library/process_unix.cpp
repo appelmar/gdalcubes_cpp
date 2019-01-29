@@ -96,7 +96,8 @@ namespace TinyProcessLib {
             if (function)
                 function();
 
-            _exit(EXIT_FAILURE);
+            raise(SIGKILL);
+            //_exit(EXIT_FAILURE);
         }
 
         if (stdin_fd)
@@ -121,7 +122,7 @@ namespace TinyProcessLib {
     Process::id_type Process::open(const std::vector<string_type> &arguments, const string_type &path, const environment_type *environment) noexcept {
         return open([&arguments, &path, &environment] {
             if (arguments.empty())
-                exit(127);
+                raise(SIGKILL);
 
             std::vector<const char *> argv_ptrs;
             argv_ptrs.reserve(arguments.size() + 1);
@@ -131,7 +132,7 @@ namespace TinyProcessLib {
 
             if (!path.empty()) {
                 if (chdir(path.c_str()) != 0)
-                    exit(1);
+                    raise(SIGKILL);
             }
 
             if (!environment)
@@ -156,7 +157,7 @@ namespace TinyProcessLib {
         return open([&command, &path, &environment] {
             if (!path.empty()) {
                 if (chdir(path.c_str()) != 0)
-                    exit(1);
+                    raise(SIGKILL);
             }
 
             if (!environment)

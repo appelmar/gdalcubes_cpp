@@ -42,7 +42,7 @@ gdalcubes makes use of the following third party software.
     - Copyright (c) 2015-2018 Ole Christian Eidheim
     - License:  [MIT license](https://opensource.org/licenses/MIT)
     - gdalcubes_server includes may statically or dynamically link to the cpprestsdk library depending on compilation flags
-    - gdalcubes distributes an unmodified version of the library under `src/external/tiny-process-library`
+    - gdalcubes distributes a **modified** version of the library under `src/external/tiny-process-library`, modifications are limited to replacing _exit() and exit() calls by raise(SIGKILL), in order to comply with R CMD check.
 
 **[Catch2](https://github.com/catchorg/Catch2: A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
     - Copyright (c) 2010 Two Blue Cubes Ltd

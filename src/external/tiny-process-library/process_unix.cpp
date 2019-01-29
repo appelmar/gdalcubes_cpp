@@ -4,6 +4,12 @@
 #include <stdexcept>
 #include "process.hpp"
 
+/*
+ * THIS FILE INCLUDES THE FOLLOWING MODIFICATIONS (c) 2019 Marius Appel:
+ * - replaced _exit() and exit() calls by raise(SIGKILL) 
+ */
+
+
 namespace TinyProcessLib {
 
     Process::Data::Data() noexcept : id(-1) {}

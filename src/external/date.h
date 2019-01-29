@@ -68,14 +68,14 @@
 #include <type_traits>
 #include <utility>
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-#if __GNUC__ < 5
-// GCC 4.9 Bug 61489 Wrong warning with -Wmissing-field-initializers
-#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-#endif
-#endif
+//#ifdef __GNUC__
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wpedantic"
+//#if __GNUC__ < 5
+//// GCC 4.9 Bug 61489 Wrong warning with -Wmissing-field-initializers
+//#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+//#endif
+//#endif
 
 namespace date {
 
@@ -1777,19 +1777,19 @@ namespace date {
         return weekday().ok() && 1 <= index_ && index_ <= 5;
     }
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif  // __GNUC__
+//#ifdef __GNUC__
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wconversion"
+//#endif  // __GNUC__
 
     CONSTCD11
     inline weekday_indexed::weekday_indexed(const date::weekday& wd, unsigned index) NOEXCEPT
         : wd_(static_cast<decltype(wd_)>(static_cast<unsigned>(wd.wd_))),
           index_(static_cast<decltype(index_)>(index)) {}
 
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif  // __GNUC__
+//#ifdef __GNUC__
+//#pragma GCC diagnostic pop
+//#endif  // __GNUC__
 
     template <class CharT, class Traits>
     inline std::basic_ostream<CharT, Traits>&
@@ -7073,8 +7073,8 @@ namespace date {
 
 }  // namespace date
 
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+//#ifdef __GNUC__
+//#pragma GCC diagnostic pop
+//#endif
 
 #endif  // DATE_H

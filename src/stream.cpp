@@ -83,19 +83,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
             }
         } }, [&errstr, this](const char *bytes, std::size_t n) {
     errstr = std::string(bytes, n);
-    if (_log_output == "stdout") {
-        std::cout << errstr << std::endl;
-    } else if (_log_output == "stderr") {
-        std::cerr << errstr << std::endl;
-    } else if (!_log_output.empty()) {
-        std::ofstream flog(_log_output, std::ios_base::out | std::ios_base::app);
-        if (flog.fail()) {
-            GCBS_WARN("Failed to open file '" + _log_output + "' for writing streaming output");
-        } else {
-            flog << errstr;
-            flog.close();
-        }
-    } }, true);
+    GCBS_DEBUG(errstr); }, true);
 
     // Write to stdin
     std::string proj = _in_cube->st_reference()->proj();

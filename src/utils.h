@@ -20,10 +20,9 @@
 #include <gdal_priv.h>
 #include <iomanip>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
-
-#include <random>
 
 /**
  * @brief A utility class for commonly used functions
@@ -38,11 +37,12 @@ class utils {
     * @return filename string
     */
     static std::string generate_unique_filename(uint16_t n = 8, std::string prefix = "", std::string suffix = "") {
+        std::random_device rd;
         std::stringstream ss;
         const std::string LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         int t = time(NULL);
         for (uint16_t i = 0; i < n; ++i) {
-            uint32_t r = t + rand();
+            uint32_t r = t + rd();
             ss << LETTERS[r % LETTERS.length()];
         }
         std::string out = prefix + ss.str() + suffix;

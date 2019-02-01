@@ -30,11 +30,14 @@
 extern "C" {
 #endif
 
+  
+typedef void (*funcptr)(void);
 
-
+union te_binding{double value; const double *bound; funcptr function;};
+  
 typedef struct te_expr {
     int type;
-    union {double value; const double *bound; const void *function;};
+    union te_binding binding;
     void *parameters[1];
 } te_expr;
 
@@ -58,7 +61,12 @@ typedef struct te_variable {
     void *context;
 } te_variable;
 
-
+typedef struct te_function {
+  const char *name;
+  funcptr address;
+  int type;
+  void *context;
+} te_function;
 
 /* Parses the input expression, evaluates it, and frees it. */
 /* Returns NaN on error. */

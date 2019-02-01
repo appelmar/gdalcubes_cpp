@@ -1019,7 +1019,7 @@ namespace date {
                   typename std::conditional<
                       digits<64,
                              std::int64_t,
-#ifdef __SIZEOF_INT128__
+#if defined(USE_INT128) && defined(__SIZEOF_INT128__)
                              __int128
 #else
                              std::int64_t

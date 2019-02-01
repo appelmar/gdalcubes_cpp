@@ -103,16 +103,16 @@ operating satellites S2A and S2B.
 ## Creating an image collection from local files
 
 As a first step, we must index these files in an image collection by deriving the aquisition date / time, the spatial extent, the spatial reference system,
-and which files belong to which spectral bands. This is what `gcbs_create_image_collection()` does. We provide a vector of files, a collection format that defines
+and which files belong to which spectral bands. This is what `create_image_collection()` does. We provide a vector of files, a collection format that defines
 how the information above can be extracted from images and an output file, where the image collection index is stored. The output file is 
-a simple [SQLite](https://www.sqlite.org) database referencing the provided files and the extracted metadata.  Notice that gdalcubes comes with a set of predefined collection formats. You can call `gcbs_collection_formats()` to print available formats.
+a simple [SQLite](https://www.sqlite.org) database referencing the provided files and the extracted metadata.  Notice that gdalcubes comes with a set of predefined collection formats. You can call `collection_formats()` to print available formats.
 The following command will scan all files and create an image collection that is stored as `S2_timeseries.db`. This file will include only
 references and metadata but not the imagery. 
 
 
 ```
-> gcbs_create_image_collection(list.files(pattern="*.zip", full.names = TRUE), 
-                             format="Sentinel2_L2A", unroll_archives=TRUE, out_file="S2_timeseries.db") 
+> create_image_collection(list.files(pattern="*.zip", full.names = TRUE), 
+                          format="Sentinel2_L2A", unroll_archives=TRUE, out_file="S2_timeseries.db") 
 
 ## A GDAL image collection object, referencing 102 images with 12  bands
 ## Images:
@@ -150,7 +150,7 @@ references and metadata but not the imagery.
 ## [1] 438.272  
 ```
 
-Notice that only the first six images are printed by `gcbs_create_image_collection()`. Setting `unroll_archives=TRUE` makes sure that we automatically scan the content of ZIP files using [GDAL's virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html).
+Notice that only the first six images are printed by `create_image_collection()`. Setting `unroll_archives=TRUE` makes sure that we automatically scan the content of ZIP files using [GDAL's virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html).
 The image collection file takes around 0.5 MB on disk.
 
 
@@ -164,21 +164,21 @@ We can thus use the same image collection and process it at different resolution
 our computations at lower resolution first. This also hides some of the ugly details with EO data such as different resolutions for different spectral bands. 
 In theory, we could define a cm resolution cube for Sentinel 2 data and gdalcubes will not complain.
 
-In the following example, we load the image collection and first create a default cube with `gcbs_cube()`, without specifying a data cube view manually.
+In the following example, we load the image collection and first create a default cube with `data_cube()`, without specifying a data cube view manually.
 This gives us a low resolution overview, covering the full spatiotemporal extent of the input image collection. We use this default
-view and modify it later by overwriting the temporal size of pixels and the number of pixels in y and x directions with `gcbs_view()`. This function
+view and modify it later by overwriting the temporal size of pixels and the number of pixels in y and x directions with `cube_view()`. This function
 can be used to
 
 1. extract the view of a data cube by providing the argument `cube`,
 2. overwriting parameters of an existing data cube view (by providing the argument `view` and one or more of the view parameters),
 3. or to define a manual data cube view by only providing data cube parameters. 
 
-Afterwards, we use `gcbs_select_bands()` to select a subset of the original bands, `gcbs_reduce()` to apply a median reduce over 
+Afterwards, we use `select_bands()` to select a subset of the original bands, `reduce()` to apply a median reduce over 
 all pixel time series and finally plot the result as am RGB image.
 
 ```
-> s2.col = gcbs_image_collection("S2_timeseries.db")
-> v = gcbs_view(gcbs_cube(s2.col))
+> s2.col = image_collection("S2_timeseries.db")
+> v = cube_view(data_cube(s2.col))
 > v
 ## $space
 ## $space$right
@@ -230,10 +230,10 @@ all pixel time series and finally plot the result as am RGB image.
 ## [1] "near"
 ## 
 ## attr(,"class")
-## [1] "gcbs_view" "list"
+## [1] "cube_view" "list"
      
-> v = gcbs_view(view=v, dt="P1M", nx=1000, ny=round(0.5477928*1000))
-> s2.cube = gcbs_cube(s2.col, v)
+> v = cube_view(view=v, dt="P1M", nx=1000, ny=round(0.5477928*1000))
+> s2.cube = data_cube(s2.col, v)
 > s2.cube
 ## A GDAL data cube proxy object
 ## Dimensions:
@@ -257,8 +257,8 @@ all pixel time series and finally plot the result as am RGB image.
 ## 11  B12      0     1    NaN     
 ## 12  B8A      0     1    NaN     
 
-> gcbs_set_threads(8)
-> s2.cube.rgb = gcbs_select_bands(s2.cube, c("B02", "B03", "B04"))
+> gdalcubes_set_threads(8)
+> s2.cube.rgb = select_bands(s2.cube, c("B02", "B03", "B04"))
 > s2.cube.rgb
 ## A GDAL data cube proxy object
 ## Dimensions:
@@ -273,7 +273,7 @@ all pixel time series and finally plot the result as am RGB image.
 ## 2  B03      0     1    NaN     
 ## 3  B04      0     1    NaN     
 
-> s2.cube.reduced = gcbs_reduce(s2.cube.rgb, "median")
+> s2.cube.reduced = reduce(s2.cube.rgb, "median")
 > s2.cube.reduced 
 ## A GDAL data cube proxy object
 ## Dimensions:
@@ -285,7 +285,7 @@ all pixel time series and finally plot the result as am RGB image.
 ## Bands:
 ##         name offset scale nodata unit
 ## 1 B02_median      0     1    NaN     
-## 2 B03_median      0     1    NaN     
+## 2 B03_median      0     1    NaN     ub
 ## 3 B04_median      0     1    NaN     
 
 > system.time(plot(s2.cube.reduced, rgb=3:1, zlim=c(0,1800)))
@@ -301,17 +301,17 @@ all pixel time series and finally plot the result as am RGB image.
 ![](S2R_img1.png)
 
 
-The package works with so called _proxy objects_. Creating a data cube with `gcbs_cube()` or any of the cube operations such as `gcbs_reduce()` and
-`gcbs_select_bands()`  will not read any data from images. Instead, it will only derive the shape
+The package works with so called _proxy objects_. Creating a data cube with `data_cube()` or any of the cube operations such as `reduce()` and
+`select_bands()`  will not read any data from images. Instead, it will only derive the shape
 of the output cube and print some metadata. In this example, calling `plot()` will start doing the actual processing.
 
 We can also write the same operation chain with the [pipe operator %>%](https://magrittr.tidyverse.org/).
 
 ```
 > require(magrittr)
-> gcbs_cube(s2.col, v) %>%
->   gcbs_select_bands(c("B02", "B03", "B04")) %>%
->   gcbs_reduce("median") %>%
+> data_cube(s2.col, v) %>%
+>   select_bands(c("B02", "B03", "B04")) %>%
+>   reduce("median") %>%
 >   plot(rgb=3:1, zlim=c(0,1800))
 ```
 
@@ -321,11 +321,11 @@ creates three different views of the same spatial area but different temporal ex
 
 
 ```
-> v1 = gcbs_view(proj="EPSG:3857", view=v, t0="2018-05",t1="2018-06", 
+> v1 = cube_view(proj="EPSG:3857", view=v, t0="2018-05",t1="2018-06", 
 >               l=2700000, r=2750000, t=7000000, b=6950000, nx=700, ny=700) # 50x50 km subset
-> system.time(gcbs_cube(s2.col, v) %>%
->   gcbs_select_bands(c("B02", "B03", "B04")) %>%
->   gcbs_reduce("median") %>%
+> system.time(data_cube(s2.col, v) %>%
+>   select_bands(c("B02", "B03", "B04")) %>%
+>   reduce("median") %>%
 >   plot(rgb=3:1, zlim=c(0,1800)))
 
 ## 0%   10   20   30   40   50   60   70   80   90   100%
@@ -335,9 +335,9 @@ creates three different views of the same spatial area but different temporal ex
 ##   user  system elapsed 
 ## 42.865   1.470   8.189
 
-> gcbs_cube(s2.col, gcbs_view(view=v1, t0="2018-07", t1="2018-08")) %>%
->      gcbs_select_bands(c("B02", "B03", "B04")) %>%
->      gcbs_reduce("median") %>%
+> data_cube(s2.col, cube_view(view=v1, t0="2018-07", t1="2018-08")) %>%
+>      select_bands(c("B02", "B03", "B04")) %>%
+>      reduce("median") %>%
 >      plot(rgb=3:1, zlim=c(0,1800))
 
 ## 0%   10   20   30   40   50   60   70   80   90   100%
@@ -345,9 +345,9 @@ creates three different views of the same spatial area but different temporal ex
 ## **************************************************|
 
 
-> gcbs_cube(s2.col, gcbs_view(v1, t0="2018-09", t1="2018-010")) %>%
->   gcbs_select_bands(c("B02", "B03", "B04")) %>%
->   gcbs_reduce("median") %>%
+> data_cube(s2.col, cube_view(v1, t0="2018-09", t1="2018-010")) %>%
+>   select_bands(c("B02", "B03", "B04")) %>%
+>   reduce("median") %>%
 >   plot(rgb=3:1, zlim=c(0,1800)))
 
 ## 0%   10   20   30   40   50   60   70   80   90   100%
@@ -364,17 +364,17 @@ creates three different views of the same spatial area but different temporal ex
 
 ## Pixel-wise calculations
 
-gdalcubes supports the calculation of basic arithmetic expressions per pixel in `gcbs_apply_pixel()`. The function takes an
+gdalcubes supports the calculation of basic arithmetic expressions per pixel in `apply_pixel()`. The function takes an
 input data cube and a character vector as input, where items are simple expressions on band names of the input cube. Each expression
 becomes a new band in the output cube where band names default to "band1", "band2", etc. A third argument `names` can be set
 to define meaningful band names. `names` must be a character vector with the same length as the expression vector.
 In the example below, we compute the NDVI using the expression `(B08-B04)/(B08+B04)`.
 
 ```
-> system.time(gcbs_cube(s2.col, v1) %>%
->   gcbs_select_bands(c("B04", "B08")) %>%
->   gcbs_apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
->   gcbs_reduce("median") %>%
+> system.time(data_cube(s2.col, v1) %>%
+>   select_bands(c("B04", "B08")) %>%
+>   apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
+>   reduce("median") %>%
 >   plot(zlim=c(-0.1,1), col=rainbow, key.pos=1))
   
 ## 0%   10   20   30   40   50   60   70   80   90   100%
@@ -391,12 +391,12 @@ So far, we have only plotted cubes after a reduction. However, we can also plot 
 a multi-band time-series (not shown here). However, depending on the number of time steps and bands, plots can quickly become unreadable.
 
 ```
-> v = gcbs_view(proj="EPSG:3857", view=v, t0="2018-06",t1="2018-08",
+> v = cube_view(proj="EPSG:3857", view=v, t0="2018-06",t1="2018-08",
 >               l=2700000, r=2750000, t=7000000, b=6950000, nx=700, ny=700, 
 >               aggregation = "median")
-> system.time(gcbs_cube(s2.col, v) %>%
->     gcbs_select_bands(c("B04", "B08")) %>%
->     gcbs_apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
+> system.time(data_cube(s2.col, v) %>%
+>     select_bands(c("B04", "B08")) %>%
+>     apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
 >     plot(zlim=c(-0.1,1), col=rainbow, key.pos=1))
 
 ## 0%   10   20   30   40   50   60   70   80   90   100%
@@ -416,7 +416,7 @@ a multi-band time-series (not shown here). However, depending on the number of t
 
 Though gdalcubes comes with very few operations to process data cubes, it is possible to apply arbitrary R functions to
 the chunks of a data cube. Chunks are smaller sub-cubes that are loaded to main memory when a data cube is read. 
-The size of chunks can be specified as an optional argument `chunking` to `gcbs_cube()`. This is a vector with three integers
+The size of chunks can be specified as an optional argument `chunking` to `data_cube()`. This is a vector with three integers
 for the number of pixels in the dimensions t, y, and x. By default, a chunk includes 16x256x256 pixels. 
 If operations such as a reduction are applied to a cube, the chunk size of the result might change. 
 
@@ -425,11 +425,11 @@ all pixel NDVI time-series and finally return (and plot) the slope of the fitted
 trend of the NDVI.
 
 ```
-> v = gcbs_view(proj="EPSG:3857", view=v, t0="2018-05-01",t1="2018-09-30", dt="P5D",  
+> v = cube_view(proj="EPSG:3857", view=v, t0="2018-05-01",t1="2018-09-30", dt="P5D",  
 >               l=2700000, r=2750000, t=7000000, b=6950000, nx=700, ny=700)
 >
 > f <- function() {
->   x = gcbs_read_stream_as_array()
+>   x = read_stream_as_array()
 >   out <- reduce_time(x, function(x) {
 >     n = sum(!is.na(x[1,]))
 >     if (n < 3) {
@@ -438,13 +438,13 @@ trend of the NDVI.
 >     y = data.frame(z = x[1,], t=1:length(x[1,]))
 >     return(coef(lm(z ~ t, y))[2])
 >   })
->   gcbs_write_stream_from_array(out)
+>   write_stream_from_array(out)
 > }
 >
-> gcbs_cube(s2.col, v, chunking = c(365, 256, 256)) %>%
->   gcbs_select_bands(c("B04", "B08")) %>%
->   gcbs_apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
->   gcbs_chunk_apply(f) %>% 
+> data_cube(s2.col, v, chunking = c(365, 256, 256)) %>%
+>   select_bands(c("B04", "B08")) %>%
+>   apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
+>   chunk_apply(f) %>% 
 >   plot(key.pos=1, col=heat.colors)
 
 ## 0%   10   20   30   40   50   60   70   80   90   100%
@@ -455,7 +455,7 @@ trend of the NDVI.
 ![](S2R_img7.png)
 
 
-The function provided to `gcbs_chunk_apply()` should **always** start with `x = gcbs_read_stream_as_array()` and end with `gcbs_write_stream_from_array(out)`.
+The function provided to `chunk_apply()` should **always** start with `x = read_stream_as_array()` and end with `write_stream_from_array(out)`.
 The former function reads the data of the current chunk as a four-dimensional R array with dimensions bands, time, y, x and the latter writes 
 the results from a four-dimensional R array to the internal gdalcubes chunk buffer. Internally, this function is quite complex because
 the gdalcubes library does not only target R. The function uses so called _chunk streaming_ by calling an external process (the Rscript executable in this case) and streaming

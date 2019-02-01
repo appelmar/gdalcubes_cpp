@@ -20,6 +20,7 @@
 #include <gdal_priv.h>
 #include <iomanip>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
 
@@ -30,15 +31,21 @@ class utils {
    public:
     /**
     * @brief Generate a unique random filename
+    * @param n number of characters of the random part
+    * @param prefix string to append before the random part
+    * @param suffix string to append after the random part
     * @return filename string
     */
-    static std::string generate_unique_filename() {
+    static std::string generate_unique_filename(uint16_t n = 8, std::string prefix = "", std::string suffix = "") {
+        std::random_device rd;
         std::stringstream ss;
         const std::string LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        for (uint8_t i = 0; i < 8; ++i) {
-            ss << LETTERS[rand() % LETTERS.length()];
+        int t = time(NULL);
+        for (uint16_t i = 0; i < n; ++i) {
+            uint32_t r = t + rd();
+            ss << LETTERS[r % LETTERS.length()];
         }
-        std::string out = ss.str();
+        std::string out = prefix + ss.str() + suffix;
         return out;
     }
 

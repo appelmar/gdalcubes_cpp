@@ -123,6 +123,10 @@ class filesystem {
         }
     }
 
+    static void remove(std::string p) {
+        VSIUnlink(p.c_str());
+    }
+
     static void mkdir(std::string p) {
         VSIMkdir(p.c_str(), 0777);
     }

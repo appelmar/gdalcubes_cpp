@@ -17,7 +17,7 @@ by the core library.
 - **[json](https://github.com/nlohmann/json): JSON for Modern C++**
      - Copyright (c) 2013-2018 Niels Lohmann
      - License: [MIT license](https://opensource.org/licenses/MIT) 
-     - gdalcubes distributes an unmodified version of the library under `src/external/json.hpp`
+     - gdalcubes distributes a **modified** version of the library under `src/external/json.hpp`, modifications are limited to commenting out diagnostic pragmas (see https://github.com/appelmar/gdalcubes/commit/9e936155489a97c5bb211e13e757236762ee1d96)
      
 - **[SQLite](https://www.sqlite.org/): A self-contained, high-reliability, embedded, full-featured, public-domain, SQL database engine**
      - Copyright:  _public domain_
@@ -37,7 +37,7 @@ by the core library.
 - **[TinyExpr](https://github.com/codeplea/tinyexpr): A very small recursive descent parser and evaluation engine for math expressions**
     - Copyright (c) 2015-2018 Lewis Van Winkle
     - License:  [zlib license](https://opensource.org/licenses/Zlib) 
-    - gdalcubes distributes a *modified* version of the library under `src/external/tinyexpr`, modifications include the implementation of logical and bit-wise operators.
+    - gdalcubes distributes a *modified* version of the library under `src/external/tinyexpr`, modifications include the implementation of logical and bit-wise operators and remove ISO C -Wpedantic warnings.
 
 - **[netCDF](https://www.unidata.ucar.edu/software/netcdf): The Unidata network Common Data Form C library**
     - Copyright (c) 1993-2017 University Corporation for Atmospheric Research/Unidata
@@ -49,7 +49,7 @@ by the core library.
     - Copyright (c) 2015-2018 Ole Christian Eidheim
     - License:  [MIT license](https://opensource.org/licenses/MIT)      
     - gdalcubes_server includes may statically or dynamically link to the cpprestsdk library depending on compilation flags 
-    - gdalcubes distributes an unmodified version of the library under `src/external/tiny-process-library`                    
+    - gdalcubes distributes a **modified** version of the library under `src/external/tiny-process-library`, modifications are limited to replacing _exit() and exit() calls by raise(SIGKILL), in order to comply with R CMD check.
 
 - **[Catch2](https://github.com/catchorg/Catch2): A modern, C++-native, header-only, test framework for unit-tests, TDD and BDD**
     - Copyright (c) 2010 Two Blue Cubes Ltd
@@ -73,7 +73,7 @@ by the core library.
     - Copyright (c) 2017 Paul Thompson
     - Copyright (c) 2018 Tomasz Kamiński    
     - License: [MIT license](https://opensource.org/licenses/MIT)       
-    - gdalcubes distributes an unmodified version of the library under `src/external/date.h`
+    - gdalcubes distributes a **modified** version of the library under `src/external/date.h`, modifications are limited to commenting out diagnostic pragmas, and adding a compilation flag for enabling __int128 support (see https://github.com/appelmar/gdalcubes/commit/9e936155489a97c5bb211e13e757236762ee1d96)
  
 - **[cpprestsdk](https://github.com/Microsoft/cpprestsdk)**
     - Copyright (c) Microsoft Corporation

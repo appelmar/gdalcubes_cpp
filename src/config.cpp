@@ -27,8 +27,8 @@ config::config() : _chunk_processor(std::make_shared<chunk_processor_singlethrea
                    _server_worker_threads_max(1),
                    _swarm_curl_verbose(false),
                    _gdal_num_threads(1),
-                   _collection_format_preset_dirs() {
-}
+                   _streaming_dir(filesystem::get_tempdir()),
+                   _collection_format_preset_dirs() {}
 
 version_info config::get_version_info() {
     version_info v;

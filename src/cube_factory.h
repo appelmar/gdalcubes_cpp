@@ -24,13 +24,53 @@
 /**
  * @brief Factory to create (nested) cubes from its JSON representation
  */
-struct cube_factory {
+class cube_factory {
+   public:
+    static cube_factory* instance() {
+        static CG g;
+        if (!_instance) {
+            _instance = new cube_factory();
+        }
+        return _instance;
+    }
+
     /**
      * Create a cube from its JSON representation
      * @param j
      * @return
      */
-    static std::shared_ptr<cube> create_from_json(nlohmann::json j);
+    std::shared_ptr<cube> create_from_json(nlohmann::json j);
+
+    /**
+     * @brief Registers a cube type with a function to create objects of this type from a JSON description.
+     *
+     * @param type_name unique name for cube type
+     * @param generator function to create an object from a json definition
+     * @todo implement this function
+     */
+    void register_cube_type(std::string type_name, std::function<std::shared_ptr<cube>(nlohmann::json&)> generator);
+
+    void register_default();
+
+   private:
+    static cube_factory* _instance;
+    cube_factory() {
+        register_default();
+    }
+    cube_factory(const cube_factory&);
+    cube_factory& operator=(const cube_factory&);
+    ~cube_factory() {}
+    class CG {
+       public:
+        ~CG() {
+            if (NULL != cube_factory::_instance) {
+                delete cube_factory::_instance;
+                cube_factory::_instance = NULL;
+            }
+        }
+    };
+
+    std::map<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>> cube_generators;
 };
 
 #endif  //CUBE_FACTORY_H

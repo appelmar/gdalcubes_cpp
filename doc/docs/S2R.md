@@ -429,7 +429,7 @@ trend of the NDVI.
 >               l=2700000, r=2750000, t=7000000, b=6950000, nx=700, ny=700)
 >
 > f <- function() {
->   x = read_stream_as_array()
+>   x = read_chunk_as_array()
 >   out <- reduce_time(x, function(x) {
 >     n = sum(!is.na(x[1,]))
 >     if (n < 3) {
@@ -438,7 +438,7 @@ trend of the NDVI.
 >     y = data.frame(z = x[1,], t=1:length(x[1,]))
 >     return(coef(lm(z ~ t, y))[2])
 >   })
->   write_stream_from_array(out)
+>   write_chunk_from_array(out)
 > }
 >
 > data_cube(s2.col, v, chunking = c(365, 256, 256)) %>%

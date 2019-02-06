@@ -390,7 +390,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
     }
 
     OGRSpatialReference proj_out;
-    proj_out.SetFromUserInput(_st_ref->proj().c_str());
+    proj_out.SetFromUserInput(_st_ref->srs().c_str());
     char *out_wkt;
     proj_out.exportToWkt(&out_wkt);
 

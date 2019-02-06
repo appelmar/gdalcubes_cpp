@@ -86,7 +86,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     GCBS_DEBUG(errstr); }, true);
 
     // Write to stdin
-    std::string proj = _in_cube->st_reference()->proj();
+    std::string proj = _in_cube->st_reference()->srs();
     process.write((char *)(size), sizeof(int) * 4);
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         int str_size = _in_cube->bands().get(i).name.size();
@@ -155,7 +155,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
         throw std::string("ERROR in stream_cube::stream_chunk_file(): cannot write streaming input data to file '" + f_in + "'");
     }
 
-    std::string proj = _in_cube->st_reference()->proj();
+    std::string proj = _in_cube->st_reference()->srs();
     f_in_stream.write((char *)(size), sizeof(int) * 4);
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         int str_size = _in_cube->bands().get(i).name.size();

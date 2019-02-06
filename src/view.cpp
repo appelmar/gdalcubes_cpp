@@ -53,7 +53,7 @@ cube_view cube_view::read(nlohmann::json j) {
             throw std::string("ERROR in cube_view::read_json_string(): at least one of nx or ny must be given.");
         }
 
-        v._proj = j.at("space").at("proj").get<std::string>();
+        v._srs = j.at("space").at("srs").get<std::string>();
 
     } else if (j.count("tile")) {
         const double EARTH_RADIUS_METERS = 6378137;
@@ -78,7 +78,7 @@ cube_view cube_view::read(nlohmann::json j) {
         v._nx = TILE_SIZE_PX;
         v._ny = TILE_SIZE_PX;
 
-        v._proj = "EPSG:3857";
+        v._srs = "EPSG:3857";
     } else {
         throw std::string("ERROR in cube_view::read(): expected either 'space' or 'tile' in JSON cube view");
     }
@@ -118,7 +118,7 @@ cube_view cube_view::read_json_string(std::string str) {
 
 void cube_view::write_json(std::string filename) {
     nlohmann::json j = nlohmann::json{
-        {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"proj", _proj}}},
+        {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"srs", _srs}}},
         {"time", {{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
         {"aggregation", aggregation::to_string(_aggregation)},
         {"resampling", resampling::to_string(_resampling)}};
@@ -134,7 +134,7 @@ void cube_view::write_json(std::string filename) {
 
 std::string cube_view::write_json_string() {
     nlohmann::json j = nlohmann::json{
-        {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"proj", _proj}}},
+        {"space", {{"nx", _nx}, {"ny", _ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"srs", _srs}}},
         {"time", {{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
         {"aggregation", aggregation::to_string(_aggregation)},
         {"resampling", resampling::to_string(_resampling)}};

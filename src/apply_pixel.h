@@ -135,7 +135,7 @@ class apply_pixel_cube : public cube {
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         _st_ref->win() = stref->win();
-        _st_ref->proj() = stref->proj();
+        _st_ref->srs() = stref->srs();
         _st_ref->ny() = stref->ny();
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();

@@ -105,7 +105,7 @@ class reduce_space_cube : public cube {
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         // copy fields from st_reference type
         _st_ref->win() = stref->win();
-        _st_ref->proj() = stref->proj();
+        _st_ref->srs() = stref->srs();
 
         _st_ref->nx() = 1;
         _st_ref->ny() = 1;

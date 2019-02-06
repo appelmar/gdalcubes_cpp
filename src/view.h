@@ -290,15 +290,15 @@ class cube_st_reference {
      * Get or set the spatial reference system / projection
      * @return string (reference) with projection / SRS information that is understandable by GDAL / OGR
      */
-    inline std::string& proj() { return _proj; }
+    inline std::string& srs() { return _srs; }
 
     /**
      * Return the spatial reference system / projection
      * @return OGRSpatialReference object
      */
-    inline OGRSpatialReference proj_ogr() const {
+    inline OGRSpatialReference srs_ogr() const {
         OGRSpatialReference s;
-        s.SetFromUserInput(_proj.c_str());
+        s.SetFromUserInput(_srs.c_str());
         return s;
     }
 
@@ -434,8 +434,8 @@ class cube_st_reference {
               l._dt == r._dt)) return false;
 
         // compare SRS
-        OGRSpatialReference a = l.proj_ogr();
-        OGRSpatialReference b = r.proj_ogr();
+        OGRSpatialReference a = l.srs_ogr();
+        OGRSpatialReference b = r.srs_ogr();
 
         if (!a.IsSame(&b))
             return false;
@@ -453,7 +453,7 @@ class cube_st_reference {
      * it can be "EPSG:xxx", WKT, or PROJ.4
      *
      */
-    std::string _proj;
+    std::string _srs;
 
     /**
      * @brief Spatial window

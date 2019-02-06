@@ -65,7 +65,7 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
                 gdal_out->GetRasterBand(1)->SetNoDataValue(std::stod(_bands.get(ib).no_data_value));
                 char *wkt_out;
                 OGRSpatialReference srs_out;
-                srs_out.SetFromUserInput(_st_ref->proj().c_str());
+                srs_out.SetFromUserInput(_st_ref->srs().c_str());
                 srs_out.exportToWkt(&wkt_out);
 
                 GDALSetProjection(gdal_out, wkt_out);
@@ -122,7 +122,7 @@ void cube::write_netcdf_directory(std::string dir, std::shared_ptr<chunk_process
             dim_x[i] = st_reference()->win().left + (i + climits.low[2]) * st_reference()->dx();
         }
 
-        OGRSpatialReference srs = st_reference()->proj_ogr();
+        OGRSpatialReference srs = st_reference()->srs_ogr();
         std::string yname = srs.IsProjected() ? "y" : "latitude";
         std::string xname = srs.IsProjected() ? "x" : "longitude";
 
@@ -280,7 +280,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
         dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
     }
 
-    OGRSpatialReference srs = st_reference()->proj_ogr();
+    OGRSpatialReference srs = st_reference()->srs_ogr();
     std::string yname = srs.IsProjected() ? "y" : "latitude";
     std::string xname = srs.IsProjected() ? "x" : "longitude";
 

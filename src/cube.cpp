@@ -307,7 +307,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
 
     double geoloc_array[6] = {st_reference()->left(), st_reference()->dx(), 0.0, st_reference()->top(), 0.0, st_reference()->dy()};
     nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
-    nc_put_att_double(ncout, NC_GLOBAL, "", NC_DOUBLE, 6, geoloc_array);
+    nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
     std::string dtunit_str;
     if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {

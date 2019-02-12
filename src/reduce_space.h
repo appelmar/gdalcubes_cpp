@@ -63,10 +63,10 @@ class reduce_space_cube : public cube {
                   reducerstr == "sd" ||
                   reducerstr == "prod" ||
                   reducerstr == "sum"))
-                throw std::string("ERROR in reduce_space_cube::reduce_time_cube(): Unknown reducer '" + reducerstr + "'");
+                throw std::string("ERROR in reduce_space_cube::reduce_space_cube(): Unknown reducer '" + reducerstr + "'");
 
             if (!(in->bands().has(bandstr))) {
-                throw std::string("ERROR in reduce_space_cube::reduce_time_cube(): Input data cube has no band '" + bandstr + "'");
+                throw std::string("ERROR in reduce_space_cube::reduce_space_cube(): Input data cube has no band '" + bandstr + "'");
             }
 
             band b = in->bands().get(bandstr);

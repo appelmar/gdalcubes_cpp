@@ -81,7 +81,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
                 memcpy((char*)(out->buf()) + databytes_read, bytes, n);
                 databytes_read += n;
             }
-        } }, [&errstr, this](const char *bytes, std::size_t n) {
+        } }, [&errstr](const char *bytes, std::size_t n) {
     errstr = std::string(bytes, n);
     GCBS_DEBUG(errstr); }, true);
 

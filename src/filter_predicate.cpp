@@ -37,7 +37,7 @@ std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
         std::string temp_name = _in_cube->bands().get(i).name;
         std::transform(temp_name.begin(), temp_name.end(), temp_name.begin(), ::tolower);
-        std::strcpy(varname, temp_name.c_str());
+        std::strncpy(varname, temp_name.c_str(),  temp_name.length() + 1);
         vars.push_back({varname, &values[i]});
     }
 
@@ -92,7 +92,7 @@ bool filter_predicate_cube::parse_predicate() {
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
         std::string temp_name = _in_cube->bands().get(i).name;
         std::transform(temp_name.begin(), temp_name.end(), temp_name.begin(), ::tolower);
-        std::strcpy(varname, temp_name.c_str());
+        std::strncpy(varname, temp_name.c_str(), temp_name.length() + 1);
         vars.push_back({varname, &dummy_values[i]});
     }
 

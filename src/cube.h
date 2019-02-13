@@ -41,6 +41,8 @@ class chunk_data;
  */
 class chunk_processor {
    public:
+    virtual ~chunk_processor() {}
+
     /**
      * Apply a function f over all chunks of a given data cube c
      * @param c data cube
@@ -55,6 +57,7 @@ class chunk_processor {
  */
 class chunk_processor_singlethread : public chunk_processor {
    public:
+
     /**
      * @copydoc chunk_processor::apply
      */

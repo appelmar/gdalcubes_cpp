@@ -267,8 +267,8 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     int *dim_t = (int *)std::calloc(size_t(), sizeof(int));
 
     if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-        _st_ref->dt().dt_unit = datetime_unit::DAY;
-        _st_ref->dt().dt_interval *= 7;  // UDUNIT does not support week
+        _st_ref->dt_unit() = datetime_unit::DAY;
+        _st_ref->dt_interval() *= 7; // UDUNIT does not support week
     }
     for (uint32_t i = 0; i < size_t(); ++i) {
         dim_t[i] = (i * st_reference()->dt().dt_interval);
@@ -301,6 +301,10 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
 
     nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
     nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+
+    // write json graph as metadata
+    //    std::string j = make_constructible_json().dump();
+    //    nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
 
     char *wkt;
     srs.exportToWkt(&wkt);
@@ -377,6 +381,10 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
         nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
         nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
         nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+
+        // this doesn't seem to solve missing spatial reference for multitemporal nc files
+        //        nc_put_att_text(ncout, v, "spatial_ref", strlen(wkt), wkt);
+        //        nc_put_att_double(ncout, v, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
         double pNAN = NAN;
         nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);

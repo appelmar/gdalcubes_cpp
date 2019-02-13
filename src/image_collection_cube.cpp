@@ -230,7 +230,7 @@ struct aggregation_state_none : public aggregation_state {
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
         memcpy(chunk_buf, img_buf, sizeof(double) * _size_btyx[2] * _size_btyx[3]);
     }
-    void finalize(void *buf) {}
+    void finalize(void *buf) override {}
 };
 
 /*
@@ -412,8 +412,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         // Find coordinates for date of the image
         datetime dt = datetime::from_string(datasets[i - 1].datetime);  // Assumption here is that the dattime of all bands within a gdal dataset is the same, which should be OK in practice
-        dt.unit() = _st_ref->dt().dt_unit;                              // explicit datetime unit cast
-        int it = (dt - cextent.t0) / _st_ref->dt();
+        dt.unit() = _st_ref->dt_unit();                              // explicit datetime unit cast
+        duration temp_dt = _st_ref->dt();
+        int it = (dt - cextent.t0) / temp_dt;
 
         // Make sure that it is valid in order to prevent buffer overflows
         if (it >= 0 && it < (int)(out->size()[1])) {
@@ -509,23 +510,23 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
     duration d = out.t1() - out.t0();
 
     if (out.t0() == out.t1()) {
-        out.dt().dt_unit = datetime_unit::DAY;
-        out.dt().dt_interval = 1;
+        out.dt_unit() = datetime_unit::DAY;
+        out.dt_interval() = 1;
     } else {
         if (d.convert(datetime_unit::YEAR).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::YEAR;
+            out.dt_unit() = datetime_unit::YEAR;
         } else if (d.convert(datetime_unit::MONTH).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::MONTH;
+            out.dt_unit() = datetime_unit::MONTH;
         } else if (d.convert(datetime_unit::DAY).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::DAY;
+            out.dt_unit() = datetime_unit::DAY;
         } else if (d.convert(datetime_unit::HOUR).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::HOUR;
+            out.dt_unit() = datetime_unit::HOUR;
         } else if (d.convert(datetime_unit::MINUTE).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::MINUTE;
+            out.dt_unit() = datetime_unit::MINUTE;
         } else if (d.convert(datetime_unit::SECOND).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::SECOND;
+            out.dt_unit() = datetime_unit::SECOND;
         } else {
-            out.dt().dt_unit = datetime_unit::DAY;
+            out.dt_unit() = datetime_unit::DAY;
         }
         out.t0().unit() = out.dt().dt_unit;
         out.t1().unit() = out.dt().dt_unit;

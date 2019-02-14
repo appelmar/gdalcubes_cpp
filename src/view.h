@@ -366,15 +366,16 @@ class cube_st_reference {
     * @param dt new datetime duration of a cube cell
     */
     void dt(duration dt) {
-        if (dt.dt_unit != _dt.dt_unit) {
-            _t0.unit() = dt.dt_unit;
-            _t1.unit() = dt.dt_unit;
-        }
+        //if (dt.dt_unit != _dt.dt_unit) {
+        _t0.unit() = dt.dt_unit;
+        _t1.unit() = dt.dt_unit;
+        //}
+        // TODO: GCBS_INFO when unit of _t0 and _t1 have been changed?
         duration dtotal = _t1 - _t0;  // + 1 if include end date2
         dtotal.dt_interval += 1;
         if (dtotal % dt != 0) {
             _t1 = _t0 + dt * (1 + dtotal / dt);
-            GCBS_WARN("Size of extent in t direction is not a multiple of the new dt value, end date will be set to " + _t1.to_string());
+            GCBS_INFO("Size of extent in t direction is not a multiple of the new dt value, end date will be set to " + _t1.to_string());
         }
         _dt = dt;
     }

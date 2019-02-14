@@ -241,7 +241,7 @@ struct aggregation_state_none : public aggregation_state {
  * 4. use RasterIO to read from the dataset
  */
 std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
-    GCBS_DEBUG("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks()) {
         // chunk is outside of the cube, we don't need to read anything.
@@ -412,7 +412,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         // Find coordinates for date of the image
         datetime dt = datetime::from_string(datasets[i - 1].datetime);  // Assumption here is that the dattime of all bands within a gdal dataset is the same, which should be OK in practice
-        dt.unit() = _st_ref->dt_unit();                              // explicit datetime unit cast
+        dt.unit() = _st_ref->dt_unit();                                 // explicit datetime unit cast
         duration temp_dt = _st_ref->dt();
         int it = (dt - cextent.t0) / temp_dt;
 

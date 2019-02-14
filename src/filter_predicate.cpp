@@ -18,7 +18,7 @@
 #include "external/tinyexpr/tinyexpr.h"
 
 std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
-    GCBS_DEBUG("filter_predicate_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("filter_predicate_cube::read_chunk(" + std::to_string(id) + ")");
 
     if (id < 0 || id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
@@ -37,7 +37,7 @@ std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
         std::string temp_name = _in_cube->bands().get(i).name;
         std::transform(temp_name.begin(), temp_name.end(), temp_name.begin(), ::tolower);
-        std::strncpy(varname, temp_name.c_str(),  temp_name.length() + 1);
+        std::strncpy(varname, temp_name.c_str(), temp_name.length() + 1);
         vars.push_back({varname, &values[i]});
     }
 

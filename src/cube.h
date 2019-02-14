@@ -57,7 +57,6 @@ class chunk_processor {
  */
 class chunk_processor_singlethread : public chunk_processor {
    public:
-
     /**
      * @copydoc chunk_processor::apply
      */

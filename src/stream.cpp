@@ -19,7 +19,7 @@
 #include "external/tiny-process-library/process.hpp"
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
-    GCBS_DEBUG("stream_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("stream_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks()) {
         // chunk is outside of the cube, we don't need to read anything.

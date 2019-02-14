@@ -42,7 +42,7 @@ struct isfinite_func : public exprtk::ifunction<T> {
 
 std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
 #ifdef USE_EXPRTK
-    GCBS_DEBUG("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
 
     if (id < 0 || id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
@@ -107,7 +107,7 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     return out;
 
 #else
-    GCBS_DEBUG("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
 
     if (id < 0 || id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.

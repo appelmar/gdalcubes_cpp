@@ -268,7 +268,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
 
     if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
         _st_ref->dt_unit() = datetime_unit::DAY;
-        _st_ref->dt_interval() *= 7; // UDUNIT does not support week
+        _st_ref->dt_interval() *= 7;  // UDUNIT does not support week
     }
     for (uint32_t i = 0; i < size_t(); ++i) {
         dim_t[i] = (i * st_reference()->dt().dt_interval);

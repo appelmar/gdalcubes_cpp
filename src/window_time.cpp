@@ -96,9 +96,12 @@ std::function<double(double* buf, uint16_t n)> window_time_cube::get_kernel_redu
         throw std::string("ERROR in window_time_cube::get_kernel_reducer(): Size of kernel does not match size of window");
     }
 
-    return std::function<double(double* buf, uint16_t n)>([&kernel](double* buf, uint16_t n) {  // TODO: does it work with capturing kernel by reference?
+    return std::function<double(double* buf, uint16_t n)>([kernel](double* buf, uint16_t n) -> double {
         double v = 0.0;
         for (uint16_t i = 0; i < n; ++i) {
+            if (std::isnan(buf[i])) {
+                return NAN;
+            }
             v += buf[i] * kernel[i];
         }
         return v;
@@ -106,7 +109,7 @@ std::function<double(double* buf, uint16_t n)> window_time_cube::get_kernel_redu
 }
 
 std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
-    GCBS_DEBUG("window_time_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("window_time_cube::read_chunk_reducerfunc(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.

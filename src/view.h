@@ -358,10 +358,8 @@ class cube_st_reference {
      */
     inline duration dt() { return _dt; }
 
-
-    inline datetime_unit& dt_unit() {return _dt.dt_unit;}
-    inline int32_t& dt_interval() {return _dt.dt_interval;}
-
+    inline datetime_unit& dt_unit() { return _dt.dt_unit; }
+    inline int32_t& dt_interval() { return _dt.dt_interval; }
 
     /**
     * Set the temporal size / duration of one cube cell
@@ -372,7 +370,7 @@ class cube_st_reference {
             _t0.unit() = dt.dt_unit;
             _t1.unit() = dt.dt_unit;
         }
-        duration dtotal = _t1 - _t0; // + 1 if include end date2
+        duration dtotal = _t1 - _t0;  // + 1 if include end date2
         dtotal.dt_interval += 1;
         if (dtotal % dt != 0) {
             _t1 = _t0 + dt * (1 + dtotal / dt);
@@ -380,7 +378,6 @@ class cube_st_reference {
         }
         _dt = dt;
     }
-
 
     /**
      * Set the temporal size of cube cells as n days

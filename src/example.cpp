@@ -64,11 +64,11 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // Test create image collection
         {
-//            collection_format f("Sentinel2_L2A");
-//            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
-//            ic->write("test.db");
-//            std::cout << ic->to_string() << std::endl;
-//            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
+            //            collection_format f("Sentinel2_L2A");
+            //            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
+            //            ic->write("test.db");
+            //            std::cout << ic->to_string() << std::endl;
+            //            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
         }
         /**************************************************************************/
 

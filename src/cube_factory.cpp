@@ -67,11 +67,13 @@ void cube_factory::register_default() {
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "window_time", [](nlohmann::json& j) {
-            // std::vector<std::pair<std::string, std::string>> band_reducers = j["reducer_bands"].get<std::vector<std::pair<std::string, std::string>>>();
-            auto x = window_time_cube::create(instance()->create_from_json(j["in_cube"]), j["reducer_bands"].get<std::vector<std::pair<std::string, std::string>>>(),
-                                              j["win_size_l"].get<uint16_t>(), j["win_size_r"].get<std::uint16_t>());
-
-            return x;
+            if (j.count("kernel") > 0) {
+                return window_time_cube::create(instance()->create_from_json(j["in_cube"]), j["kernel"].get<std::vector<double>>(),
+                                                j["win_size_l"].get<uint16_t>(), j["win_size_r"].get<std::uint16_t>());
+            } else {
+                return window_time_cube::create(instance()->create_from_json(j["in_cube"]), j["reducer_bands"].get<std::vector<std::pair<std::string, std::string>>>(),
+                                                j["win_size_l"].get<uint16_t>(), j["win_size_r"].get<std::uint16_t>());
+            }
         }));
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "select_bands", [](nlohmann::json& j) {

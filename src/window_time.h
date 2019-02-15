@@ -93,6 +93,8 @@ class window_time_cube : public cube {
 
             band b = in->bands().get(i);
             _bands.add(b);
+
+            _band_idx_in.push_back(i);
         }
     }
 

@@ -102,7 +102,7 @@ class filter_predicate_cube : public cube {
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
     }
 
     bool parse_predicate();

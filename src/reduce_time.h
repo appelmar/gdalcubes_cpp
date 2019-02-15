@@ -42,7 +42,7 @@ class reduce_time_cube : public cube {
 
    public:
     reduce_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
-        _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
+        _st_ref->dt(_st_ref->t1() - _st_ref->t0());
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         assert(_st_ref->nt() == 1);
         _chunk_size[0] = 1;
@@ -113,9 +113,9 @@ class reduce_time_cube : public cube {
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
 
-        _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
+        _st_ref->dt(_st_ref->t1() - _st_ref->t0());
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         //assert(_st_ref->nt() == 1);
     }

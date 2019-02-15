@@ -92,7 +92,6 @@ class window_time_cube : public cube {
             _f.push_back(get_kernel_reducer(kernel));
 
             band b = in->bands().get(i);
-            ;
             _bands.add(b);
         }
     }
@@ -101,9 +100,6 @@ class window_time_cube : public cube {
     ~window_time_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
-
-    std::shared_ptr<chunk_data> read_chunk_reducerfunc(chunkid_t id);
-    std::shared_ptr<chunk_data> read_chunk_kernelfunc(chunkid_t id);
 
     nlohmann::json make_constructible_json() override {
         nlohmann::json out;
@@ -136,7 +132,7 @@ class window_time_cube : public cube {
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
     }
 
     std::function<double(double* buf, uint16_t n)> get_default_reducer_by_name(std::string name);

@@ -62,7 +62,7 @@ class join_bands_cube : public cube {
         _st_ref->nx() = _in_A->st_reference()->nx();
         _st_ref->t0() = _in_A->st_reference()->t0();
         _st_ref->t1() = _in_A->st_reference()->t1();
-        _st_ref->dt() = _in_A->st_reference()->dt();
+        _st_ref->dt(_in_A->st_reference()->dt());
 
         _chunk_size[0] = _in_A->chunk_size()[0];
         _chunk_size[1] = _in_A->chunk_size()[1];
@@ -105,7 +105,7 @@ class join_bands_cube : public cube {
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
     }
 };
 

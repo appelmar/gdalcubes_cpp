@@ -43,7 +43,7 @@ class reduce_cube : public cube {
 
    public:
     reduce_cube(std::shared_ptr<cube> in, std::string reducer = "mean") : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer(reducer) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
-        _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
+        _st_ref->dt(_st_ref->t1() - _st_ref->t0());
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         assert(_st_ref->nt() == 1);
         _chunk_size[0] = 1;
@@ -104,9 +104,9 @@ class reduce_cube : public cube {
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
 
-        _st_ref->dt() = _st_ref->t1() - _st_ref->t0();
+        _st_ref->dt(_st_ref->t1() - _st_ref->t0());
         _st_ref->t1() = _st_ref->t0();  // set nt=1
         //assert(_st_ref->nt() == 1);
     }

@@ -133,7 +133,7 @@ class stream_cube : public cube {
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
 
         if (!_keep_input_nt) _st_ref->nt(count_chunks_t());
         if (!_keep_input_ny) _st_ref->ny() = count_chunks_y();

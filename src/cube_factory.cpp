@@ -17,6 +17,7 @@
 #include "cube_factory.h"
 
 #include "apply_pixel.h"
+#include "dummy.h"
 #include "external/json.hpp"
 #include "filesystem.h"
 #include "filter_predicate.h"
@@ -116,6 +117,14 @@ void cube_factory::register_default() {
             }
             cube_view v = cube_view::read_json_string(j["view"].dump());
             auto x = image_collection_cube::create(j["file"].get<std::string>(), v);
+            x->set_chunk_size(j["chunk_size"][0].get<uint32_t>(), j["chunk_size"][1].get<uint32_t>(), j["chunk_size"][2].get<uint32_t>());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "dummy", [](nlohmann::json& j) {
+            cube_view v = cube_view::read_json_string(j["view"].dump());
+            auto x = dummy_cube::create(v, j["nbands"].get<uint16_t>(), j["fill"].get<double>());
             x->set_chunk_size(j["chunk_size"][0].get<uint32_t>(), j["chunk_size"][1].get<uint32_t>(), j["chunk_size"][2].get<uint32_t>());
             return x;
         }));

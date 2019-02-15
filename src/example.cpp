@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
             c->st_reference()->nt(5);
             auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04"});
             auto cw = window_time_cube::create(cb, {{"mean", "B04"}}, 1, 1);
-            cw->write_netcdf_file("test_window_time_reduce.nc");
+            //   cw->write_netcdf_file("test_window_time_reduce.nc");
 
             auto cw2 = window_time_cube::create(cb, {-1.0, 2, -1.0}, 1, 1);
             cw2->write_netcdf_file("test_window_time_kernel.nc");

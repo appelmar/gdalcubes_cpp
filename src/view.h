@@ -340,14 +340,14 @@ class cube_st_reference {
         dnew.dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
         _dt = dnew;
         if (d.dt_interval % n != 0) {
-            _t1 = _t0 + _dt * (n-1);
+            _t1 = _t0 + _dt * (n - 1);
             GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
         }
-//
-//        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
-//            _t1 = _t1 + dt();
-//            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
-//        }
+        //
+        //        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
+        //            _t1 = _t1 + dt();
+        //            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
+        //        }
         assert(nt() == n);
     }
 
@@ -380,7 +380,7 @@ class cube_st_reference {
         dtotal.dt_interval += 1;
         if (dtotal % dt != 0) {
             _t1 = _t0 + dt * (1 + dtotal / dt);
-            GCBS_INFO("Size of extent in t direction is not a multiple of the new dt value, end date will be set to " + _t1.to_string());
+            GCBS_INFO("Size of extent in t direction is not a multiple of the new dt value, end date will be extended to " + _t1.to_string());
         }
         _dt = dt;
     }

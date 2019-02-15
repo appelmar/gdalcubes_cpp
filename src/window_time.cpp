@@ -114,11 +114,6 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
-    // If input cube is already "reduced", simply return corresponding input chunk
-    if (_in_cube->size_t() == 1) {
-        return _in_cube->read_chunk(id);
-    }
-
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
 
     coords_nd<uint32_t, 4> size_btyx = {uint32_t(_bands.count()), size_tyx[0], size_tyx[1], size_tyx[2]};
@@ -162,7 +157,7 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
             if (i >= l_chunks.size()) {
                 // fill NA
                 for (uint32_t ic = 0; ic < _in_cube->chunk_size()[0]; ++ic) {
-                    if (tsidx >= 0) {
+                    if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {
                         for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
                             cur_ts[ib * cur_ts_length + tsidx] = NAN;
                         }
@@ -171,7 +166,7 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
                 }
             } else {
                 for (uint32_t ic = 0; ic < l_chunks[i]->size()[1]; ++ic) {
-                    if (tsidx >= 0) {  // read only up to window size even if current chunk is larger
+                    if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {  // read only up to window size even if current chunk is larger
                         for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
                             cur_ts[ib * cur_ts_length + tsidx] = ((double*)(l_chunks[i]->buf()))[_band_idx_in[ib] * (l_chunks[i]->size()[1] * l_chunks[i]->size()[2] * l_chunks[i]->size()[3]) + (l_chunks[i]->size()[1] - 1 - ic) * (l_chunks[i]->size()[2] * l_chunks[i]->size()[3]) + ixy];
                         }
@@ -184,9 +179,12 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
         // fill values from current chunk
         tsidx = _win_size_l;
         for (uint32_t ic = 0; ic < this_chunk->size()[1]; ++ic) {
-            for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
-                cur_ts[ib * cur_ts_length + tsidx] = ((double*)(this_chunk->buf()))[_band_idx_in[ib] * (this_chunk->size()[1] * this_chunk->size()[2] * this_chunk->size()[3]) + ic * (this_chunk->size()[2] * this_chunk->size()[3]) + ixy];
-                tsidx++;
+            if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {  // read only up to window size even if current chunk is larger
+                for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
+                    cur_ts[ib * cur_ts_length + tsidx] = ((double*)(this_chunk->buf()))[_band_idx_in[ib] * (this_chunk->size()[1] * this_chunk->size()[2] * this_chunk->size()[3]) +
+                                                                                        ic * (this_chunk->size()[2] * this_chunk->size()[3]) + ixy];
+                    tsidx++;
+                }
             }
         }
 
@@ -195,7 +193,7 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
             if (i >= r_chunks.size()) {
                 // fill NA
                 for (uint32_t ic = 0; ic < _in_cube->chunk_size()[0]; ++ic) {
-                    if (tsidx < (int32_t)cur_ts_length) {
+                    if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {
                         for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
                             cur_ts[ib * cur_ts_length + tsidx] = NAN;
                         }
@@ -205,7 +203,7 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
 
             } else {
                 for (uint32_t ic = 0; ic < r_chunks[i]->size()[1]; ++ic) {
-                    if (tsidx < (int32_t)cur_ts_length) {  // read only up to window size even if current chunk is larger
+                    if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {  // read only up to window size even if current chunk is larger
                         for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
                             cur_ts[ib * cur_ts_length + tsidx] = ((double*)(r_chunks[i]->buf()))[_band_idx_in[ib] * (r_chunks[i]->size()[1] * r_chunks[i]->size()[2] * r_chunks[i]->size()[3]) + ic * (r_chunks[i]->size()[2] * r_chunks[i]->size()[3]) + ixy];
                         }

@@ -243,7 +243,7 @@ class cube_st_reference {
         _win.right += exp_x / 2;
         _win.left -= exp_x / 2;
         if (std::fabs(exp_x) > std::numeric_limits<double>::epsilon()) {
-            GCBS_WARN("Size of extent in x direction is not a multiple of the new dx value, extent will be enlarged by " + std::to_string(exp_x / 2) + " at both sides.");
+            GCBS_INFO("Size of extent in x direction is not a multiple of the new dx value, extent will be enlarged by " + std::to_string(exp_x / 2) + " at both sides.");
         }
     }
 
@@ -375,11 +375,13 @@ class cube_st_reference {
         _t0.unit() = dt.dt_unit;
         _t1.unit() = dt.dt_unit;
         //}
-        // TODO: GCBS_INFO when unit of _t0 and _t1 have been changed?
         duration dtotal = _t1 - _t0;  // + 1 if include end date2
         dtotal.dt_interval += 1;
         if (dtotal % dt != 0) {
-            _t1 = _t0 + dt * (1 + dtotal / dt);
+            duration end_duration;  // end duration has one (day / month / unit) less than dt)
+            end_duration.dt_interval = dt.dt_interval - 1;
+            end_duration.dt_unit = dt.dt_unit;
+            _t1 = (_t0 + dt * (dtotal / dt)) + end_duration;
             GCBS_INFO("Size of extent in t direction is not a multiple of the new dt value, end date will be extended to " + _t1.to_string());
         }
         _dt = dt;

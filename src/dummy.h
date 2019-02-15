@@ -41,7 +41,7 @@ class dummy_cube : public cube {
    public:
     dummy_cube(cube_view v, uint16_t nbands = 1, double fill = 1.0) : cube(std::make_shared<cube_view>(v)), _fill(fill) {
         for (uint16_t ib = 0; ib < nbands; ++ib) {
-            band b("band" + std::to_string(ib));
+            band b("band" + std::to_string(ib + 1));
             b.scale = 1.0;
             b.offset = 0.0;
             _bands.add(b);

@@ -100,7 +100,7 @@ void cube_factory::register_default() {
         }));
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "join_bands", [](nlohmann::json& j) {
-            auto x = join_bands_cube::create(instance()->create_from_json(j["A"]), instance()->create_from_json(j["B"]));
+            auto x = join_bands_cube::create(instance()->create_from_json(j["A"]), instance()->create_from_json(j["B"]), j["prefix_A"].get<std::string>(), j["prefix_B"].get<std::string>());
             return x;
         }));
 

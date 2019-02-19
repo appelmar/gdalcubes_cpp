@@ -243,7 +243,7 @@ class cube_st_reference {
         _win.right += exp_x / 2;
         _win.left -= exp_x / 2;
         if (std::fabs(exp_x) > std::numeric_limits<double>::epsilon()) {
-            GCBS_INFO("Size of extent in x direction is not a multiple of the new dx value, extent will be enlarged by " + std::to_string(exp_x / 2) + " at both sides.");
+            GCBS_INFO("Size of the cube in x direction does not align with dx, extent will be enlarged by " + std::to_string(exp_x / 2) + " at both sides.");
         }
     }
 
@@ -264,7 +264,7 @@ class cube_st_reference {
         _win.top += exp_y / 2;
         _win.bottom -= exp_y / 2;
         if (std::fabs(exp_y) > std::numeric_limits<double>::epsilon()) {
-            GCBS_WARN("Size of extent in y direction is not a multiple of the new dx value, extent will be enlarged by " + std::to_string(exp_y / 2) + " at both sides.");
+            GCBS_INFO("Size of the cube in y direction does not align with dy, extent will be enlarged by " + std::to_string(exp_y / 2) + " at both sides.");
         }
     }
 
@@ -341,7 +341,7 @@ class cube_st_reference {
         _dt = dnew;
         if (d.dt_interval % n != 0) {
             _t1 = _t0 + _dt * (n - 1);
-            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
+            GCBS_INFO("Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " + _t1.to_string());
         }
         //
         //        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
@@ -382,7 +382,7 @@ class cube_st_reference {
             end_duration.dt_interval = dt.dt_interval - 1;
             end_duration.dt_unit = dt.dt_unit;
             _t1 = (_t0 + dt * (dtotal / dt)) + end_duration;
-            GCBS_INFO("Size of extent in t direction is not a multiple of the new dt value, end date will be extended to " + _t1.to_string());
+            GCBS_INFO("Temporal size of the cube does not align with dt, end date/time of the cube will be extended to " + _t1.to_string());
         }
         _dt = dt;
     }

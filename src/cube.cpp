@@ -252,7 +252,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
         throw std::string("ERROR in cube::write_netcdf_file(): output already exists and is a directory.");
     }
     if (filesystem::is_regular_file(op)) {
-        GCBS_WARN("Existing file '" + op + "' will be overwritten for NetCDF export");
+        GCBS_INFO("Existing file '" + op + "' will be overwritten for NetCDF export");
     }
 
     if (!filesystem::exists(filesystem::parent(op))) {

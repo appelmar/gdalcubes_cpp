@@ -33,7 +33,7 @@ class join_bands_cube : public cube {
      * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<join_bands_cube> create(std::shared_ptr<cube> A, std::shared_ptr<cube> B, std::string prefix_A = "A", std::string prefix_B = "B") {
-        std::shared_ptr<join_bands_cube> out = std::make_shared<join_bands_cube>(A, B);
+        std::shared_ptr<join_bands_cube> out = std::make_shared<join_bands_cube>(A, B, prefix_A, prefix_B);
         A->add_child_cube(out);
         B->add_child_cube(out);
         out->add_parent_cube(A);

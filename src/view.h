@@ -337,6 +337,10 @@ class cube_st_reference {
     void nt(uint32_t n) {
         duration d = (_t1 - _t0) + 1;
         duration dnew = dt();
+        if (dnew.dt_interval == 0) {  // if dt has not been set
+            dnew.dt_unit = d.dt_unit;
+            // alternatively, a "reasonable" should be derived here
+        }
         dnew.dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
         _dt = dnew;
         if (d.dt_interval % n != 0) {

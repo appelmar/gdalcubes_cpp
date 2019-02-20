@@ -61,4 +61,20 @@ TEST_CASE("Create", "[view]") {
     REQUIRE(v.t1() == datetime::from_string("2018-01-12"));
     REQUIRE(v.nt() == 4);
     REQUIRE(v.dt() == duration::from_string("P3D"));
+
+    cube_view v1;
+    v1.srs() = "EPSG:3857";
+    v1.win().bottom = 6831918;
+    v1.win().top = 7027881;
+    v1.win().left = 2500790;
+    v1.win().right = 2858522;
+    v1.t0() = datetime::from_string("2018-03-26T09:40:29");
+    v1.t1() = datetime::from_string("2018-11-08T09:32:09");
+    v1.nx() = 700;
+    v1.ny() = 700;
+    v1.nt(4);
+
+    datetime t0 = v1.t0();
+    datetime t1 = v1.t1();
+    REQUIRE((t1 - t0).dt_interval > 0);
 }

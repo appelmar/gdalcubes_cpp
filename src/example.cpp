@@ -64,11 +64,11 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // Test create image collection
         {
-            //                collection_format f("Sentinel2_L2A");
-            //                auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
-            //                ic->write("test.db");
-            //                std::cout << ic->to_string() << std::endl;
-            //                std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
+            //            collection_format f("Sentinel2_L2A");
+            //            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
+            //            ic->write("test.db");
+            //            std::cout << ic->to_string() << std::endl;
+            //            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
         }
         /**************************************************************************/
 
@@ -76,39 +76,39 @@ int main(int argc, char *argv[]) {
 
         /**************************************************************************/
         // test reduction
-        //                {
-        //                    auto c = image_collection_cube::create("test.db", v);
-        //                    auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-        //                    cb->write_netcdf_file("band_select.nc");
-        //                    auto cr = reduce_cube::create(cb, "median");
-        //                    cr->write_gdal_image("test_A.tif");
+        //        {
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //            cb->write_netcdf_file("band_select.nc");
+        //            auto cr = reduce_cube::create(cb, "median");
+        //            cr->write_gdal_image("test_A.tif");
         //
-        //                    c = image_collection_cube::create("test.db", v);
-        //                    cr = reduce_cube::create(c, "max");
-        //                    cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
-        //                    reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
-        //                }
+        //            c = image_collection_cube::create("test.db", v);
+        //            cr = reduce_cube::create(c, "max");
+        //            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
+        //            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
+        //        }
         /**************************************************************************/
 
         /**************************************************************************/
         // test filter predicate over time
-        {
-            //            auto c = image_collection_cube::create("test.db", v);
-            //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            //            auto cf = filter_predicate_cube::create(cb, "B04 < 1000");
-            //            auto cr = reduce_time_cube::create(cf, {{"max", "B04"}, {"count", "B04"}});
-            //            cr->write_gdal_image("test_filter_predicate_2.tif");
-        }
+        //        {
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //            auto cf = filter_predicate_cube::create(cb, "B04 < 1000");
+        //            auto cr = reduce_time_cube::create(cf, {{"max", "B04"}, {"count", "B04"}});
+        //            cr->write_gdal_image("test_filter_predicate_2.tif");
+        //        }
         /**************************************************************************/
 
         //        /**************************************************************************/
         //        // test reduction over time
         //        {
-        //                    auto c = image_collection_cube::create("test.db", v);
-        //                    auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-        //                   // auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
-        //                    auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
-        //                    cr->write_gdal_image("test_reduce_new.tif");
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+        //            // auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
+        //            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
+        //            cr->write_gdal_image("test_reduce_new.tif");
         //        }
         //        /**************************************************************************/
 
@@ -127,9 +127,13 @@ int main(int argc, char *argv[]) {
         //        // test window time over space
         {
             auto c = image_collection_cube::create("test.db", v);
+            c->st_reference()->nt(5);
             auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04"});
             auto cw = window_time_cube::create(cb, {{"mean", "B04"}}, 1, 1);
-            cw->write_netcdf_file("test_window_time.nc");
+            //   cw->write_netcdf_file("test_window_time_reduce.nc");
+
+            auto cw2 = window_time_cube::create(cb, {-1.0, 2, -1.0}, 1, 1);
+            cw2->write_netcdf_file("test_window_time_kernel.nc");
         }
         //      /**************************************************************************/
 

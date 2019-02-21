@@ -41,6 +41,8 @@ class chunk_data;
  */
 class chunk_processor {
    public:
+    virtual ~chunk_processor() {}
+
     /**
      * Apply a function f over all chunks of a given data cube c
      * @param c data cube
@@ -639,7 +641,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param dir output directory
      * @param p chunk processor instance, defaults to the global configuration
      */
-    void write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    //void write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Export a cube to a single NetCDF file

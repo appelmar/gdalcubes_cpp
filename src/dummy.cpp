@@ -14,10 +14,10 @@
    limitations under the License.
 */
 
-#include "join_bands.h"
+#include "dummy.h"
 
-std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
-    GCBS_TRACE("join_bands_cube::read_chunk(" + std::to_string(id) + ")");
+std::shared_ptr<chunk_data> dummy_cube::read_chunk(chunkid_t id) {
+    GCBS_TRACE("dummy_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
@@ -26,17 +26,11 @@ std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
     coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
-    std::shared_ptr<chunk_data> dat_A = _in_A->read_chunk(id);
-    std::shared_ptr<chunk_data> dat_B = _in_B->read_chunk(id);
-
     // Fill buffers accordingly
     out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
     double *begin = (double *)out->buf();
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
-    std::fill(begin, end, NAN);
-
-    memcpy(((double *)out->buf()), ((double *)dat_A->buf()), dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3] * sizeof(double));
-    memcpy(((double *)out->buf()) + dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3], ((double *)dat_B->buf()), dat_B->size()[0] * dat_B->size()[1] * dat_B->size()[2] * dat_B->size()[3] * sizeof(double));
+    std::fill(begin, end, _fill);
 
     return out;
 }

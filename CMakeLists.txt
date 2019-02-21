@@ -31,6 +31,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 #add_definitions(-DBOOST_SYSTEM_NO_DEPRECATED)
 #add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # for clang-tidy
 
 if (DEFINED USE_EXPRTK)
     add_definitions(-DUSE_EXPRTK)
@@ -74,7 +75,18 @@ else ()
     set_target_properties(clangformat PROPERTIES EXCLUDE_FROM_ALL true)
 endif()
 
-
+# code analysis clang-tidy
+find_program (CLANG_TIDY NAMES clang-tidy)
+if(NOT CLANG_TIDY)
+    message(WARNING "could not find clang-tidy, skipping static code analysis.")
+else ()
+    file(GLOB ALL_SOURCE_FILES  src/*.cpp )
+    add_custom_target(clangtidy ALL
+            COMMAND ${CLANG_TIDY} -p ${CMAKE_CURRENT_BINARY_DIR} ${ALL_SOURCE_FILES}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            COMMENT "Static code analysis with clang-tidy" VERBATIM)
+    set_target_properties(clangtidy PROPERTIES EXCLUDE_FROM_ALL true)
+endif()
 
 
 

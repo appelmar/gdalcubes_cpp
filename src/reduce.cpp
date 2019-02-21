@@ -314,7 +314,7 @@ struct sd_reducer : public var_reducer {
 };
 
 std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
-    GCBS_DEBUG("reduce_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("reduce_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
@@ -390,7 +390,7 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
     }
 
     OGRSpatialReference proj_out;
-    proj_out.SetFromUserInput(_st_ref->proj().c_str());
+    proj_out.SetFromUserInput(_st_ref->srs().c_str());
     char *out_wkt;
     proj_out.exportToWkt(&out_wkt);
 

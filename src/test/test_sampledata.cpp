@@ -27,7 +27,7 @@
 //
 //    v.t0() = datetime::from_string("2015-07-12");
 //    v.t1() = datetime::from_string("2015-07-12");
-//    v.dt() = duration::from_string("P1D");
+//    v.dt(duration::from_string("P1D"));
 //
 //    REQUIRE(v.nt() == 1);
 //

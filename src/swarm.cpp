@@ -68,8 +68,8 @@ void gdalcubes_swarm::post_file(std::string path, uint16_t server_index) {
 
             curl_easy_setopt(_server_handles[server_index], CURLOPT_URL, (_server_uris[server_index] + "/file" + "?name=" + path).c_str());
 
-            struct curl_slist *header = NULL;
-            header = curl_slist_append(header, "Content-Type: application/octet-stream");
+            //struct curl_slist *header = NULL;
+            //header = curl_slist_append(header, "Content-Type: application/octet-stream");
             // curl_easy_setopt(curl, CURLOPT_HTTPHEADER, header);
 
             curl_easy_setopt(_server_handles[server_index], CURLOPT_UPLOAD, 1L);
@@ -267,7 +267,7 @@ void gdalcubes_swarm::apply(std::shared_ptr<cube> c, std::function<void(chunkid_
     std::mutex mutex;
     std::vector<std::thread> workers;
     for (uint16_t it = 0; it < nthreads; ++it) {
-        workers.push_back(std::thread([this, c, &chunk_distr, nthreads, &f, it, &mutex](void) {
+        workers.push_back(std::thread([this, c, &chunk_distr, &f, it, &mutex](void) {
             // One remote server is processed by a single thread for now, changing this will require to using the multi interface of curl
             for (uint32_t iserver = it; iserver < _server_uris.size(); iserver += _server_uris.size()) {
                 for (uint32_t ichunk = 0; ichunk < chunk_distr[iserver].size(); ++ichunk) {

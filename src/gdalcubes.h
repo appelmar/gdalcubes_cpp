@@ -23,6 +23,7 @@
 #include "build_info.h"
 #include "config.h"
 #include "cube.h"
+#include "dummy.h"
 #include "filter_predicate.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"

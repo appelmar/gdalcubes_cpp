@@ -32,8 +32,8 @@ class join_bands_cube : public cube {
      * @param B input data cube
      * @return a shared pointer to the created data cube instance
      */
-    static std::shared_ptr<join_bands_cube> create(std::shared_ptr<cube> A, std::shared_ptr<cube> B) {
-        std::shared_ptr<join_bands_cube> out = std::make_shared<join_bands_cube>(A, B);
+    static std::shared_ptr<join_bands_cube> create(std::shared_ptr<cube> A, std::shared_ptr<cube> B, std::string prefix_A = "A", std::string prefix_B = "B") {
+        std::shared_ptr<join_bands_cube> out = std::make_shared<join_bands_cube>(A, B, prefix_A, prefix_B);
         A->add_child_cube(out);
         B->add_child_cube(out);
         out->add_parent_cube(A);
@@ -42,7 +42,7 @@ class join_bands_cube : public cube {
     }
 
    public:
-    join_bands_cube(std::shared_ptr<cube> A, std::shared_ptr<cube> B) : cube(), _in_A(A), _in_B(B) {
+    join_bands_cube(std::shared_ptr<cube> A, std::shared_ptr<cube> B, std::string prefix_A = "A", std::string prefix_B = "B") : cube(), _in_A(A), _in_B(B), _prefix_A(prefix_A), _prefix_B(prefix_B) {
         _st_ref = std::make_shared<cube_st_reference>();
 
         // Check that A and B have identical shape
@@ -56,13 +56,28 @@ class join_bands_cube : public cube {
             throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cubes have different chunk sizes");
         }
 
+        if (_prefix_A.empty() && _prefix_B.empty()) {
+            // check that there are no name conflicts
+            for (uint16_t iba = 0; iba < _in_A->bands().count(); ++iba) {
+                if (_in_B->bands().has(_in_A->bands().get(iba).name)) {
+                    GCBS_ERROR("cubes have bands with identical names");
+                    throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cubes have bands with identical names");
+                }
+            }
+        } else {
+            if (_prefix_A == _prefix_B) {
+                GCBS_ERROR("cannot join cubes with identical prefix");
+                throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cannot join cubes with identical prefix");
+            }
+        }
+
         _st_ref->win() = _in_A->st_reference()->win();
-        _st_ref->proj() = _in_A->st_reference()->proj();
+        _st_ref->srs() = _in_A->st_reference()->srs();
         _st_ref->ny() = _in_A->st_reference()->ny();
         _st_ref->nx() = _in_A->st_reference()->nx();
         _st_ref->t0() = _in_A->st_reference()->t0();
         _st_ref->t1() = _in_A->st_reference()->t1();
-        _st_ref->dt() = _in_A->st_reference()->dt();
+        _st_ref->dt(_in_A->st_reference()->dt());
 
         _chunk_size[0] = _in_A->chunk_size()[0];
         _chunk_size[1] = _in_A->chunk_size()[1];
@@ -70,12 +85,12 @@ class join_bands_cube : public cube {
 
         for (uint16_t ib = 0; ib < _in_A->bands().count(); ++ib) {
             band b = _in_A->bands().get(ib);
-            b.name = "A." + b.name;  // TODO: replace A with cube name if exists
+            b.name = _prefix_A.empty() ? (b.name) : (_prefix_A + "." + b.name);
             _bands.add(b);
         }
         for (uint16_t ib = 0; ib < _in_B->bands().count(); ++ib) {
             band b = _in_B->bands().get(ib);
-            b.name = "B." + b.name;  // TODO: replace B with cube name if exists
+            b.name = _prefix_B.empty() ? (b.name) : (_prefix_B + "." + b.name);
             _bands.add(b);
         }
     }
@@ -90,22 +105,26 @@ class join_bands_cube : public cube {
         out["cube_type"] = "join_bands";
         out["A"] = _in_A->make_constructible_json();
         out["B"] = _in_B->make_constructible_json();
+        out["prefix_A"] = _prefix_A;
+        out["prefix_B"] = _prefix_B;
         return out;
     }
 
    private:
     std::shared_ptr<cube> _in_A;
     std::shared_ptr<cube> _in_B;
+    std::string _prefix_A;
+    std::string _prefix_B;
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         // copy fields from st_reference type
         _st_ref->win() = stref->win();
-        _st_ref->proj() = stref->proj();
+        _st_ref->srs() = stref->srs();
         _st_ref->ny() = stref->ny();
         _st_ref->nx() = stref->nx();
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
     }
 };
 

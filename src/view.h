@@ -242,6 +242,9 @@ class cube_st_reference {
         double exp_x = _nx * x - (_win.right - _win.left);
         _win.right += exp_x / 2;
         _win.left -= exp_x / 2;
+        if (std::fabs(exp_x) > std::numeric_limits<double>::epsilon()) {
+            GCBS_INFO("Size of the cube in x direction does not align with dx, extent will be enlarged by " + std::to_string(exp_x / 2) + " at both sides.");
+        }
     }
 
     /**
@@ -260,6 +263,9 @@ class cube_st_reference {
         double exp_y = _ny * x - (_win.top - _win.bottom);
         _win.top += exp_y / 2;
         _win.bottom -= exp_y / 2;
+        if (std::fabs(exp_y) > std::numeric_limits<double>::epsilon()) {
+            GCBS_INFO("Size of the cube in y direction does not align with dy, extent will be enlarged by " + std::to_string(exp_y / 2) + " at both sides.");
+        }
     }
 
     /**
@@ -290,15 +296,15 @@ class cube_st_reference {
      * Get or set the spatial reference system / projection
      * @return string (reference) with projection / SRS information that is understandable by GDAL / OGR
      */
-    inline std::string& proj() { return _proj; }
+    inline std::string& srs() { return _srs; }
 
     /**
      * Return the spatial reference system / projection
      * @return OGRSpatialReference object
      */
-    inline OGRSpatialReference proj_ogr() const {
+    inline OGRSpatialReference srs_ogr() const {
         OGRSpatialReference s;
-        s.SetFromUserInput(_proj.c_str());
+        s.SetFromUserInput(_srs.c_str());
         return s;
     }
 
@@ -330,10 +336,22 @@ class cube_st_reference {
      */
     void nt(uint32_t n) {
         duration d = (_t1 - _t0) + 1;
-        dt().dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
-        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
-            _t1 = _t1 + dt();
+        duration dnew = dt();
+        if (dnew.dt_interval == 0) {  // if dt has not been set
+            dnew.dt_unit = d.dt_unit;
+            // alternatively, a "reasonable" should be derived here
         }
+        dnew.dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
+        _dt = dnew;
+        if (d.dt_interval % n != 0) {
+            _t1 = _t0 + _dt * (n - 1);
+            GCBS_INFO("Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " + _t1.to_string());
+        }
+        //
+        //        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
+        //            _t1 = _t1 + dt();
+        //            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
+        //        }
         assert(nt() == n);
     }
 
@@ -344,10 +362,34 @@ class cube_st_reference {
     inline bounds_2d<double>& win() { return _win; }
 
     /**
-     * Get or set the temporal site / duration of one cube cell
-     * @return a reference to the view's dt field
+     * Get the temporal size / duration of one cube cell
+     * @return the view's dt field as a duration object
      */
-    inline duration& dt() { return _dt; }
+    inline duration dt() { return _dt; }
+
+    inline datetime_unit& dt_unit() { return _dt.dt_unit; }
+    inline int32_t& dt_interval() { return _dt.dt_interval; }
+
+    /**
+    * Set the temporal size / duration of one cube cell
+    * @param dt new datetime duration of a cube cell
+    */
+    void dt(duration dt) {
+        //if (dt.dt_unit != _dt.dt_unit) {
+        _t0.unit() = dt.dt_unit;
+        _t1.unit() = dt.dt_unit;
+        //}
+        duration dtotal = _t1 - _t0;  // + 1 if include end date2
+        dtotal.dt_interval += 1;
+        if (dtotal % dt != 0) {
+            duration end_duration;  // end duration has one (day / month / unit) less than dt)
+            end_duration.dt_interval = dt.dt_interval - 1;
+            end_duration.dt_unit = dt.dt_unit;
+            _t1 = (_t0 + dt * (dtotal / dt)) + end_duration;
+            GCBS_INFO("Temporal size of the cube does not align with dt, end date/time of the cube will be extended to " + _t1.to_string());
+        }
+        _dt = dt;
+    }
 
     /**
      * Set the temporal size of cube cells as n days
@@ -434,8 +476,8 @@ class cube_st_reference {
               l._dt == r._dt)) return false;
 
         // compare SRS
-        OGRSpatialReference a = l.proj_ogr();
-        OGRSpatialReference b = r.proj_ogr();
+        OGRSpatialReference a = l.srs_ogr();
+        OGRSpatialReference b = r.srs_ogr();
 
         if (!a.IsSame(&b))
             return false;
@@ -453,7 +495,7 @@ class cube_st_reference {
      * it can be "EPSG:xxx", WKT, or PROJ.4
      *
      */
-    std::string _proj;
+    std::string _srs;
 
     /**
      * @brief Spatial window

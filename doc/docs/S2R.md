@@ -1,7 +1,7 @@
 
 ## Preface
 
-This tutorial will demonstrate how Sentinel 2 time series can be processed
+This tutorial will demonstrate how Sentinel 2 image time series can be processed
 with the gdalcubes R package. We will use 102 Sentinel 2 Level 2A images
 from three different tiles, covering the European [Białowieża Forest](https://en.wikipedia.org/wiki/Bia%C5%82owie%C5%BCa_Forest) from
 March to November 2018.
@@ -13,20 +13,19 @@ Due to the data size, we do not provide the data along with this document. Howev
 you should be able to run the commands by downloading the same data from the [Copernicus Open Access Hub](https://scihub.copernicus.eu/) on your own, 
 or by putting any other Sentinel 2 Level 2A(!) images to the current working directory.
 
-Time measurements refer to a personal laptop equipped with a quite powerful quad-core CPU where images are stored on an exernal SSD and up to 8 threads are used to process the data cubes. 
+Time measurements refer to a personal laptop equipped with a quite powerful quad-core CPU where images are stored on an SSD and up to 8 threads are used to process the data cubes. 
 
 ## Getting started
-
 
 As a first step, we load the package with `library(gdalcubes)`, which also loads required packages and prints some version information. 
 
 ```
-> library(gdalcubes)
+library(gdalcubes)
 ## Loading required package: Rcpp
 ## Loading required package: RcppProgress
 ## Loading required package: jsonlite
 ## Loading required package: ncdf4
-## Using gdalcubes library version 0.0.1 (78122403dc09d91994b2cefe86bec23b40ad115b)
+## Using gdalcubes library version 0.0.1 (e2b3e14f94ec0bc3687afc845c21a3c68ce7a36c)
 ```
 
 The Sentinel 2 images are stored as original ZIP archives at the current working directory.
@@ -34,7 +33,7 @@ We process the archive files directly without unzipping through [GDAL's virtual 
 The following command prints a list of available files.
 
 ```
-> list.files(pattern=".zip")
+list.files(pattern=".zip")
 ##  [1] "S2A_MSIL2A_20180328T093031_N0207_R136_T34UFD_20180328T145945.zip" "S2A_MSIL2A_20180407T093031_N0207_R136_T34UFD_20180407T104459.zip"
 ##  [3] "S2A_MSIL2A_20180407T093031_N0207_R136_T34UGD_20180407T104459.zip" "S2A_MSIL2A_20180407T093031_N0207_R136_T35ULU_20180407T104459.zip"
 ##  [5] "S2A_MSIL2A_20180410T094031_N0207_R036_T34UFD_20180410T114924.zip" "S2A_MSIL2A_20180410T094031_N0207_R036_T34UGD_20180410T114924.zip"
@@ -88,32 +87,38 @@ The following command prints a list of available files.
 ##[101] "S2B_MSIL2A_20181108T093209_N0210_R136_T34UGD_20181108T125929.zip" "S2B_MSIL2A_20181108T093209_N0210_R136_T35ULU_20181108T125929.zip"
 ```
 
-That gives us 102 images, amounting to approximately 90 GB.
+This gives us 102 images, amounting to approximately 90 GB.
 
 ```
-> sum(file.size(list.files(pattern="*.zip"))) / 1000^3
+sum(file.size(list.files(pattern="*.zip"))) / 1000^3
 ## [1] 90.2587
 ```
 
-As described above, the data come from 3 different tiles (T34UFD, T34UGD, and T35ULU) that include different UTM Zones (34N and 35N). Images also come from both 
+As described above, the data come from 3 different tiles (T34UFD, T34UGD, and T35ULU) covering two different UTM Zones (34N and 35N). Images also come from both 
 operating satellites S2A and S2B.
 
 
 
 ## Creating an image collection from local files
 
-As a first step, we must index these files in an image collection by deriving the aquisition date / time, the spatial extent, the spatial reference system,
-and which files belong to which spectral bands. This is what `create_image_collection()` does. We provide a vector of files, a collection format that defines
-how the information above can be extracted from images and an output file, where the image collection index is stored. The output file is 
+
+Before creating a data cube, we must index the files in an _image collection_ by deriving the aquisition date / time, the spatial extent, the spatial reference system,
+and which files belong to which spectral bands. This is what `create_image_collection()` does. We provide a vector of files, a _collection format_ that defines
+how the information above can be extracted from images, and an output file, where the image collection index shall be stored. The output file is 
 a simple [SQLite](https://www.sqlite.org) database referencing the provided files and the extracted metadata.  Notice that gdalcubes comes with a set of predefined collection formats. You can call `collection_formats()` to print available formats.
-The following command will scan all files and create an image collection that is stored as `S2_timeseries.db`. This file will include only
+The following command will scan all files and create an image collection stored as `S2_timeseries.db`. This file will include only
 references and metadata but not the imagery. 
 
 
 ```
-> create_image_collection(list.files(pattern="*.zip", full.names = TRUE), 
-                          format="Sentinel2_L2A", unroll_archives=TRUE, out_file="S2_timeseries.db") 
+create_image_collection(list.files(pattern="*.zip", full.names = TRUE), 
+                        format="Sentinel2_L2A", unroll_archives=TRUE, 
+                        out_file="S2_timeseries.db") 
 
+## 0%   10   20   30   40   50   60   70   80   90   100%
+## [----|----|----|----|----|----|----|----|----|----|
+## **************************************************|
+## 
 ## A GDAL image collection object, referencing 102 images with 12  bands
 ## Images:
 ##                                                           name     left      top   bottom    right            datetime
@@ -123,13 +128,14 @@ references and metadata but not the imagery.
 ## 4 S2A_MSIL2A_20180407T093031_N0207_R136_T35ULU_20180407T104459 24.00476 53.24196 52.22621 25.67854 2018-04-07T09:30:31
 ## 5 S2A_MSIL2A_20180410T094031_N0207_R036_T34UFD_20180410T114924 22.46498 53.24021 52.22257 24.14177 2018-04-10T09:40:31
 ## 6 S2A_MSIL2A_20180410T094031_N0207_R036_T34UGD_20180410T114924 23.92782 53.21199 52.17549 25.63418 2018-04-10T09:40:31
-##                                                proj
+##                                                  srs
 ## 1 +proj=utm +zone=34 +datum=WGS84 +units=m +no_defs 
 ## 2 +proj=utm +zone=34 +datum=WGS84 +units=m +no_defs 
 ## 3 +proj=utm +zone=34 +datum=WGS84 +units=m +no_defs 
 ## 4 +proj=utm +zone=35 +datum=WGS84 +units=m +no_defs 
 ## 5 +proj=utm +zone=34 +datum=WGS84 +units=m +no_defs 
 ## 6 +proj=utm +zone=34 +datum=WGS84 +units=m +no_defs 
+## [ omitted 96 images ] 
 ## 
 ## Bands:
 ##    name type offset scale unit   nodata
@@ -144,322 +150,373 @@ references and metadata but not the imagery.
 ## 9   B09    2      0     1      0.000000
 ## 10  B11    2      0     1      0.000000
 ## 11  B12    2      0     1      0.000000
-## 12  B8A    2      0     1      0.000000   
+## 12  B8A    2      0     1      0.000000
 
 > file.size("S2_timeseries.db") / 1000
 ## [1] 438.272  
 ```
 
-Notice that only the first six images are printed by `create_image_collection()`. Setting `unroll_archives=TRUE` makes sure that we automatically scan the content of ZIP files using [GDAL's virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html).
+Only the first six images are printed by `create_image_collection()`. Setting `unroll_archives=TRUE` makes sure that we automatically scan the content of ZIP files using [GDAL's virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html).
 The image collection file takes around 0.5 MB on disk.
 
 
 
-## Creating a data cube and deriving a true color preview image
+## Creating raster data cubes 
 
 Unfortunately, raw image collections are hard to work with: Images overlap, come in different map projections, and have irregular temporal
-sampling. gdalcubes creates regular data cubes (multidimensional arrays) from image collections by cropping, resampling, and reprojecting images
-on-the-fly with regard to a previously defined cube. The shape of the cube is defined in a _data cube view_, containing the spatiotemporal extent, resolution, and spatial reference system.
-We can thus use the same image collection and process it at different resolutions, and extents. This makes working with EO imagery much easier and interactive as we can try out
-our computations at lower resolution first. This also hides some of the ugly details with EO data such as different resolutions for different spectral bands. 
-In theory, we could define a cm resolution cube for Sentinel 2 data and gdalcubes will not complain.
+sampling. gdalcubes creates regular data cubes from image collections by cropping, resampling, and reprojecting images
+on-the-fly with regard to a previously defined shape of the target cube. The shape is defined in a _data cube view_, containing the spatiotemporal extent, resolution, and spatial reference system.
+We can use the same image collection and process it at different resolutions, extents, and spatial reference systems simply by changing properties of the data cube view. 
+This makes working with EO imagery much easier and interactive as we can try out our computations at lower resolution first, before running on full-resolution and 
+wait for a long time. The data cube representation also hides some of the ugly details with EO data such as different resolutions for different spectral bands. 
+In the example for Sentinel 2 imagery, we do not need to handle 10, 20, or 60 meter bands differently.
 
-In the following example, we load the image collection and first create a default cube with `data_cube()`, without specifying a data cube view manually.
-This gives us a low resolution overview, covering the full spatiotemporal extent of the input image collection. We use this default
-view and modify it later by overwriting the temporal size of pixels and the number of pixels in y and x directions with `cube_view()`. This function
-can be used to
+The key function to define the data cube view is `cube_view()`, which can be used to
 
 1. extract the view of a data cube by providing the argument `cube`,
-2. overwriting parameters of an existing data cube view (by providing the argument `view` and one or more of the view parameters),
-3. or to define a manual data cube view by only providing data cube parameters. 
+2. overwrite parameters of an existing data cube view (by providing the argument `view` and one or more of the view properties),
+3. or to define a manual data cube view by only providing data cube view properties. 
 
-Afterwards, we use `select_bands()` to select a subset of the original bands, `reduce()` to apply a median reduce over 
-all pixel time series and finally plot the result as am RGB image.
+To create a data cube, the image collection and a data cube view can be passed to the `raster_cube()` function. 
+In the code section below, we load the image collection and create several data cubes with different extents and resolutions. 
+
+
+
 
 ```
-> s2.col = image_collection("S2_timeseries.db")
-> v = cube_view(data_cube(s2.col))
-> v
-## $space
-## $space$right
-## [1] 2858522
+s2.collection = image_collection("S2_timeseries.db")
+
+# low resolution overview using the extent of the image collection 
+v1  = cube_view(srs="EPSG:3857", extent=s2.collection, nx=700, dt="P1M") 
+v1
+## Dimensions:
+##                low             high count             size
+## t          2018-03          2018-11     9              P1M
+## y 6831917.79967488 7027880.72902787   383 511.652557057414
+## x 2500790.13428108 2858522.44239267   700 511.046154445136
 ## 
-## $space$left
-## [1] 2500790
-## 
-## $space$top
-## [1] 7027881
-## 
-## $space$bottom
-## [1] 6831918
-## 
-## $space$nx
-## [1] 691
-## 
-## $space$ny
-## [1] 378
-## 
-## $space$proj
-## [1] "EPSG:3857"
-## 
-## $space$dx
-## NULL
-## 
-## $space$dy
-## NULL
-## 
-## 
-## $time
-## $time$t0
-## [1] "2018-03"
-## 
-## $time$t1
-## [1] "2019-02"
-## 
-## $time$dt
-## [1] "P3M"
-## 
-## $time$nt
-## NULL
-## 
-## 
-## $aggregation
-## [1] "first"
-## 
-## $resampling
-## [1] "near"
-## 
-## attr(,"class")
-## [1] "cube_view" "list"
-     
-> v = cube_view(view=v, dt="P1M", nx=1000, ny=round(0.5477928*1000))
-> s2.cube = data_cube(s2.col, v)
-> s2.cube
+## SRS: "EPSG:3857"
+## Temporal aggregation method: "first"
+## Spatial resampling method: "near"
+
+raster_cube(s2.collection, v1)
 ## A GDAL data cube proxy object
 ## Dimensions:
 ##   name     low    high size chunk_size
-## 1    t  201803  201902   12         16
-## 2    y 6831918 7027881  548        256
-## 3    x 2500790 2858522 1000        256
+## 1    t  201803  201811    9         16
+## 2    y 6831918 7027881  383        256
+## 3    x 2500790 2858522  700        256
 ## 
 ## Bands:
-##    name offset scale nodata unit
-## 1   B01      0     1    NaN     
-## 2   B02      0     1    NaN     
-## 3   B03      0     1    NaN     
-## 4   B04      0     1    NaN     
-## 5   B05      0     1    NaN     
-## 6   B06      0     1    NaN     
-## 7   B07      0     1    NaN     
-## 8   B08      0     1    NaN     
-## 9   B09      0     1    NaN     
-## 10  B11      0     1    NaN     
-## 11  B12      0     1    NaN     
-## 12  B8A      0     1    NaN     
+##    name    type offset scale nodata unit
+## 1   B01 float64      0     1    NaN     
+## 2   B02 float64      0     1    NaN     
+## 3   B03 float64      0     1    NaN     
+## 4   B04 float64      0     1    NaN     
+## 5   B05 float64      0     1    NaN     
+## 6   B06 float64      0     1    NaN     
+## 7   B07 float64      0     1    NaN     
+## 8   B08 float64      0     1    NaN     
+## 9   B09 float64      0     1    NaN     
+## 10  B11 float64      0     1    NaN     
+## 11  B12 float64      0     1    NaN     
+## 12  B8A float64      0     1    NaN 
 
-> gdalcubes_set_threads(8)
-> s2.cube.rgb = select_bands(s2.cube, c("B02", "B03", "B04"))
-> s2.cube.rgb
+
+# small spatial subset at 100m spatial resolution and 10 daily temporal resolution
+v2 = cube_view(srs="EPSG:3857", extent=list(left=2700000, right=2750000, top=7000000, bottom=6950000,
+                                            t0="2018-05-01",t1="2018-09-30"), dx=100, dt="P10D")
+## Info: Temporal size of the cube does not align with dt, end date/time of the cube will be extended to 2018-10-07
+
+v2
+## A data cube view object
+## 
+## Dimensions:
+##          low       high count size
+## t 2018-05-01 2018-10-07    16 P10D
+## y    6950000      7e+06   500  100
+## x    2700000    2750000   500  100
+## 
+## SRS: "EPSG:3857"
+## Temporal aggregation method: "first"
+## Spatial resampling method: "near"
+
+
+raster_cube(s2.collection, v2)
 ## A GDAL data cube proxy object
 ## Dimensions:
-##   name     low    high size chunk_size
-## 1    t  201803  201902   12         16
-## 2    y 6831918 7027881  548        256
-## 3    x 2500790 2858522 1000        256
+##   name      low     high size chunk_size
+## 1    t 20180501 20181007   16         16
+## 2    y  6950000  7000000  500        256
+## 3    x  2700000  2750000  500        256
 ## 
 ## Bands:
-##   name offset scale nodata unit
-## 1  B02      0     1    NaN     
-## 2  B03      0     1    NaN     
-## 3  B04      0     1    NaN     
+##    name    type offset scale nodata unit
+## 1   B01 float64      0     1    NaN     
+## 2   B02 float64      0     1    NaN     
+## 3   B03 float64      0     1    NaN     
+## 4   B04 float64      0     1    NaN     
+## 5   B05 float64      0     1    NaN     
+## 6   B06 float64      0     1    NaN     
+## 7   B07 float64      0     1    NaN     
+## 8   B08 float64      0     1    NaN     
+## 9   B09 float64      0     1    NaN     
+## 10  B11 float64      0     1    NaN     
+## 11  B12 float64      0     1    NaN     
+## 12  B8A float64      0     1    NaN
 
-> s2.cube.reduced = reduce(s2.cube.rgb, "median")
-> s2.cube.reduced 
+# overwrite spatial resolution from 100m to 10m 
+v3 = cube_view(view=v2, dx=10) 
+v3
+## A data cube view object
+## 
+## Dimensions:
+##          low       high count size
+## t 2018-05-01 2018-07-09     7 P10D
+## y    6950000      7e+06  5000   10
+## x    2700000    2750000  5000   10
+## 
+## SRS: "EPSG:3857"
+## Temporal aggregation method: "first"
+## Spatial resampling method: "near"
+
+raster_cube(s2.collection, v3)
 ## A GDAL data cube proxy object
 ## Dimensions:
-##   name     low    high size chunk_size
-## 1    t  201803  201803    1          1
-## 2    y 6831918 7027881  548        256
-## 3    x 2500790 2858522 1000        256
+##   name      low     high size chunk_size
+## 1    t 20180501 20181007   16         16
+## 2    y  6950000  7000000 5000        256
+## 3    x  2700000  2750000 5000        256
 ## 
 ## Bands:
-##         name offset scale nodata unit
-## 1 B02_median      0     1    NaN     
-## 2 B03_median      0     1    NaN     ub
-## 3 B04_median      0     1    NaN     
+##    name    type offset scale nodata unit
+## 1   B01 float64      0     1    NaN     
+## 2   B02 float64      0     1    NaN     
+## 3   B03 float64      0     1    NaN     
+## 4   B04 float64      0     1    NaN     
+## 5   B05 float64      0     1    NaN     
+## 6   B06 float64      0     1    NaN     
+## 7   B07 float64      0     1    NaN     
+## 8   B08 float64      0     1    NaN     
+## 9   B09 float64      0     1    NaN     
+## 10  B11 float64      0     1    NaN     
+## 11  B12 float64      0     1    NaN     
+## 12  B8A float64      0     1    NaN
+```
 
-> system.time(plot(s2.cube.reduced, rgb=3:1, zlim=c(0,1800)))
+The package works with so called _proxy objects_. Creating a data cube with `raster_cube()` or any other cube operations
+(as described below) will not read any data from images. Instead, it will only derive the shape
+of the output cube and print some metadata. Operations such as `write_ncdf()` or `plot()` will start the actual
+computations.
+
+
+### Aggregation and resampling
+Besides the spatiotemporal extent, the resolution and the spatial reference system, the data cube view contains the two important
+parameters `aggregation` and `resampling`. Resampling here refers to how images are resampled in **space** during the warp operation (
+resampling, reprojection, and cropping). You can use any method available in [gdalwarp](https://www.gdal.org/gdalwarp.html).
+The **temporal** aggregation method defines how values for the same cell from different images are combined in the target cube.
+For example, a data cube with monthly temporal resolution will likely contain values from multiple images. Currently, 
+possible values are _first_, _last_, _min_, _max_, _mean_, and _median_. These functions are evaluated per data cube pixel. 
+Nodata values are ignored automatically. 
+
+
+
+## Operations on data cubes
+In the following, we will explain some data cube operations by example. For more details on specific functions and
+arguments, please also check the package documentation. For readability, we will use the [pipe operator %>%](https://magrittr.tidyverse.org/) to chain operations. To make
+computations a little faster, we use up to 8 data cube 8 threads to process the data cubes by calling:
+
+
+```
+gdalcubes_set_threads(8)
+```
+ 
+
+### Deriving a true color overview image
+
+To generate a cloud-free true color overview image of the study area, we simply apply a median reducer over 
+the RGB bands (2,3,4) of a data cube created with `raster_cube()` and plot the result:
+
+```
+require(magrittr) # get the pipe
+system.time(
+  raster_cube(s2.collection, v1) %>%
+    select_bands(c("B02", "B03", "B04")) %>%
+    reduce_time("median(B02)", "median(B03)", "median(B04)") %>%
+    plot(rgb=3:1, zlim=c(0,1800))
+)
 ## 0%   10   20   30   40   50   60   70   80   90   100%
 ## [----|----|----|----|----|----|----|----|----|----|
 ## **************************************************|
 ## 
 ##    user  system elapsed 
-## 132.478  42.987 115.177 
+##  61.212  23.046  38.226
 ```
+![](S2R_1.png)
 
 
-![](S2R_img1.png)
-
-
-The package works with so called _proxy objects_. Creating a data cube with `data_cube()` or any of the cube operations such as `reduce()` and
-`select_bands()`  will not read any data from images. Instead, it will only derive the shape
-of the output cube and print some metadata. In this example, calling `plot()` will start doing the actual processing.
-
-We can also write the same operation chain with the [pipe operator %>%](https://magrittr.tidyverse.org/).
-
-```
-> require(magrittr)
-> data_cube(s2.col, v) %>%
->   select_bands(c("B02", "B03", "B04")) %>%
->   reduce("median") %>%
->   plot(rgb=3:1, zlim=c(0,1800))
-```
-
-The data is cropped, resampled, and reprojected on-the-fly, meaning that we can apply the same functions as above but simply 
-use a different data cube view to create a cloud free image of a small spatiotemporal subset at higher resolution. The code below 
-creates three different views of the same spatial area but different temporal extents and applies the median reduce over the RGB bands.
+If we remove the call to plot in this operation chain, we again simply get a proxy object, no data would actually be read from disk.
+Notice that calling `select_bands()` directly after `raster_cube()` improves the performance as it avoids reading unneeded bands from disk. 
+To see how many non-NA cells our cube has, we can apply a count reducer on one of the bands with:
 
 
 ```
-> v1 = cube_view(proj="EPSG:3857", view=v, t0="2018-05",t1="2018-06", 
->               l=2700000, r=2750000, t=7000000, b=6950000, nx=700, ny=700) # 50x50 km subset
-> system.time(data_cube(s2.col, v) %>%
->   select_bands(c("B02", "B03", "B04")) %>%
->   reduce("median") %>%
->   plot(rgb=3:1, zlim=c(0,1800)))
-
-## 0%   10   20   30   40   50   60   70   80   90   100%
-## [----|----|----|----|----|----|----|----|----|----|
-## **************************************************|
-##
-##   user  system elapsed 
-## 42.865   1.470   8.189
-
-> data_cube(s2.col, cube_view(view=v1, t0="2018-07", t1="2018-08")) %>%
->      select_bands(c("B02", "B03", "B04")) %>%
->      reduce("median") %>%
->      plot(rgb=3:1, zlim=c(0,1800))
-
-## 0%   10   20   30   40   50   60   70   80   90   100%
-## [----|----|----|----|----|----|----|----|----|----|
-## **************************************************|
-
-
-> data_cube(s2.col, cube_view(v1, t0="2018-09", t1="2018-010")) %>%
->   select_bands(c("B02", "B03", "B04")) %>%
->   reduce("median") %>%
->   plot(rgb=3:1, zlim=c(0,1800)))
-
-## 0%   10   20   30   40   50   60   70   80   90   100%
-## [----|----|----|----|----|----|----|----|----|----|
-## **************************************************|
-```
-
-![](S2R_img2.png)
-
-![](S2R_img3.png)
-
-![](S2R_img4.png)
-
-
-## Pixel-wise calculations
-
-gdalcubes supports the calculation of basic arithmetic expressions per pixel in `apply_pixel()`. The function takes an
-input data cube and a character vector as input, where items are simple expressions on band names of the input cube. Each expression
-becomes a new band in the output cube where band names default to "band1", "band2", etc. A third argument `names` can be set
-to define meaningful band names. `names` must be a character vector with the same length as the expression vector.
-In the example below, we compute the NDVI using the expression `(B08-B04)/(B08+B04)`.
-
-```
-> system.time(data_cube(s2.col, v1) %>%
->   select_bands(c("B04", "B08")) %>%
->   apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
->   reduce("median") %>%
->   plot(zlim=c(-0.1,1), col=rainbow, key.pos=1))
-  
+system.time(
+  raster_cube(s2.collection, v1) %>%
+    select_bands(c("B04")) %>%
+    reduce_time("count(B04)") %>%
+    plot(key.pos = 1)
+)
 ## 0%   10   20   30   40   50   60   70   80   90   100%
 ## [----|----|----|----|----|----|----|----|----|----|
 ## **************************************************|
 ## 
 ##    user  system elapsed 
-##  30.367   1.190   6.009   
+##  20.649  7.595   11.725
 ```
+![](S2R_2.png)
 
-![](S2R_img5.png)
+We can see that we only have data for all months in a small vertical stripe of the area. This illustrates that
+all operations work on the cube representation and **not** on the images. Results relate to the number of cube cells but not
+on the number of available images (which is much larger here). We can simulate the latter by using a data cube view with
+daily temporal resolution. 
 
-So far, we have only plotted cubes after a reduction. However, we can also plot a time series by not applying a reducer, and even
-a multi-band time-series (not shown here). However, depending on the number of time steps and bands, plots can quickly become unreadable.
+
+
+
+### NDVI summaries
+
+The package comes with a function `apply_pixel()` to apply pixel-wise functions on data cubes. For example, this
+allows to derive spectral indices on-the-fly. In the example below, we compute NDVI values for all pixels and afterwards
+compute the minumum, median, and maximum values over time. We use a data cube view covering a small (50km x 50km) spatial subset at 100m spatial resolution.
 
 ```
-> v = cube_view(proj="EPSG:3857", view=v, t0="2018-06",t1="2018-08",
->               l=2700000, r=2750000, t=7000000, b=6950000, nx=700, ny=700, 
->               aggregation = "median")
-> system.time(data_cube(s2.col, v) %>%
->     select_bands(c("B04", "B08")) %>%
->     apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
->     plot(zlim=c(-0.1,1), col=rainbow, key.pos=1))
-
+system.time(
+  raster_cube(s2.collection, v2) %>%
+    select_bands(c("B04", "B08")) %>%
+    apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
+    reduce_time("min(NDVI)", "median(NDVI)", "max(NDVI)") %>%
+    plot(zlim=c(-1,1), key.pos=1, col=rainbow)
+)
 ## 0%   10   20   30   40   50   60   70   80   90   100%
 ## [----|----|----|----|----|----|----|----|----|----|
 ## **************************************************|
 ## 
-##   user  system elapsed 
-## 38.053   1.318   7.917
+##    user  system elapsed 
+##  33.814   1.066  11.984
 ```
-
-![](S2R_img6.png)
-
+![](S2R_3.png)
 
 
+Similarly, we can also reduce our cube over space, to get summary time series:
 
-## Applying R functions to data cube chunks
+```
+system.time(
+  raster_cube(s2.collection, v2) %>%
+    select_bands(c("B04", "B08")) %>%
+    apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
+    reduce_space("min(NDVI)", "median(NDVI)", "max(NDVI)") %>%
+    plot(join.timeseries=TRUE)
+)
+## 0%   10   20   30   40   50   60   70   80   90   100%
+## [----|----|----|----|----|----|----|----|----|----|
+## **************************************************|
+## 
+##    user  system elapsed 
+##  30.808   0.996  31.867
+```
+![](S2R_4.png)
 
-Though gdalcubes comes with very few operations to process data cubes, it is possible to apply arbitrary R functions to
-the chunks of a data cube. Chunks are smaller sub-cubes that are loaded to main memory when a data cube is read. 
-The size of chunks can be specified as an optional argument `chunking` to `data_cube()`. This is a vector with three integers
+In this example, the time series contain a few gaps because for some of the 10 day intervals there is simply no 
+image in our collection. 
+
+
+
+### Monthly NDVI differences 
+
+We can apply a moving window operation over pixel time series with the `window_time` function. 
+This function can either apply a reducer function (min, median, max, mean, var, sd) on a window of specified size,
+or apply a convolution kernel. 
+Below, we apply a convolution kernel $(-1, 1)$ to compute pixel-wise monthly differences in the NDVI data.
+As an example, we plot the resulting differences between May and June and between August and July respectively with the following
+R code.
+
+```
+system.time(
+    raster_cube(s2.collection, cube_view(view=v2, dt="P1M")) %>%
+        select_bands(c("B04", "B08")) %>%
+        apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
+        window_time(kernel=c(-1,1)) %>%
+        plot(zlim=c(-1,1), key.pos=4, col=rainbow, t=c(2,4))
+)
+## 0%   10   20   30   40   50   60   70   80   90   100%
+## [----|----|----|----|----|----|----|----|----|----|
+## **************************************************|
+## 
+##    user  system elapsed 
+##  40.342   1.150  13.684 
+## Warning message:
+## In window_time.cube(., kernel = c(-1, 1)) :
+##   length of kernel is even, using an asymmetric window (1,0)
+```
+![](S2R_5.png)
+
+The results could e.g. be used to identify agricultural areas that have been cropped.
+
+
+
+
+### NDVI trend estimation
+Though gdalcubes comes with a rather limited set of operations to process data cubes, it is possible to apply arbitrary R functions to
+chunks of a data cube. Chunks are small sub-cubes that are loaded to main memory when a data cube is read. 
+The size of chunks can be specified as an optional argument `chunking` to `raster_cube()`. This is a vector with three integers
 for the number of pixels in the dimensions t, y, and x. By default, a chunk includes 16x256x256 pixels. 
 If operations such as a reduction are applied to a cube, the chunk size of the result might change. 
 
-In the example below, we create a 5-daily time series for the spatial subset from June to September 2018, fit a regression line through
+In the example below, we create a 10-daily time series for the spatial subset from May to September 2018, fit a regression line through
 all pixel NDVI time-series and finally return (and plot) the slope of the fitted line. This should give us a rough idea about the 
-trend of the NDVI.
+trend of the NDVI. We use the function `chunk_apply()` and pass a previously defined function.
+
 
 ```
-> v = cube_view(proj="EPSG:3857", view=v, t0="2018-05-01",t1="2018-09-30", dt="P5D",  
->               l=2700000, r=2750000, t=7000000, b=6950000, nx=700, ny=700)
->
-> f <- function() {
->   x = read_stream_as_array()
->   out <- reduce_time(x, function(x) {
->     n = sum(!is.na(x[1,]))
->     if (n < 3) {
->       return(NA)
->     }
->     y = data.frame(z = x[1,], t=1:length(x[1,]))
->     return(coef(lm(z ~ t, y))[2])
->   })
->   write_stream_from_array(out)
-> }
->
-> data_cube(s2.col, v, chunking = c(365, 256, 256)) %>%
->   select_bands(c("B04", "B08")) %>%
->   apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
->   chunk_apply(f) %>% 
->   plot(key.pos=1, col=heat.colors)
+f <- function() {
+  x = read_chunk_as_array()
+  out <- reduce_time(x, function(x) {
+    n = sum(!is.na(x[1,]))
+    if (n < 3) {
+      return(NA)
+    }
+    y = data.frame(z = x[1,], t=1:length(x[1,]))
+    return(coef(lm(z ~ t, y))[2])
+  })
+  write_chunk_from_array(out)
+}
+
+raster_cube(s2.collection, v2, chunking = c(200, 64, 64)) %>%
+  select_bands(c("B04", "B08")) %>%
+  apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
+  chunk_apply(f) %>% 
+  plot(key.pos=1, col=heat.colors)
 
 ## 0%   10   20   30   40   50   60   70   80   90   100%
 ## [----|----|----|----|----|----|----|----|----|----|
 ## **************************************************|
 ```
+![](S2R_6.png)
 
-![](S2R_img7.png)
+This is a rather low-level interface to applying user-defined R functions. There are a few things to consider in the user defined function here:
 
+1. Data of the current chunk is read as a four-dimensional R array `x` with `read_chunk_as_array()`.
+2. Array dimensions of `x` are in the order bands, time, y, x.
+3. The package provides a set of helper functions including `reduce_time()`, `reduce_space()`, and `apply_pixel()`, which also work 
+on R arrays. These functions are simple wrappers around the ordinary `apply()` function.
+4. Results must be four-dimensional R arrays as well and are written back to the gdalcubes library with `write_chunk_from_array()`.  
 
-The function provided to `chunk_apply()` should **always** start with `x = read_stream_as_array()` and end with `write_stream_from_array(out)`.
-The former function reads the data of the current chunk as a four-dimensional R array with dimensions bands, time, y, x and the latter writes 
-the results from a four-dimensional R array to the internal gdalcubes chunk buffer. Internally, this function is quite complex because
-the gdalcubes library does not only target R. The function uses so called _chunk streaming_ by calling an external process (the Rscript executable in this case) and streaming
-data to [stdin](https://en.wikipedia.org/wiki/Standard_streams) and reading data from [stdout](https://en.wikipedia.org/wiki/Standard_streams) of these processes.
+In order to interpret the results correctly, the output must have either 1 or the same number of cells as the input chunk in the spatial and temporal dimensions.
+The number of bands, however, can be arbitrary. Internally, this function is quite complex because the gdalcubes library does not only target R. 
+The function uses so called chunk streaming by calling an external process (the Rscript executable in this case) and streaming data to and reading data from these processes.
+
+In the future, we will add higher-level interfaces to pass user-defined R functions. For example, users will then be able to pass R functions to `reduce_time()`, `reduce_space()`, `window_time()`, and `apply_pixel()`. 
 
 
 
@@ -468,9 +525,6 @@ data to [stdin](https://en.wikipedia.org/wiki/Standard_streams) and reading data
 Though this example demonstrates how to process around 90GB of Sentinel 2 imagery, processing larger amounts of images locally will eventually fail and at some point we must move to the cloud. 
 gdalcubes in principal can be used in the cloud by referencing e.g. S3 buckets with Sentinel imagery but this has not been tried and documented. Using `gdalcubes_server` it should also be possible to run everything even in distributed cloud environments, e.g., with [Docker](https://docs.docker.com) und [Kubernetes](https://kubernetes.io).
 We see a lot of things that could be done in this regard but this is all still to be done in the future.
-
-At the moment, gdalcubes includes only very few operations to process data cubes. For instance, reduction over space and moving window operations are not yet implemented. 
-The `plot()` functions also certainly needs some improvement, e.g., to plot simple time series or to change the plot layouts for multi-spectral and multi-temporal cubes.
 
 
 

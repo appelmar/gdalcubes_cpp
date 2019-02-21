@@ -63,10 +63,10 @@ class reduce_space_cube : public cube {
                   reducerstr == "sd" ||
                   reducerstr == "prod" ||
                   reducerstr == "sum"))
-                throw std::string("ERROR in reduce_space_cube::reduce_time_cube(): Unknown reducer '" + reducerstr + "'");
+                throw std::string("ERROR in reduce_space_cube::reduce_space_cube(): Unknown reducer '" + reducerstr + "'");
 
             if (!(in->bands().has(bandstr))) {
-                throw std::string("ERROR in reduce_space_cube::reduce_time_cube(): Input data cube has no band '" + bandstr + "'");
+                throw std::string("ERROR in reduce_space_cube::reduce_space_cube(): Input data cube has no band '" + bandstr + "'");
             }
 
             band b = in->bands().get(bandstr);
@@ -105,14 +105,14 @@ class reduce_space_cube : public cube {
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         // copy fields from st_reference type
         _st_ref->win() = stref->win();
-        _st_ref->proj() = stref->proj();
+        _st_ref->srs() = stref->srs();
 
         _st_ref->nx() = 1;
         _st_ref->ny() = 1;
 
         _st_ref->t0() = stref->t0();
         _st_ref->t1() = stref->t1();
-        _st_ref->dt() = stref->dt();
+        _st_ref->dt(stref->dt());
     }
 };
 

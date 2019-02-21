@@ -37,13 +37,12 @@ class utils {
     * @return filename string
     */
     static std::string generate_unique_filename(uint16_t n = 8, std::string prefix = "", std::string suffix = "") {
-        std::random_device rd;
+        static std::mt19937 gen(time(NULL));  //Standard mersenne_twister_engine seeded with rd()
+        static const std::string LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        static std::uniform_int_distribution<> dis(0, LETTERS.length() - 1);
         std::stringstream ss;
-        const std::string LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        int t = time(NULL);
         for (uint16_t i = 0; i < n; ++i) {
-            uint32_t r = t + rd();
-            ss << LETTERS[r % LETTERS.length()];
+            ss << LETTERS[dis(gen)];
         }
         std::string out = prefix + ss.str() + suffix;
         return out;

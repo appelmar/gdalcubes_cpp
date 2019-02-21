@@ -230,7 +230,7 @@ struct aggregation_state_none : public aggregation_state {
     void update(void *chunk_buf, void *img_buf, uint32_t b, uint32_t t) override {
         memcpy(chunk_buf, img_buf, sizeof(double) * _size_btyx[2] * _size_btyx[3]);
     }
-    void finalize(void *buf) {}
+    void finalize(void *buf) override {}
 };
 
 /*
@@ -241,7 +241,7 @@ struct aggregation_state_none : public aggregation_state {
  * 4. use RasterIO to read from the dataset
  */
 std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
-    GCBS_DEBUG("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
+    GCBS_TRACE("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id < 0 || id >= count_chunks()) {
         // chunk is outside of the cube, we don't need to read anything.
@@ -251,7 +251,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     // Find intersecting images from collection and iterate over these
     bounds_st cextent = bounds_from_chunk(id);
-    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, _st_ref->proj(), "gdalrefs.descriptor");
+    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, _st_ref->srs(), "gdalrefs.descriptor");
     // In some cases, datasets still contains images at the temporal borders, which are actually not
     // part of the chunk. If this is the case, the check for the temporal index later in this function
     // will make sure that it is not read as it would lead to buffer overflows.
@@ -290,7 +290,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     //    affine[4] = 0.0;
 
     OGRSpatialReference proj_out;
-    proj_out.SetFromUserInput(_st_ref->proj().c_str());
+    proj_out.SetFromUserInput(_st_ref->srs().c_str());
 
     aggregation_state *agg = nullptr;
     if (view()->aggregation_method() == aggregation::aggregation_type::AGG_MEAN) {
@@ -340,7 +340,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         warp_args.AddString("MEM");  // TODO: Check whether /vsimem/GTiff is faster?
 
         warp_args.AddString("-t_srs");
-        warp_args.AddString(_st_ref->proj().c_str());
+        warp_args.AddString(_st_ref->srs().c_str());
 
         warp_args.AddString("-te");  // xmin ymin xmax ymax
         warp_args.AddString(std::to_string(cextent.s.left).c_str());
@@ -375,7 +375,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         warp_args.AddString("Float64");
 
         warp_args.AddString("-te_srs");
-        warp_args.AddString(_st_ref->proj().c_str());
+        warp_args.AddString(_st_ref->srs().c_str());
 
         warp_args.AddString("-ts");
         warp_args.AddString(std::to_string(size_btyx[3]).c_str());
@@ -412,8 +412,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         // Find coordinates for date of the image
         datetime dt = datetime::from_string(datasets[i - 1].datetime);  // Assumption here is that the dattime of all bands within a gdal dataset is the same, which should be OK in practice
-        dt.unit() = _st_ref->dt().dt_unit;                              // explicit datetime unit cast
-        int it = (dt - cextent.t0) / _st_ref->dt();
+        dt.unit() = _st_ref->dt_unit();                                 // explicit datetime unit cast
+        duration temp_dt = _st_ref->dt();
+        int it = (dt - cextent.t0) / temp_dt;
 
         // Make sure that it is valid in order to prevent buffer overflows
         if (it >= 0 && it < (int)(out->size()[1])) {
@@ -486,13 +487,13 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
 
     std::string srs = ic->distinct_srs();
     if (srs.empty()) {
-        out.proj() = "EPSG:3857";
+        out.srs() = "EPSG:3857";
     } else {
-        out.proj() = srs;
+        out.srs() = srs;
     }
 
     // Transform WGS84 boundaries to target srs
-    bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326", out.proj().c_str());
+    bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326", out.srs().c_str());
     out.left() = ext_transformed.left;
     out.right() = ext_transformed.right;
     out.top() = ext_transformed.top;
@@ -509,23 +510,23 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
     duration d = out.t1() - out.t0();
 
     if (out.t0() == out.t1()) {
-        out.dt().dt_unit = datetime_unit::DAY;
-        out.dt().dt_interval = 1;
+        out.dt_unit() = datetime_unit::DAY;
+        out.dt_interval() = 1;
     } else {
         if (d.convert(datetime_unit::YEAR).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::YEAR;
+            out.dt_unit() = datetime_unit::YEAR;
         } else if (d.convert(datetime_unit::MONTH).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::MONTH;
+            out.dt_unit() = datetime_unit::MONTH;
         } else if (d.convert(datetime_unit::DAY).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::DAY;
+            out.dt_unit() = datetime_unit::DAY;
         } else if (d.convert(datetime_unit::HOUR).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::HOUR;
+            out.dt_unit() = datetime_unit::HOUR;
         } else if (d.convert(datetime_unit::MINUTE).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::MINUTE;
+            out.dt_unit() = datetime_unit::MINUTE;
         } else if (d.convert(datetime_unit::SECOND).dt_interval > 4) {
-            out.dt().dt_unit = datetime_unit::SECOND;
+            out.dt_unit() = datetime_unit::SECOND;
         } else {
-            out.dt().dt_unit = datetime_unit::DAY;
+            out.dt_unit() = datetime_unit::DAY;
         }
         out.t0().unit() = out.dt().dt_unit;
         out.t1().unit() = out.dt().dt_unit;

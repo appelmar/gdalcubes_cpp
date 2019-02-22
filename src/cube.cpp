@@ -274,7 +274,7 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
         dim_t[i] = (i * st_reference()->dt().dt_interval);
     }
     for (uint32_t i = 0; i < size_y(); ++i) {
-        dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // or i +1 ?
+        dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();
     }
     for (uint32_t i = 0; i < size_x(); ++i) {
         dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();

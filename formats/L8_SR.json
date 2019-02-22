@@ -4,10 +4,10 @@
   "tags" : ["Landsat", "USGS", "Level 2", "NASA", "surface reflectance"],
   "pattern" : ".+\\.tif",
   "images" : {
-    "pattern" : "(?:.*[/\\\\])?([^/\\\\]+)[/\\\\].+\\.tif"
+    "pattern" : ".*(L[OTC]08_.{4}_.{6}_.{8}_.{8}_.{2}_.{2})[A-Za-z0-9_]+\\.tif"
   },
   "datetime" : {
-    "pattern" : ".*L[OTC]08_.{4}_.{6}_(.+)_.*\\.tif",
+    "pattern" : ".*L[OTC]08_.{4}_.{6}_(.{8})_.*\\.tif",
     "format" : "%Y%m%d"
   },
   "bands": {

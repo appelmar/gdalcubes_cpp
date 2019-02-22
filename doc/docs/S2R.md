@@ -447,7 +447,7 @@ system.time(
         select_bands(c("B04", "B08")) %>%
         apply_pixel("(B08-B04)/(B08+B04)", "NDVI") %>%
         window_time(kernel=c(-1,1)) %>%
-        plot(zlim=c(-1,1), key.pos=4, col=rainbow, t=c(2,4))
+        plot(zlim=c(-1,1), key.pos=1, col=rainbow)
 )
 ## 0%   10   20   30   40   50   60   70   80   90   100%
 ## [----|----|----|----|----|----|----|----|----|----|

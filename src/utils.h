@@ -20,6 +20,7 @@
 #include <gdal_priv.h>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <random>
 #include <sstream>
 #include <string>
@@ -40,11 +41,14 @@ class utils {
         static std::mt19937 gen(time(NULL));  //Standard mersenne_twister_engine seeded with rd()
         static const std::string LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         static std::uniform_int_distribution<> dis(0, LETTERS.length() - 1);
+        static std::mutex mtx;
+        mtx.lock();
         std::stringstream ss;
         for (uint16_t i = 0; i < n; ++i) {
             ss << LETTERS[dis(gen)];
         }
         std::string out = prefix + ss.str() + suffix;
+        mtx.unlock();
         return out;
     }
 

@@ -441,8 +441,16 @@ void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
     for (uint16_t it = 0; it < _nthreads; ++it) {
         workers.push_back(std::thread([this, &c, f, it, &mutex](void) {
             for (uint32_t i = it; i < c->count_chunks(); i += _nthreads) {
-                std::shared_ptr<chunk_data> dat = c->read_chunk(i);
-                f(i, dat, mutex);
+                try {
+                    std::shared_ptr<chunk_data> dat = c->read_chunk(i);
+                    f(i, dat, mutex);
+                } catch (std::string s) {
+                    GCBS_ERROR(s);
+                    continue;
+                } catch (...) {
+                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(i));
+                    continue;
+                }
             }
         }));
     }

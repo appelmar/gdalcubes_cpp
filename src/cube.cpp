@@ -245,7 +245,7 @@ void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processo
 //    prg->finalize();
 //}
 
-void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> p) {
+void cube::write_netcdf_file(std::string path, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
     std::string op = filesystem::make_absolute(path);
 
     if (filesystem::is_directory(op)) {
@@ -371,6 +371,11 @@ void cube::write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> 
     for (uint16_t i = 0; i < bands().count(); ++i) {
         int v;
         nc_def_var(ncout, bands().get(i).name.c_str(), NC_DOUBLE, 3, d_all, &v);
+        std::size_t csize[3] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
+        nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);
+        if (compression_level > 0) {
+            nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
+        }
 
         if (!bands().get(i).unit.empty())
             nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());

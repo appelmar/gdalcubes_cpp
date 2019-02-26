@@ -134,18 +134,6 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
     std::string f_in = filesystem::join(config::instance()->get_streaming_dir(), utils::generate_unique_filename(12, ".stream_", "_in"));
     std::string f_out = filesystem::join(config::instance()->get_streaming_dir(), utils::generate_unique_filename(12, ".stream_", "_out"));
 
-#ifdef _WIN32
-    _putenv("GDALCUBES_STREAMING=1");
-    //_putenv((std::string("GDALCUBES_STREAMING_DIR") + "=" + config::instance()->get_streaming_dir().c_str()).c_str());
-    _putenv((std::string("GDALCUBES_STREAMING_FILE_IN") + "=" + f_in.c_str()).c_str());
-    _putenv((std::string("GDALCUBES_STREAMING_FILE_OUT") + "=" + f_out.c_str()).c_str());
-#else
-    setenv("GDALCUBES_STREAMING", "1", 1);
-    // setenv("GDALCUBES_STREAMING_DIR", config::instance()->get_streaming_dir().c_str(), 1);
-    setenv("GDALCUBES_STREAMING_FILE_IN", f_in.c_str(), 1);
-    setenv("GDALCUBES_STREAMING_FILE_OUT", f_out.c_str(), 1);
-#endif
-
     std::string errstr;  // capture error string
 
     // write input data
@@ -181,10 +169,26 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
     f_in_stream.write(((char *)(data->buf())), sizeof(double) * data->size()[0] * data->size()[1] * data->size()[2] * data->size()[3]);
     f_in_stream.close();
 
+    /* setenv / _putenv is not thread-safe, we need to get a mutex until the child process has been started. */
+    static std::mutex mtx;
+    mtx.lock();
+#ifdef _WIN32
+    _putenv("GDALCUBES_STREAMING=1");
+    //_putenv((std::string("GDALCUBES_STREAMING_DIR") + "=" + config::instance()->get_streaming_dir().c_str()).c_str());
+    _putenv((std::string("GDALCUBES_STREAMING_FILE_IN") + "=" + f_in.c_str()).c_str());
+    _putenv((std::string("GDALCUBES_STREAMING_FILE_OUT") + "=" + f_out.c_str()).c_str());
+#else
+    setenv("GDALCUBES_STREAMING", "1", 1);
+    // setenv("GDALCUBES_STREAMING_DIR", config::instance()->get_streaming_dir().c_str(), 1);
+    setenv("GDALCUBES_STREAMING_FILE_IN", f_in.c_str(), 1);
+    setenv("GDALCUBES_STREAMING_FILE_OUT", f_out.c_str(), 1);
+#endif
+
     // start process
     TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {}, [&errstr](const char *bytes, std::size_t n) {
         errstr = std::string(bytes, n);
         GCBS_DEBUG(errstr); }, false);
+    mtx.unlock();
     auto exit_status = process.get_exit_status();
     filesystem::remove(f_in);
     if (exit_status != 0) {

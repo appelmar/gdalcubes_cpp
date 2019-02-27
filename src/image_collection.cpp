@@ -507,7 +507,7 @@ bounds_st image_collection::extent() {
 }
 
 std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range, std::string srs,
-                                                                                 std::vector<std::string> bands, std::string order_by) {
+                                                                                 std::vector<std::string> bands, std::vector<std::string> order_by) {
     bounds_2d<double> range_trans = (srs == "EPSG:4326") ? range.s : range.s.transform(srs, "EPSG:4326");
     std::string sql =  // TODO: do we really need image_name ?
         "SELECT gdalrefs.image_id, images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
@@ -526,14 +526,30 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
         bandlist += "'" + bands[bands.size() - 1] + "'";
         sql += " AND bands.name IN (" + bandlist + ")";
     }
-    if (!order_by.empty()) {  // explicitly test order by column if given to avoid SQL injection
-        if (order_by == "images.name" ||
-            order_by == "gdalrefs.descriptor" ||
-            order_by == "images.datetime" ||
-            order_by == "bands.name" ||
-            order_by == "gdalrefs.band_num")
-            sql += " ORDER BY " + order_by;
-
+    if (!order_by.empty()) {
+        sql += "ORDER BY ";
+        for (uint16_t io=0; io<order_by.size()-1; ++io) {
+            if (order_by[io] == "gdalrefs.image_id" ||
+                order_by[io] == "images.name" ||
+                order_by[io] == "gdalrefs.descriptor" ||
+                order_by[io] == "images.datetime" ||
+                order_by[io] == "bands.name" ||
+                order_by[io] == "gdalrefs.band_num") {
+                sql += order_by[io] + ",";
+            }
+            else {
+                throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
+            }
+        }
+        uint16_t io=order_by.size()-1;
+        if (order_by[io] == "gdalrefs.image_id" ||
+            order_by[io] == "images.name" ||
+            order_by[io] == "gdalrefs.descriptor" ||
+            order_by[io] == "images.datetime" ||
+            order_by[io] == "bands.name" ||
+            order_by[io] == "gdalrefs.band_num") {
+            sql += order_by[io];
+        }
         else {
             throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
         }

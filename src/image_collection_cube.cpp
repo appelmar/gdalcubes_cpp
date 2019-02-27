@@ -285,7 +285,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     // Find intersecting images from collection and iterate over these
     // Note that these are ordered by image id and descriptor
     bounds_st cextent = bounds_from_chunk(id);
-    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, _st_ref->srs(), "gdalrefs.image_id, gdalrefs.descriptor");
+    std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, _st_ref->srs(), std::vector<std::string>(), std::vector<std::string>{"gdalrefs.image_id", "gdalrefs.descriptor"});
 
     if (datasets.empty()) {
         GCBS_DEBUG("Chunk " + std::to_string(id) + " does not intersect with any image from the image_collection_cube");
@@ -541,7 +541,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 warp_args.AddString(std::to_string(size_btyx[2]).c_str());
 
                 warp_args.AddString("-r");
-                warp_args.AddString("near");
+                warp_args.AddString("mode");
 
                 warp_args.AddString("-wo");
                 warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());

@@ -118,6 +118,27 @@ void cube_factory::register_default() {
             cube_view v = cube_view::read_json_string(j["view"].dump());
             auto x = image_collection_cube::create(j["file"].get<std::string>(), v);
             x->set_chunk_size(j["chunk_size"][0].get<uint32_t>(), j["chunk_size"][1].get<uint32_t>(), j["chunk_size"][2].get<uint32_t>());
+
+            if (j.count("mask") > 0) {
+                if (j["mask"].count("mask_type") == 0) {
+                    GCBS_WARN("ERROR in cube_generators[\"image_collection\"](): missing mask type, mask will be ignored");
+                } else {
+                    std::string mask_type = j["mask"]["mask_type"];
+                    if (mask_type == "value_mask") {
+                        x->set_mask(j["mask"]["mask_band"], std::make_shared<value_mask>(j["mask"]["values"].get<std::unordered_set<double>>(), j["mask"]["invert"].get<bool>()));
+                    } else if (mask_type == "range_mask") {
+                        x->set_mask(j["mask"]["mask_band"], std::make_shared<range_mask>(j["mask"]["min"].get<double>(), j["mask"]["max"].get<double>(), j["mask"]["invert"].get<bool>()));
+                    } else {
+                        GCBS_WARN("ERROR in cube_generators[\"image_collection\"](): invalid mask type, mask will be ignored");
+                    }
+                }
+            }
+
+            if (j.count("warp_args") > 0) {
+                x->set_warp_args(j["warp_args"].get<std::vector<std::string>>());
+            }
+
+
             return x;
         }));
 

@@ -287,7 +287,7 @@ class image_collection {
         uint16_t band_num;
     };
     std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs,
-                                                 std::vector<std::string> bands,  std::vector<std::string> order_by = {});
+                                                 std::vector<std::string> bands, std::vector<std::string> order_by = {});
     inline std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs, std::vector<std::string> order_by = {}) {
         return find_range_st(range, srs, std::vector<std::string>(), order_by);
     };

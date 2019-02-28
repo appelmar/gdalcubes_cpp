@@ -21,16 +21,16 @@
 #include "error.h"
 #include "utils.h"
 
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") {
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  {
     st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
     load_bands();
 }
 
-image_collection_cube::image_collection_cube(std::string icfile) : cube(), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") {
+image_collection_cube::image_collection_cube(std::string icfile) : cube(), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  {
     st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
     load_bands();
 }
@@ -452,6 +452,12 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             warp_args.AddString("-wo");
             warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
 
+
+            // add custom warp args
+            for (uint16_t iwarp_args = 0; iwarp_args < _warp_args.size(); ++iwarp_args) {
+                warp_args.AddString(_warp_args[iwarp_args].c_str());
+            }
+
             GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
             if (warp_opts == NULL) {
                 GDALWarpAppOptionsFree(warp_opts);
@@ -541,16 +547,30 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 warp_args.AddString(std::to_string(size_btyx[2]).c_str());
 
                 warp_args.AddString("-r");
-                warp_args.AddString("mode");
+                warp_args.AddString("near");
 
                 warp_args.AddString("-wo");
                 warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
+
+                // add custom warp args
+                for (uint16_t iwarp_args = 0; iwarp_args < _warp_args.size(); ++iwarp_args) {
+                    warp_args.AddString(_warp_args[iwarp_args].c_str());
+                }
 
                 GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
                 if (warp_opts == NULL) {
                     GDALWarpAppOptionsFree(warp_opts);
                     throw std::string("ERROR in image_collection_cube::read_chunk(): cannot create gdalwarp options.");
                 }
+
+                //                // log gdalwarp call
+                //                std::stringstream ss;
+                //                ss << "Running gdalwarp ";
+                //                for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
+                //                    ss << warp_args[iws] << " ";
+                //                }
+                //                ss << (mask_dataset_band.first);
+                //                GCBS_DEBUG(ss.str());
 
                 GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
 

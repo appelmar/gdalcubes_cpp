@@ -528,7 +528,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     }
     if (!order_by.empty()) {
         sql += "ORDER BY ";
-        for (uint16_t io=0; io<order_by.size()-1; ++io) {
+        for (uint16_t io = 0; io < order_by.size() - 1; ++io) {
             if (order_by[io] == "gdalrefs.image_id" ||
                 order_by[io] == "images.name" ||
                 order_by[io] == "gdalrefs.descriptor" ||
@@ -536,12 +536,11 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
                 order_by[io] == "bands.name" ||
                 order_by[io] == "gdalrefs.band_num") {
                 sql += order_by[io] + ",";
-            }
-            else {
+            } else {
                 throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
             }
         }
-        uint16_t io=order_by.size()-1;
+        uint16_t io = order_by.size() - 1;
         if (order_by[io] == "gdalrefs.image_id" ||
             order_by[io] == "images.name" ||
             order_by[io] == "gdalrefs.descriptor" ||
@@ -549,8 +548,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
             order_by[io] == "bands.name" ||
             order_by[io] == "gdalrefs.band_num") {
             sql += order_by[io];
-        }
-        else {
+        } else {
             throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
         }
     }

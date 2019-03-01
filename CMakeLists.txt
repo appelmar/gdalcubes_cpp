@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(gdalcubes LANGUAGES CXX C VERSION 0.0.1)
+project(gdalcubes LANGUAGES CXX C VERSION 0.1.0)
 
 #set(COLLECTION_FORMAT_VERSION_MAJOR 0)
 #set(COLLECTION_FORMAT_VERSION_MINOR 0)
@@ -19,8 +19,8 @@ endif ()
 #    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg --coverage")
 #    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg --coverage" )
 #    #set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg --coverage")
-#    #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
-#    #set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+#    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+#    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
 #endif ( )
 
 

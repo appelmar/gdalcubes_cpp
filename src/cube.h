@@ -646,9 +646,10 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * Export a cube to a single NetCDF file
      * @param path path of the target file
+     * @param compression_level deflate level, 0=no compression, 1= fast, 9 = small
      * @param p chunk processor instance, defaults to the global configuration
      */
-    void write_netcdf_file(std::string path, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_netcdf_file(std::string path, uint8_t compression_level = 0, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Get the cube's bands

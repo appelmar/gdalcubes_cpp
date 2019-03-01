@@ -232,6 +232,18 @@ class config {
         _collection_format_preset_dirs.push_back(dir);
     }
 
+    std::string gdal_version_info() {
+        return GDALVersionInfo("--version");
+    }
+
+    std::vector<std::string> gdal_formats() {
+        std::vector<std::string> out;
+        for (int i = 0; i < GDALGetDriverCount(); ++i) {
+            out.push_back(GDALGetDriverShortName(GDALGetDriver(i)));
+        }
+        return out;
+    }
+
    private:
     std::shared_ptr<chunk_processor> _chunk_processor;
     std::shared_ptr<progress> _progress_bar;

@@ -149,6 +149,7 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
     // buffer for a single time series including data from adjacent chunks for all used input bands
     uint32_t cur_ts_length = _win_size_l + size_tyx[0] + _win_size_r;
     double* cur_ts = (double*)std::calloc(cur_ts_length * _bands.count(), sizeof(double));
+    std::fill(cur_ts, cur_ts + cur_ts_length * _bands.count(), NAN);
 
     for (uint32_t ixy = 0; ixy < size_tyx[1] * size_tyx[2]; ++ixy) {
         // fill values from l chunks

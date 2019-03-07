@@ -29,10 +29,6 @@ by the core library.
      - License: [curl license](https://curl.haxx.se/docs/copyright.html) 
      - gdalcubes may statically or dynamically link to the libcurl library depending on compilation flags
         
-- **[ExprTk](http://www.partow.net/programming/exprtk/): A C++ Mathematical Expression Parsing and Evaluation Library**
-    - Copyright (c) Arash Partow (1999-2018) 
-    - License:  [MIT license](https://opensource.org/licenses/MIT) 
-    - gdalcubes distributes an unmodified version of the library under `src/external/exprtk.hpp`
     
 - **[TinyExpr](https://github.com/codeplea/tinyexpr): A very small recursive descent parser and evaluation engine for math expressions**
     - Copyright (c) 2015-2018 Lewis Van Winkle

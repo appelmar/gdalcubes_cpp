@@ -21,8 +21,6 @@
 #include <string>
 #include "cube.h"
 
-// If possible, take care to NOT include exprtk.hpp in header
-
 /**
  * @brief A data cube that applies one or more arithmetic expressions on band values per pixel
  *
@@ -80,11 +78,10 @@ class apply_pixel_cube : public cube {
             _bands.add(b);
         }
 
-#ifndef USE_EXPRTK  // tinyexpr works with lower case symbols only
+        // tinyexpr works with lower case symbols only
         for (uint16_t i = 0; i < _expr.size(); ++i) {
             std::transform(_expr[i].begin(), _expr[i].end(), _expr[i].begin(), ::tolower);
         }
-#endif
 
         // parse expressions, currently this is only for validation,
         // expressions will be parsed again in read_chunk(), costs should
@@ -100,9 +97,10 @@ class apply_pixel_cube : public cube {
             for (uint16_t ib = 0; ib < _in_cube->bands().count(); ++ib) {
                 std::string name = _in_cube->bands().get(ib).name;
                 std::string temp_name = name;
-#ifndef USE_EXPRTK  // tinyexpr works with lower case symbols only
+
+                // tinyexpr works with lower case symbols only
                 std::transform(temp_name.begin(), temp_name.end(), temp_name.begin(), ::tolower);
-#endif
+
                 if (_expr[i].find(temp_name) != std::string::npos) {
                     _band_usage[i].insert(name);
                     _band_usage_all.insert(name);

@@ -121,20 +121,6 @@ gdalcubes makes use of the following third party software.
 
 ------------------------------------------------------------------------------------------------------------------------
 
-**[ExprTk](http://www.partow.net/programming/exprtk/): A C++ Mathematical Expression Parsing and Evaluation Library**
-    - Copyright (c) Arash Partow (1999-2018)
-    - License:  [MIT license](https://opensource.org/licenses/MIT) (see below)
-    - gdalcubes distributes an unmodified version of the library under `src/external/exprtk.hpp`
-
-    Free  use  of  the  C++  Mathematical  Expression  Toolkit  Library is
-    permitted under the guidelines and in accordance with the most current
-    version of the MIT License.
-
-    http://www.opensource.org/licenses/MIT
-
-
-------------------------------------------------------------------------------------------------------------------------
-
 **[netCDF](https://www.unidata.ucar.edu/software/netcdf): The Unidata network Common Data Form C library**
     - Copyright (c) 1993-2017 University Corporation for Atmospheric Research/Unidata
     - License: MIT-like[https://www.unidata.ucar.edu/software/netcdf/copyright.html](https://www.unidata.ucar.edu/software/netcdf/copyright.html) (see below)

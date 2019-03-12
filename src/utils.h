@@ -133,6 +133,14 @@ class utils {
                 return "null";
         }
     }
+
+    static std::string dbl_to_string(double x, uint8_t precision = std::numeric_limits<double>::max_digits10) {
+        std::ostringstream ss;
+        ss << std::fixed;
+        ss << std::setprecision(precision);
+        ss << x;
+        return ss.str();
+    }
 };
 
 #endif  //UTILS_H

@@ -23,8 +23,6 @@
 
 struct te_variable;  // forward declaration for add_default_functions
 
-// If possible, take care to NOT include exprtk.hpp in header
-
 /**
  * @brief A data cube that applies one or more arithmetic expressions on band values per pixel
  *

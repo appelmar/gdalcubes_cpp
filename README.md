@@ -85,8 +85,6 @@ gdalcubes uses the following open source libraries. Detailed licensing and copyr
 
 **[TinyExpr](https://github.com/codeplea/tinyexpr): A very small recursive descent parser and evaluation engine for math expressions**
 
-**[ExprTk](http://www.partow.net/programming/exprtk/): A C++ Mathematical Expression Parsing and Evaluation Library**
- 
 **[netCDF](https://www.unidata.ucar.edu/software/netcdf): The Unidata network Common Data Form C library**
    
 **[tiny-process-library](https://gitlab.com/eidheim/tiny-process-library): A small platform independent library making it simple to create and stop new processes in C++**

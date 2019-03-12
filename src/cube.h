@@ -633,17 +633,6 @@ class cube : public std::enable_shared_from_this<cube> {
     void write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
-     * Writes a cube as a set of NetCDF files (one per chunk) under a given directory.
-     * The resulting files will be names by chunk id.
-     *
-     * @todo Check compliance with CF conventions (http://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/cf-conventions.html#_abstract)
-     *
-     * @param dir output directory
-     * @param p chunk processor instance, defaults to the global configuration
-     */
-    //void write_netcdf_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
-
-    /**
      * Export a cube to a single NetCDF file
      * @param path path of the target file
      * @param compression_level deflate level, 0=no compression, 1= fast, 9 = small

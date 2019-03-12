@@ -15,15 +15,8 @@ nav:
     - Credits: credits.md
 
 theme:
-  name: 'material'
+  name: 'readthedocs'
   favicon: 'favicon.ico'
-  feature:
-      tabs: false
-  logo:
-      icon: 'collections'
-  palette:
-    primary: 'blue grey'
-    accent: 'deep orange'
 
 #extra:
 #  social:

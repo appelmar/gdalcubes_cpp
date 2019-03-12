@@ -343,10 +343,10 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         warp_args.AddString(_st_ref->srs().c_str());
 
         warp_args.AddString("-te");  // xmin ymin xmax ymax
-        warp_args.AddString(std::to_string(cextent.s.left).c_str());
-        warp_args.AddString(std::to_string(cextent.s.bottom).c_str());
-        warp_args.AddString(std::to_string(cextent.s.right).c_str());
-        warp_args.AddString(std::to_string(cextent.s.top).c_str());
+        warp_args.AddString(utils::dbl_to_string(cextent.s.left).c_str());
+        warp_args.AddString(utils::dbl_to_string(cextent.s.bottom).c_str());
+        warp_args.AddString(utils::dbl_to_string(cextent.s.right).c_str());
+        warp_args.AddString(utils::dbl_to_string(cextent.s.top).c_str());
 
         warp_args.AddString("-dstnodata");
         warp_args.AddString("nan");

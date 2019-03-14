@@ -378,10 +378,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 throw std::string("ERROR in image_collection_cube::read_chunk(): GDAL cannot open'" + it->first + "'");
             }
 
-            OGRSpatialReference srs_in(g->GetProjectionRef());
-            double affine_in[6];
-            g->GetGeoTransform(affine_in);
-
             CPLStringList warp_args;
             warp_args.AddString("-of");
             warp_args.AddString("MEM");  // TODO: Check whether /vsimem/GTiff is faster?

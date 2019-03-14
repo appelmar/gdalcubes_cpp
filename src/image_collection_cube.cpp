@@ -22,15 +22,15 @@
 #include "utils.h"
 
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  {
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() {
     st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
     load_bands();
 }
 
-image_collection_cube::image_collection_cube(std::string icfile) : cube(), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args()  {
+image_collection_cube::image_collection_cube(std::string icfile) : cube(), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() {
     st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
     load_bands();
 }
@@ -436,7 +436,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
             warp_args.AddString("-wo");
             warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
-
 
             // add custom warp args
             for (uint16_t iwarp_args = 0; iwarp_args < _warp_args.size(); ++iwarp_args) {

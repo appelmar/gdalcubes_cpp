@@ -240,7 +240,7 @@ class image_collection_cube : public cube {
     // set additional GDAL warp arguments like whether or not to use overviews, how GCPs should be interpolated, or
     // performance settings
     void set_warp_args(std::vector<std::string> args) {
-        _warp_args = args; // TODO: do some checks that users do not overwrite settings like -of, -r, -tr, -ts, -te, -s_srs, -t_srs, -ot, -wt
+        _warp_args = args;  // TODO: do some checks that users do not overwrite settings like -of, -r, -tr, -ts, -te, -s_srs, -t_srs, -ot, -wt
     }
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;

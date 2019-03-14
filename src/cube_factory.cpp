@@ -138,7 +138,6 @@ void cube_factory::register_default() {
                 x->set_warp_args(j["warp_args"].get<std::vector<std::string>>());
             }
 
-
             return x;
         }));
 

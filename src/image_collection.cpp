@@ -507,10 +507,10 @@ bounds_st image_collection::extent() {
 }
 
 std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range, std::string srs,
-                                                                                 std::vector<std::string> bands, std::string order_by) {
+                                                                                 std::vector<std::string> bands, std::vector<std::string> order_by) {
     bounds_2d<double> range_trans = (srs == "EPSG:4326") ? range.s : range.s.transform(srs, "EPSG:4326");
-    std::string sql =
-        "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
+    std::string sql =  // TODO: do we really need image_name ?
+        "SELECT gdalrefs.image_id, images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
         "images.datetime >= '" +
         range.t0.to_string(datetime_unit::SECOND) + "' AND images.datetime <= '" + range.t1.to_string(datetime_unit::SECOND) +
@@ -526,15 +526,29 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
         bandlist += "'" + bands[bands.size() - 1] + "'";
         sql += " AND bands.name IN (" + bandlist + ")";
     }
-    if (!order_by.empty()) {  // explicitly test order by column if given to avoid SQL injection
-        if (order_by == "images.name" ||
-            order_by == "gdalrefs.descriptor" ||
-            order_by == "images.datetime" ||
-            order_by == "bands.name" ||
-            order_by == "gdalrefs.band_num")
-            sql += " ORDER BY " + order_by;
-
-        else {
+    if (!order_by.empty()) {
+        sql += "ORDER BY ";
+        for (uint16_t io = 0; io < order_by.size() - 1; ++io) {
+            if (order_by[io] == "gdalrefs.image_id" ||
+                order_by[io] == "images.name" ||
+                order_by[io] == "gdalrefs.descriptor" ||
+                order_by[io] == "images.datetime" ||
+                order_by[io] == "bands.name" ||
+                order_by[io] == "gdalrefs.band_num") {
+                sql += order_by[io] + ",";
+            } else {
+                throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
+            }
+        }
+        uint16_t io = order_by.size() - 1;
+        if (order_by[io] == "gdalrefs.image_id" ||
+            order_by[io] == "images.name" ||
+            order_by[io] == "gdalrefs.descriptor" ||
+            order_by[io] == "images.datetime" ||
+            order_by[io] == "bands.name" ||
+            order_by[io] == "gdalrefs.band_num") {
+            sql += order_by[io];
+        } else {
             throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
         }
     }
@@ -548,11 +562,12 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     std::vector<find_range_st_row> out;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         find_range_st_row r;
-        r.image_name = sqlite_as_string(stmt, 0);
-        r.descriptor = sqlite_as_string(stmt, 1);
-        r.datetime = sqlite_as_string(stmt, 2);
-        r.band_name = sqlite_as_string(stmt, 3);
-        r.band_num = sqlite3_column_int(stmt, 4);
+        r.image_id = sqlite3_column_int(stmt, 0);
+        r.image_name = sqlite_as_string(stmt, 1);
+        r.descriptor = sqlite_as_string(stmt, 2);
+        r.datetime = sqlite_as_string(stmt, 3);
+        r.band_name = sqlite_as_string(stmt, 4);
+        r.band_num = sqlite3_column_int(stmt, 5);
 
         out.push_back(r);
     }

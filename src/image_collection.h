@@ -278,7 +278,8 @@ class image_collection {
     uint32_t count_gdalrefs();
 
     struct find_range_st_row {
-        find_range_st_row() : image_name(""), descriptor(""), datetime(""), band_name(""), band_num(1) {}
+        find_range_st_row() : image_id(0), image_name(""), descriptor(""), datetime(""), band_name(""), band_num(1) {}
+        uint32_t image_id;
         std::string image_name;
         std::string descriptor;
         std::string datetime;
@@ -286,8 +287,8 @@ class image_collection {
         uint16_t band_num;
     };
     std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs,
-                                                 std::vector<std::string> bands, std::string order_by = "");
-    inline std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs, std::string order_by = "") {
+                                                 std::vector<std::string> bands, std::vector<std::string> order_by = {});
+    inline std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs, std::vector<std::string> order_by = {}) {
         return find_range_st(range, srs, std::vector<std::string>(), order_by);
     };
 

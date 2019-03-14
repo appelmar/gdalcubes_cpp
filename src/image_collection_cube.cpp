@@ -71,8 +71,7 @@ struct aggregation_state_mean : public aggregation_state {
                 _img_count[ib] = std::unordered_map<uint32_t, uint16_t>();
             }
             if (_img_count[ib].find(t) == _img_count[ib].end()) {
-                memcpy(chunk_buf, img_buf,
-                       sizeof(double) * _size_btyx[2] * _size_btyx[3]);  // TODO: make sure that b is zero-based!!!
+                memcpy(((double *)chunk_buf) + chunk_buf_offset, img_buf, sizeof(double) * _size_btyx[2] * _size_btyx[3]);  // TODO: make sure that b is zero-based!!!
                 _img_count[ib][t] = 1;
             } else {
                 _img_count[ib][t]++;
@@ -306,20 +305,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
 
-    // In case /vsimem/ with GTiff is used, create options might be used to improve the performance
-    //    CPLStringList out_co(NULL);
-    //    out_co.AddNameValue("TILED", "YES");
-    //    out_co.AddNameValue("BLOCKXSIZE", "256");
-    //    out_co.AddNameValue("BLOCKYSIZE", "256");
-
-    //    double affine[6];
-    //    affine[0] = cextent.s.left;
-    //    affine[3] = cextent.s.top;
-    //    affine[1] = _st_ref->dx();
-    //    affine[5] = -_st_ref->dy();
-    //    affine[2] = 0.0;
-    //    affine[4] = 0.0;
-
     OGRSpatialReference proj_out;
     proj_out.SetFromUserInput(_st_ref->srs().c_str());
 
@@ -477,8 +462,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
             // GDALDataset *gdal_out = (GDALDataset *)GDALWarp(("/vsimem/" + std::to_string(id) + "_" + std::to_string(i) + ".tif").c_str(), NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
             GDALWarpAppOptionsFree(warp_opts);
-
-            // Find coordinates for date of the image
 
             // For each band, call RasterIO to read and copy data to the right position in the buffers
             for (uint16_t b = 0; b < it->second.size(); ++b) {

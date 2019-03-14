@@ -1,6 +1,6 @@
 
 
-# 0.2.9999 (dev)
+# 0.1.9999 (dev)
 
 * reimplementation of image_collection_cube::read_chunk(), supporting image masks and custom gdalwarp arguments 
 

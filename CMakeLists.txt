@@ -16,11 +16,13 @@ endif ()
 
 
 #if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug") # enable profiling and coverage reports (gcc specific, only for debug)
-#    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg --coverage")
-#    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg --coverage" )
-#    #set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg --coverage")
-#    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
-#    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+#   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg --coverage")
+#   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-no-as-needed -lprofiler" )
+#   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-no-as-needed  -lprofiler")
+#   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg --coverage" )
+#   set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg --coverage")
+#   set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
+#   set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -fsanitize=address -fsanitize=undefined -D_FORTIFY_SOURCE=0")
 #endif ( )
 
 

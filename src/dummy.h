@@ -19,27 +19,30 @@
 
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
- * @brief A dummy data cube with n bands and a simple fill value
- */
+     * @brief A dummy data cube with n bands and a simple fill value
+     */
 class dummy_cube : public cube {
    public:
     /**
-     * @brief Create a dummy data cube with a simple fill value
-     * @note This static creation method should preferably be used instead of the constructors as
-     * the constructors will not set connections between cubes properly.
-     * @param v shape of the cube
-     * @param nbands number of bands
-     * @param fill fill value
-     * @return a shared pointer to the created data cube instance
-     */
+         * @brief Create a dummy data cube with a simple fill value
+         * @note This static creation method should preferably be used instead of the constructors as
+         * the constructors will not set connections between cubes properly.
+         * @param v shape of the cube
+         * @param nbands number of bands
+         * @param fill fill value
+         * @return a shared pointer to the created data cube instance
+         */
     static std::shared_ptr<dummy_cube> create(cube_view v, uint16_t nbands = 1, double fill = 1.0) {
         std::shared_ptr<dummy_cube> out = std::make_shared<dummy_cube>(v, nbands, fill);
         return out;
     }
 
    public:
-    dummy_cube(cube_view v, uint16_t nbands = 1, double fill = 1.0) : cube(std::make_shared<cube_view>(v)), _fill(fill) {
+    dummy_cube(cube_view v, uint16_t nbands = 1, double fill = 1.0) : cube(std::make_shared<cube_view>(v)),
+                                                                      _fill(fill) {
         for (uint16_t ib = 0; ib < nbands; ++ib) {
             band b("band" + std::to_string(ib + 1));
             b.scale = 1.0;
@@ -80,5 +83,6 @@ class dummy_cube : public cube {
         _st_ref->dt(stref->dt());
     }
 };
+}  // namespace gdalcubes
 
 #endif  //DUMMY_H

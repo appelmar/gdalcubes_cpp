@@ -19,6 +19,8 @@
 
 #include <chrono>
 
+namespace gdalcubes {
+
 /**
  * A simple class to measure real elapsed time with high resolution.
  */
@@ -52,4 +54,6 @@ class timer {
     std::chrono::high_resolution_clock::time_point t;
 };
 
-#endif  //GDAL_CUBES_TIMER_H
+}  // namespace gdalcubes
+
+#endif  //TIMER_H

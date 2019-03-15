@@ -21,6 +21,8 @@
 #include "build_info.h"
 #include "filesystem.h"
 
+namespace gdalcubes {
+
 void cube::write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p) {
     if (!filesystem::exists(dir)) {
         filesystem::mkdir_recursive(dir);
@@ -328,3 +330,5 @@ void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
         workers[it].join();
     }
 }
+
+}  // namespace gdalcubes

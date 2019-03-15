@@ -19,6 +19,8 @@
 
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief A data cube that streams data from another data cube to stdin of an external program and captures stdout as result
  *
@@ -140,5 +142,7 @@ class stream_cube : public cube {
         if (!_keep_input_nx) _st_ref->nx() = count_chunks_x();
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  //STREAM_H

@@ -16,6 +16,8 @@
 
 #include "reduce.h"
 
+namespace gdalcubes {
+
 struct reducer {
     virtual ~reducer() {}
 
@@ -449,3 +451,5 @@ void reduce_cube::write_gdal_image(std::string path, std::string format, std::ve
     p->apply(shared_from_this(), f);
     prg->finalize();
 }
+
+}  // namespace gdalcubes

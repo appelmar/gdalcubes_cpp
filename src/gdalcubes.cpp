@@ -30,6 +30,8 @@
 #include "swarm.h"
 #include "utils.h"
 
+using namespace gdalcubes;
+
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
 

@@ -19,8 +19,9 @@
 
 #include "cube.h"
 
+namespace gdalcubes {
+
 // TODO: add custom reducer function
-// TODO: add kernel reducer function
 // TODO: add boundary fill options (e.g. NA, wrap, repeat, mirror, ...)
 /**
  * @brief A data cube that applies reducer functions over selected bands of a data cube over time
@@ -29,37 +30,43 @@
 class window_time_cube : public cube {
    public:
     /**
-     * @brief Create a data cube that applies a reducer function on a given input data cube over time
-     * @note This static creation method should preferably be used instead of the constructors as
-     * the constructors will not set connections between cubes properly.
-     * @param in input data cube
-     * @param reducer reducer function
-     * @return a shared pointer to the created data cube instance
-     */
-    static std::shared_ptr<window_time_cube> create(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands, uint16_t win_size_l, uint16_t win_size_r) {
-        std::shared_ptr<window_time_cube> out = std::make_shared<window_time_cube>(in, reducer_bands, win_size_l, win_size_r);
+         * @brief Create a data cube that applies a reducer function on a given input data cube over time
+         * @note This static creation method should preferably be used instead of the constructors as
+         * the constructors will not set connections between cubes properly.
+         * @param in input data cube
+         * @param reducer reducer function
+         * @return a shared pointer to the created data cube instance
+         */
+    static std::shared_ptr<window_time_cube>
+    create(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands,
+           uint16_t win_size_l, uint16_t win_size_r) {
+        std::shared_ptr<window_time_cube> out = std::make_shared<window_time_cube>(in, reducer_bands, win_size_l,
+                                                                                   win_size_r);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
     }
 
     /**
-    * @brief Create a data cube that applies a convolution kernel on a given input data cube over time
-    * @note This static creation method should preferably be used instead of the constructors as
-    * the constructors will not set connections between cubes properly.
-    * @param in input data cube
-    * @param reducer reducer function
-    * @return a shared pointer to the created data cube instance
-    */
-    static std::shared_ptr<window_time_cube> create(std::shared_ptr<cube> in, std::vector<double> kernel, uint16_t win_size_l, uint16_t win_size_r) {
-        std::shared_ptr<window_time_cube> out = std::make_shared<window_time_cube>(in, kernel, win_size_l, win_size_r);
+        * @brief Create a data cube that applies a convolution kernel on a given input data cube over time
+        * @note This static creation method should preferably be used instead of the constructors as
+        * the constructors will not set connections between cubes properly.
+        * @param in input data cube
+        * @param reducer reducer function
+        * @return a shared pointer to the created data cube instance
+        */
+    static std::shared_ptr<window_time_cube>
+    create(std::shared_ptr<cube> in, std::vector<double> kernel, uint16_t win_size_l, uint16_t win_size_r) {
+        std::shared_ptr<window_time_cube> out = std::make_shared<window_time_cube>(in, kernel, win_size_l,
+                                                                                   win_size_r);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
     }
 
    public:
-    window_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands, uint16_t win_size_l, uint16_t win_size_r) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel() {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    window_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands,
+                     uint16_t win_size_l, uint16_t win_size_r) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel() {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -78,14 +85,16 @@ class window_time_cube : public cube {
         }
     }
 
-    window_time_cube(std::shared_ptr<cube> in, std::vector<double> kernel, uint16_t win_size_l, uint16_t win_size_r) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel(kernel) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    window_time_cube(std::shared_ptr<cube> in, std::vector<double> kernel, uint16_t win_size_l, uint16_t win_size_r)
+        : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel(kernel) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
 
         if (!win_size_l + (uint32_t)1 + win_size_r == kernel.size()) {
             GCBS_ERROR("kernel size does not match window size");
-            throw std::string("ERROR in window_time_cube::window_time_cube(): Kernel size does not match window size");
+            throw std::string(
+                "ERROR in window_time_cube::window_time_cube(): Kernel size does not match window size");
         }
 
         for (uint16_t i = 0; i < in->bands().count(); ++i) {
@@ -122,7 +131,7 @@ class window_time_cube : public cube {
     std::vector<std::pair<std::string, std::string>> _reducer_bands;
     uint16_t _win_size_l;
     uint16_t _win_size_r;
-    std::vector<std::function<double(double* buf, uint16_t n)>> _f;
+    std::vector<std::function<double(double *buf, uint16_t n)>> _f;
     std::vector<uint16_t> _band_idx_in;
     std::vector<double> _kernel;
 
@@ -137,8 +146,11 @@ class window_time_cube : public cube {
         _st_ref->dt(stref->dt());
     }
 
-    std::function<double(double* buf, uint16_t n)> get_default_reducer_by_name(std::string name);
-    std::function<double(double* buf, uint16_t n)> get_kernel_reducer(std::vector<double> kernel);
+    std::function<double(double *buf, uint16_t n)> get_default_reducer_by_name(std::string name);
+
+    std::function<double(double *buf, uint16_t n)> get_kernel_reducer(std::vector<double> kernel);
 };
+
+}  // namespace gdalcubes
 
 #endif  // WINDOW_TIME_H

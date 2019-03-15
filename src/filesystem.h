@@ -29,6 +29,8 @@
 #define DIR_SEPARATOR "/"
 #endif
 
+namespace gdalcubes {
+
 /**
  * @brief A simple wrapper class around GDAL's CPL and VSI interfaces for simple filesystem operations
  */
@@ -187,5 +189,7 @@ class filesystem {
         return s.st_size;
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  //FILESYSTEM_H

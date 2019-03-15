@@ -23,6 +23,8 @@
 #include "collection_format.h"
 #include "datetime.h"
 
+namespace gdalcubes {
+
 template <typename Ta>
 struct bounds_2d {
     Ta left, bottom, top, right;
@@ -348,5 +350,7 @@ class image_collection {
 
     static std::string sqlite_as_string(sqlite3_stmt* stmt, uint16_t col);
 };
+
+}  // namespace gdalcubes
 
 #endif  //IMAGE_COLLECTION_H

@@ -18,6 +18,8 @@
 
 #include "external/tinyexpr/tinyexpr.h"
 
+namespace gdalcubes {
+
 std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
 
@@ -131,3 +133,5 @@ bool apply_pixel_cube::parse_expressions() {
     }
     return res;
 }
+
+}  // namespace gdalcubes

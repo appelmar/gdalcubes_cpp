@@ -19,6 +19,8 @@
 
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief A data cube that combines the bands of two identically-shaped data cubes
  */
@@ -127,5 +129,7 @@ class join_bands_cube : public cube {
         _st_ref->dt(stref->dt());
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  // JOIN_BANDS_H

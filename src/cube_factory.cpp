@@ -29,6 +29,8 @@
 #include "stream.h"
 #include "window_time.h"
 
+namespace gdalcubes {
+
 cube_factory* cube_factory::_instance = 0;
 
 std::shared_ptr<cube> cube_factory::create_from_json(nlohmann::json j) {
@@ -149,3 +151,5 @@ void cube_factory::register_default() {
             return x;
         }));
 }
+
+}  // namespace gdalcubes

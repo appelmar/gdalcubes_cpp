@@ -34,6 +34,8 @@
 #include "error.h"
 #include "external/date.h"
 
+namespace gdalcubes {
+
 enum class datetime_unit {
     SECOND = 0,
     MINUTE = 1,
@@ -553,5 +555,7 @@ class datetime {
         return "%Y-%m-%dT%H:%M:%S";
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  //DATETIME_H

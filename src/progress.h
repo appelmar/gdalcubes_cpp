@@ -21,6 +21,8 @@
 #include "timer.h"
 #include "utils.h"
 
+namespace gdalcubes {
+
 /**
  * @brief Virtual base class for progress updates of long running processes
 */
@@ -153,5 +155,7 @@ struct progress_simple_stdout_with_time : public progress {
     std::mutex _m;
     double _p;
 };
+
+}  // namespace gdalcubes
 
 #endif  //PROGRESS_H

@@ -1,7 +1,7 @@
 
 #include "../external/catch.hpp"
 #include "../gdalcubes.h"
-
+using namespace gdalcubes;
 /**
  * THIS TEST CASE DEPENDS ON LOCAL FILES AND IS COMMENTED OUT.
  */

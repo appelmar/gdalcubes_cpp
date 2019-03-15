@@ -16,6 +16,8 @@
 
 #include "join_bands.h"
 
+namespace gdalcubes {
+
 std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("join_bands_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
@@ -40,3 +42,5 @@ std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
 
     return out;
 }
+
+}  // namespace gdalcubes

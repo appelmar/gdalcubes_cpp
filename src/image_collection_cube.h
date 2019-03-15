@@ -19,6 +19,8 @@
 #include <unordered_set>
 #include "cube.h"
 
+namespace gdalcubes {
+
 struct image_mask {
     virtual void apply(double *mask_buf, double *pixel_buf, uint32_t nb, uint32_t ny, uint32_t nx) = 0;
     virtual nlohmann::json as_json() = 0;
@@ -302,5 +304,7 @@ class image_collection_cube : public cube {
     std::string _mask_band;
     std::vector<std::string> _warp_args;
 };
+
+}  // namespace gdalcubes
 
 #endif  //IMAGE_COLLECTION_CUBE_H

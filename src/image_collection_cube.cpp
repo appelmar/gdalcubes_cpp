@@ -21,6 +21,8 @@
 #include "error.h"
 #include "utils.h"
 
+namespace gdalcubes {
+
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
 image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
@@ -698,3 +700,5 @@ void image_collection_cube::select_bands(std::vector<uint16_t> bands) {
     }
     _bands = sel;
 }
+
+}  // namespace gdalcubes

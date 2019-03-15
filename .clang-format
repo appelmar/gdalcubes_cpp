@@ -5,4 +5,4 @@ ColumnLimit: 0
 AlignTrailingComments: true
 #FixNamespaceComments: true # not yet supported
 ReflowComments: true
-NamespaceIndentation: All
+NamespaceIndentation: None

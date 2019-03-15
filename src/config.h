@@ -24,6 +24,9 @@
 #include "error.h"
 #include "filesystem.h"
 #include "progress.h"
+
+namespace gdalcubes {
+
 // forward declarations
 class chunk_processor;
 class chunk_processor_singlethread;
@@ -273,5 +276,7 @@ class config {
         }
     };
 };
+
+}  // namespace gdalcubes
 
 #endif  //CONFIG_H

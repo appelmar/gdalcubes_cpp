@@ -22,6 +22,8 @@
 #include "filesystem.h"
 #include "utils.h"
 
+namespace gdalcubes {
+
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
     if (sqlite3_open_v2("", &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL) != SQLITE_OK) {
         std::string msg = "ERROR in image_collection::create(): cannot create temporary image collection file.";
@@ -733,3 +735,5 @@ std::string image_collection::sqlite_as_string(sqlite3_stmt* stmt, uint16_t col)
         return std::string(reinterpret_cast<const char*>(a));
     }
 }
+
+}  // namespace gdalcubes

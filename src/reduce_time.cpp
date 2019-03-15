@@ -16,6 +16,8 @@
 
 #include "reduce_time.h"
 
+namespace gdalcubes {
+
 struct reducer_singleband {
     virtual ~reducer_singleband() {}
 
@@ -598,3 +600,5 @@ void reduce_time_cube::write_gdal_image(std::string path, std::string format, st
     p->apply(shared_from_this(), f);
     prg->finalize();
 }
+
+}  // namespace gdalcubes

@@ -17,6 +17,8 @@
 #include "view.h"
 #include "filesystem.h"
 
+namespace gdalcubes {
+
 cube_view cube_view::read(nlohmann::json j) {
     cube_view v;
 
@@ -142,3 +144,5 @@ std::string cube_view::write_json_string() {
     o << j;
     return o.str();
 }
+
+}  // namespace gdalcubes

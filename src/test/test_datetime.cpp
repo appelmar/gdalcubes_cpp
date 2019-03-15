@@ -17,6 +17,9 @@
 #include <string>
 #include "../datetime.h"
 #include "../external/catch.hpp"
+
+using namespace gdalcubes;
+
 TEST_CASE("Deriving datetime unit from string", "[datetime]") {
     REQUIRE(datetime::from_string("2002-03-04 12:13:14").unit() == datetime_unit::SECOND);
     REQUIRE(datetime::from_string("2002-03-04 12:13").unit() == datetime_unit::MINUTE);

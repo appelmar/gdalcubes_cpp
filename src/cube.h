@@ -22,6 +22,8 @@
 #include "config.h"
 #include "view.h"
 
+namespace gdalcubes {
+
 typedef std::array<uint32_t, 4> cube_coordinate_btyx;
 typedef std::array<uint32_t, 3> cube_coordinate_tyx;
 typedef std::array<uint32_t, 4> cube_size_btyx;
@@ -34,6 +36,7 @@ typedef std::array<uint32_t, 3> chunk_size_tyx;
 typedef uint32_t chunkid_t;
 
 class cube;
+
 class chunk_data;
 
 /**
@@ -49,7 +52,8 @@ class chunk_processor {
      * @param f function to be applied over all chunks of c, the function gets the chunk_id, the actual chunk data, and a mutex object as input. The latter is only needed
      * for parallel chunk processing, e.g., for synchronous file writing.
      */
-    virtual void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) = 0;
+    virtual void
+    apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) = 0;
 };
 
 /**
@@ -60,7 +64,8 @@ class chunk_processor_singlethread : public chunk_processor {
     /**
      * @copydoc chunk_processor::apply
      */
-    void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) override;
+    void apply(std::shared_ptr<cube> c,
+               std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) override;
 };
 
 /**
@@ -77,7 +82,8 @@ class chunk_processor_multithread : public chunk_processor {
     /**
     * @copydoc chunk_processor::apply
     */
-    void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex&)> f) override;
+    void apply(std::shared_ptr<cube> c,
+               std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) override;
 
     /**
      * Query the number of threads to be used in parallel chunk processing
@@ -94,6 +100,7 @@ class chunk_processor_multithread : public chunk_processor {
  */
 struct band {
     band(std::string name) : name(name), no_data_value(std::to_string(NAN)), offset(0), scale(1), unit(""), type("float64") {}
+
     std::string name;
     std::string no_data_value;
     double offset;
@@ -221,7 +228,7 @@ class chunk_data {
      * remove / add vector elements if you don't know exactly what you do.
      * @return void pointer pointing to the data buffer
      */
-    inline void* buf() { return _buf; }
+    inline void *buf() { return _buf; }
 
     /**
      * @brief (Re)set the raw buffer where the data is stored in memory
@@ -231,7 +238,7 @@ class chunk_data {
      *
      * @param b new buffer object, this class takes the ownership, i.e., eventually std::frees memory automatically in the destructor.
      */
-    inline void buf(void* b) {
+    inline void buf(void *b) {
         if (_buf && _size[0] * _size[1] * _size[2] * _size[3] > 0) std::free(_buf);
         _buf = b;
     }
@@ -254,7 +261,7 @@ class chunk_data {
     inline void size(coords_nd<uint32_t, 4> s) { _size = s; }
 
    private:
-    void* _buf;
+    void *_buf;
     chunk_size_btyx _size;
 };
 
@@ -630,7 +637,8 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param dir directory where to store the files
      * @param p chunk processor instance, defaults to the global configuration
      */
-    void write_gtiff_directory(std::string dir, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_gtiff_directory(std::string dir,
+                               std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Export a cube to a single NetCDF file
@@ -638,7 +646,8 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param compression_level deflate level, 0=no compression, 1= fast, 9 = small
      * @param p chunk processor instance, defaults to the global configuration
      */
-    void write_netcdf_file(std::string path, uint8_t compression_level = 0, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_netcdf_file(std::string path, uint8_t compression_level = 0,
+                           std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Get the cube's bands
@@ -710,7 +719,8 @@ class cube : public std::enable_shared_from_this<cube> {
     * @param stref new spatiotemporal reference / data cube view
     * @param scet set of cubes instances which have already been processed to avoid cyclic calls
     */
-    void update_st_reference_recursion(std::shared_ptr<cube_st_reference> stref, std::set<std::shared_ptr<cube>>& cset) {
+    void
+    update_st_reference_recursion(std::shared_ptr<cube_st_reference> stref, std::set<std::shared_ptr<cube>> &cset) {
         if (cset.count(shared_from_this()) > 0) return;
         this->set_st_reference(stref);
         cset.insert(shared_from_this());
@@ -727,5 +737,7 @@ class cube : public std::enable_shared_from_this<cube> {
         }
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  //CUBE_H

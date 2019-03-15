@@ -26,6 +26,8 @@
 #include "external/json.hpp"
 #include "filesystem.h"
 
+namespace gdalcubes {
+
 /**
  * The image collection format describes rules how image collections can be build from a simple list of files / URLs.
  * It defines
@@ -129,5 +131,7 @@ class collection_format {
    private:
     nlohmann::json _j;
 };
+
+}  // namespace gdalcubes
 
 #endif  //COLLECTION_FORMAT_H

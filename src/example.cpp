@@ -25,7 +25,7 @@
 #include "collection_format.h"
 #include "cube_factory.h"
 #include "error.h"
-#include "filter_predicate.h"
+#include "filter_pixel.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "reduce.h"
@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
         //        {
         //            auto c = image_collection_cube::create("test.db", v);
         //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-        //            auto cf = filter_predicate_cube::create(cb, "B04 < 1000");
+        //            auto cf = filter_pixel_cube::create(cb, "B04 < 1000");
         //            auto cr = reduce_time_cube::create(cf, {{"max", "B04"}, {"count", "B04"}});
         //            cr->write_gdal_image("test_filter_predicate_2.tif");
         //        }

@@ -14,11 +14,11 @@
    limitations under the License.
 */
 
-#include "filter_predicate.h"
+#include "filter_pixel.h"
 #include "external/tinyexpr/tinyexpr.h"
 
-std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
-    GCBS_TRACE("filter_predicate_cube::read_chunk(" + std::to_string(id) + ")");
+std::shared_ptr<chunk_data> filter_pixel_cube::read_chunk(chunkid_t id) {
+    GCBS_TRACE("filter_pixel_cube::read_chunk(" + std::to_string(id) + ")");
 
     if (id < 0 || id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
@@ -83,7 +83,7 @@ std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
-bool filter_predicate_cube::parse_predicate() {
+bool filter_pixel_cube::parse_predicate() {
     bool res = true;
     std::vector<double> dummy_values;
     std::vector<te_variable> vars;

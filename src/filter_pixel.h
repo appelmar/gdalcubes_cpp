@@ -14,8 +14,8 @@
    limitations under the License.
 */
 
-#ifndef FILTER_PREDICATE_H
-#define FILTER_PREDICATE_H
+#ifndef FILTER_PIXEL_H
+#define FILTER_PIXEL_H
 
 #include <algorithm>
 #include <string>
@@ -30,7 +30,7 @@ struct te_variable;  // forward declaration for add_default_functions
  * Please notice that the functionality of these libraries (i.e. the amount of functions they support) may vary. tinyexpr
  * seems to work only with lower case symbols, expressions and band names are automatically converted to lower case then.
  */
-class filter_predicate_cube : public cube {
+class filter_pixel_cube : public cube {
    public:
     /**
      * @brief Create a data cube that applies arithmetic expressions on pixels of an input data cube
@@ -41,8 +41,8 @@ class filter_predicate_cube : public cube {
      * @param band_names specify names for the bands of the resulting cube, if empty, "band1", "band2", "band3", etc. will be used as names
      * @return a shared pointer to the created data cube instance
      */
-    static std::shared_ptr<filter_predicate_cube> create(std::shared_ptr<cube> in, std::string predicate) {
-        std::shared_ptr<filter_predicate_cube> out = std::make_shared<filter_predicate_cube>(in, predicate);
+    static std::shared_ptr<filter_pixel_cube> create(std::shared_ptr<cube> in, std::string predicate) {
+        std::shared_ptr<filter_pixel_cube> out = std::make_shared<filter_pixel_cube>(in, predicate);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
@@ -54,7 +54,7 @@ class filter_predicate_cube : public cube {
      * @param expr vector of string expressions, each expression will result in a new band in the resulting cube where values are derived from the input cube according to the specific expression
      * @param band_names specify names for the bands of the resulting cube, if empty, "band1", "band2", "band3", etc. will be used as names
      */
-    filter_predicate_cube(std::shared_ptr<cube> in, std::string predicate) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _pred(predicate) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    filter_pixel_cube(std::shared_ptr<cube> in, std::string predicate) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _pred(predicate) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -72,18 +72,18 @@ class filter_predicate_cube : public cube {
         // be negligible compared to the actual evaluation
         if (!parse_predicate()) {
             GCBS_ERROR("Invalid predicate");
-            throw std::string("ERROR in filter_predicate_cube::filter_predicate_cube(): Invalid predicate");
+            throw std::string("ERROR in filter_pixel_cube::filter_pixel_cube(): Invalid predicate");
         }
     }
 
    public:
-    ~filter_predicate_cube() {}
+    ~filter_pixel_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     nlohmann::json make_constructible_json() override {
         nlohmann::json out;
-        out["cube_type"] = "filter_predicate";
+        out["cube_type"] = "filter_pixel";
         out["predicate"] = _pred;
         out["in_cube"] = _in_cube->make_constructible_json();
         return out;

@@ -24,7 +24,7 @@
 #include "config.h"
 #include "cube.h"
 #include "dummy.h"
-#include "filter_predicate.h"
+#include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
 #include "progress.h"

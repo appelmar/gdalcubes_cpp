@@ -20,6 +20,7 @@
 #include "dummy.h"
 #include "external/json.hpp"
 #include "filesystem.h"
+#include "fill_time.h"
 #include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
@@ -87,6 +88,12 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "filter_pixel", [](nlohmann::json& j) {
             auto x = filter_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["predicate"].get<std::string>());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "fill_time", [](nlohmann::json& j) {
+            auto x = fill_time_cube::create(instance()->create_from_json(j["in_cube"]), j["method"].get<std::string>());
             return x;
         }));
 

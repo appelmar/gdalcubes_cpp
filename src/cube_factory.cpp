@@ -134,9 +134,9 @@ void cube_factory::register_default() {
                 } else {
                     std::string mask_type = j["mask"]["mask_type"];
                     if (mask_type == "value_mask") {
-                        x->set_mask(j["mask_band"], std::make_shared<value_mask>(j["mask"]["values"].get<std::unordered_set<double>>(), j["mask"]["invert"].get<bool>()));
+                        x->set_mask(j["mask_band"], std::make_shared<value_mask>(j["mask"]["values"].get<std::unordered_set<double>>(), j["mask"]["invert"].get<bool>(), j["mask"]["bits"].get<std::vector<uint8_t>>()));
                     } else if (mask_type == "range_mask") {
-                        x->set_mask(j["mask_band"], std::make_shared<range_mask>(j["mask"]["min"].get<double>(), j["mask"]["max"].get<double>(), j["mask"]["invert"].get<bool>()));
+                        x->set_mask(j["mask_band"], std::make_shared<range_mask>(j["mask"]["min"].get<double>(), j["mask"]["max"].get<double>(), j["mask"]["invert"].get<bool>(), j["mask"]["bits"].get<std::vector<uint8_t>>()));
                     } else {
                         GCBS_WARN("ERROR in cube_generators[\"image_collection\"](): invalid mask type, mask will be ignored");
                     }

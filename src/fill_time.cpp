@@ -26,13 +26,11 @@ std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {
     std::unordered_map<chunkid_t, std::shared_ptr<chunk_data>> in_chunks;
     in_chunks.insert(std::pair<chunkid_t, std::shared_ptr<chunk_data>>(id, _in_cube->read_chunk(id)));
 
-
-    if (in_chunks[id]->empty()) { // if input chunk is empty, fill with NANs
+    if (in_chunks[id]->empty()) {  // if input chunk is empty, fill with NANs
         in_chunks[id]->size(size_btyx);
         in_chunks[id]->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
         std::fill((double*)(in_chunks[id]->buf()), ((double*)(in_chunks[id]->buf())) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], NAN);
     }
-
 
     // iterate over all pixel time series
     for (uint32_t ixy = 0; ixy < size_btyx[2] * size_btyx[3]; ++ixy) {
@@ -64,8 +62,8 @@ std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {
                         chunk_size_tyx cs = _in_cube->chunk_size(prev_chunk);
                         while (prev_t >= 0 && !found) {
                             // if not nan break both loops
-                            if (!std::isnan(((double *) in_chunks[prev_chunk]->buf())[ib * cs[0] * cs[1] * cs[2] +
-                                                                                      prev_t * cs[1] * cs[2] + ixy])) {
+                            if (!std::isnan(((double*)in_chunks[prev_chunk]->buf())[ib * cs[0] * cs[1] * cs[2] +
+                                                                                    prev_t * cs[1] * cs[2] + ixy])) {
                                 found = true;
                             } else {
                                 --prev_t;
@@ -91,10 +89,10 @@ std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {
                     }
                     if (!in_chunks[next_chunk]->empty()) {
                         chunk_size_tyx cs = _in_cube->chunk_size(next_chunk);
-                        while (next_t < (int32_t) cs[0] && !found) {
+                        while (next_t < (int32_t)cs[0] && !found) {
                             // if not nan break both loops
-                            if (!std::isnan(((double *) in_chunks[next_chunk]->buf())[ib * cs[0] * cs[1] * cs[2] +
-                                                                                      next_t * cs[1] * cs[2] + ixy])) {
+                            if (!std::isnan(((double*)in_chunks[next_chunk]->buf())[ib * cs[0] * cs[1] * cs[2] +
+                                                                                    next_t * cs[1] * cs[2] + ixy])) {
                                 found = true;
                             } else {
                                 ++next_t;
@@ -173,11 +171,11 @@ std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {
                         if (!in_chunks[next_chunk]->empty()) {
                             chunk_size_tyx cs = _in_cube->chunk_size(next_chunk);
 
-                            while (next_t < (int32_t) cs[0] && !found) {
+                            while (next_t < (int32_t)cs[0] && !found) {
                                 // if not nan break both loops
-                                if (!std::isnan(((double *) in_chunks[next_chunk]->buf())[ib * cs[0] * cs[1] * cs[2] +
-                                                                                          next_t * cs[1] * cs[2] +
-                                                                                          ixy])) {
+                                if (!std::isnan(((double*)in_chunks[next_chunk]->buf())[ib * cs[0] * cs[1] * cs[2] +
+                                                                                        next_t * cs[1] * cs[2] +
+                                                                                        ixy])) {
                                     found = true;
                                 } else {
                                     ++next_t;

@@ -142,6 +142,10 @@ std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {
                         } else {
                             *res = v0 * ((double)next_dist / ((double)prev_dist + (double)next_dist)) + v1 * ((double)prev_dist / ((double)prev_dist + (double)next_dist));
                         }
+                    } else if (_method == "repeat_prec") {
+                        *res = v0;
+                    } else if (_method == "repeat_succ") {
+                        *res = v1;
                     } else {  // nearest
                         if (std::isnan(v0) && std::isnan(v1)) {
                             *res = NAN;

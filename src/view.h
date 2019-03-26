@@ -36,7 +36,9 @@ struct aggregation {
         AGG_MEAN,
         AGG_MEDIAN,
         AGG_FIRST,
-        AGG_LAST
+        AGG_LAST,
+        AGG_IMAGE_COUNT,
+        AGG_VALUE_COUNT
     };
 
     static aggregation_type from_string(std::string s) {
@@ -55,6 +57,10 @@ struct aggregation {
             return aggregation_type::AGG_FIRST;
         } else if (s == "last") {
             return aggregation_type::AGG_LAST;
+        } else if (s == "count_images") {
+            return aggregation_type::AGG_IMAGE_COUNT;
+        } else if (s == "count_values") {
+            return aggregation_type::AGG_VALUE_COUNT;
         }
         return aggregation_type::AGG_NONE;
     }
@@ -75,6 +81,10 @@ struct aggregation {
                 return "first";
             case aggregation_type::AGG_LAST:
                 return "last";
+            case aggregation_type::AGG_IMAGE_COUNT:
+                return "count_images";
+            case aggregation_type::AGG_VALUE_COUNT:
+                return "count_values";
             default:
                 return "none";
         }

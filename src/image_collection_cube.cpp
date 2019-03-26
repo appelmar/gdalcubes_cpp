@@ -185,6 +185,53 @@ struct aggregation_state_first : public aggregation_state {
     void finalize(void *buf) override {}
 };
 
+struct aggregation_state_count_values : public aggregation_state {
+    aggregation_state_count_values(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
+
+    void init() override {}
+
+    void update(void *chunk_buf, void *img_buf, uint32_t t) override {
+        for (uint32_t ib = 0; ib < _size_btyx[0]; ++ib) {
+            uint32_t chunk_buf_offset =
+                ib * _size_btyx[1] * _size_btyx[2] * _size_btyx[3] + t * _size_btyx[2] * _size_btyx[3];
+            uint32_t img_buf_offset = ib * _size_btyx[2] * _size_btyx[3];
+            // iterate over all pixels
+            for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
+                if (std::isnan(((double *)chunk_buf)[chunk_buf_offset + i])) {
+                    ((double *)chunk_buf)[chunk_buf_offset + i] = 0;
+                }
+                if (std::isnan(((double *)img_buf)[img_buf_offset + i])) continue;
+                ((double *)chunk_buf)[chunk_buf_offset + i] += 1;
+            }
+        }
+    }
+
+    void finalize(void *buf) override {}
+};
+
+struct aggregation_state_count_images : public aggregation_state {
+    aggregation_state_count_images(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
+
+    void init() override {}
+
+    void update(void *chunk_buf, void *img_buf, uint32_t t) override {
+        for (uint32_t ib = 0; ib < _size_btyx[0]; ++ib) {
+            uint32_t chunk_buf_offset =
+                ib * _size_btyx[1] * _size_btyx[2] * _size_btyx[3] + t * _size_btyx[2] * _size_btyx[3];
+            uint32_t img_buf_offset = ib * _size_btyx[2] * _size_btyx[3];
+            // iterate over all pixels
+            for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
+                if (std::isnan(((double *)chunk_buf)[chunk_buf_offset + i])) {
+                    ((double *)chunk_buf)[chunk_buf_offset + i] = 0;
+                }
+                ((double *)chunk_buf)[chunk_buf_offset + i] += 1;
+            }
+        }
+    }
+
+    void finalize(void *buf) override {}
+};
+
 struct aggregation_state_last : public aggregation_state {
     aggregation_state_last(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx) {}
 
@@ -323,6 +370,10 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         agg = new aggregation_state_last(size_btyx);
     } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_MEDIAN) {
         agg = new aggregation_state_median(size_btyx);
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_IMAGE_COUNT) {
+        agg = new aggregation_state_count_images(size_btyx);
+    } else if (view()->aggregation_method() == aggregation::aggregation_type::AGG_VALUE_COUNT) {
+        agg = new aggregation_state_count_values(size_btyx);
     } else
         agg = new aggregation_state_none(size_btyx);
 

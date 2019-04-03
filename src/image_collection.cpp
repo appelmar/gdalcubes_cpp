@@ -16,6 +16,7 @@
 
 #include "image_collection.h"
 
+#include <gdalwarper.h>
 #include <regex>
 #include "config.h"
 #include "external/date.h"
@@ -205,10 +206,91 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         char* proj4;
         if (dataset->GetGeoTransform(affine_in) != CE_None) {
             // No affine transformation, maybe GCPs?
-            GDALClose((GDALDatasetH)dataset);
-            if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot derive affine transformation for '" + *it + "'. GCPs or unreferenced images are currently not supported.");
-            GCBS_WARN("Failed to derive affine transformation from " + *it);
-            continue;
+            if (dataset->GetGCPCount() > 0) {
+                dataset->GetGCPProjection();  // TODO replace with GetGCPSpatialRef if available (GDAL > 2.5)
+
+                // First try, find GCPs for corner pixels
+                double xmin = std::numeric_limits<double>::infinity();
+                double ymin = std::numeric_limits<double>::infinity();
+                double xmax = -std::numeric_limits<double>::infinity();
+                double ymax = -std::numeric_limits<double>::infinity();
+                bool x1 = false, x2 = false, x3 = false, x4 = false;
+
+                for (int32_t igcp = 0; igcp < dataset->GetGCPCount(); ++igcp) {
+                    GDAL_GCP gcp = dataset->GetGCPs()[igcp];
+                    if (gcp.dfGCPLine == 0 && gcp.dfGCPPixel == 0) {
+                        x1 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    } else if (gcp.dfGCPLine == dataset->GetRasterYSize() - 1 && gcp.dfGCPPixel == 0) {
+                        x2 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    } else if (gcp.dfGCPLine == 0 && gcp.dfGCPPixel == dataset->GetRasterXSize() - 1) {
+                        x3 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    } else if (gcp.dfGCPLine == dataset->GetRasterYSize() - 1 && gcp.dfGCPPixel == dataset->GetRasterXSize() - 1) {
+                        x4 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    }
+                }
+
+                if (x1 && x2 && x3 && x4) {
+                    // use extent from corner GCPS
+                    bbox.left = xmin;
+                    bbox.right = xmax;
+                    bbox.top = ymax;
+                    bbox.bottom = ymin;
+                    OGRSpatialReference srs_in;
+                    srs_in.SetFromUserInput(dataset->GetGCPProjection());
+                    srs_in.exportToProj4(&proj4);
+                    bbox.transform(proj4, "EPSG:4326");
+                } else {
+                    //approximate extent based on gdalwarp
+                    double approx_geo_transform[6];
+                    int nx = 0, ny = 0;
+                    double extent[4];
+                    OGRSpatialReference srs_in;
+                    srs_in.SetFromUserInput(dataset->GetGCPProjection());
+                    srs_in.exportToProj4(&proj4);
+
+                    CPLStringList transform_args;
+                    transform_args.AddString(("SRC_SRS=" + std::string(proj4)).c_str());
+                    transform_args.AddString("DST_SRS=EPSG:4326");
+                    transform_args.AddString("GCPS_OK=TRUE");
+
+                    // TODO: add further transformation options if needed
+                    void* transform = GDALCreateGenImgProjTransformer2(dataset, NULL, transform_args.List());
+                    if (GDALSuggestedWarpOutput2(dataset,
+                                                 GDALGenImgProjTransform, transform,
+                                                 approx_geo_transform, &nx, &ny, extent, 0) != CE_None) {
+                        if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot derive extent for '" + *it + "'.");
+                        GCBS_WARN("Failed to derive spatial extent from " + *it);
+                    }
+
+                    // TODO: error handling
+                    bbox.left = extent[0];
+                    bbox.right = extent[2];
+                    bbox.top = extent[3];
+                    bbox.bottom = extent[1];
+                }
+
+            } else {
+                GDALClose((GDALDatasetH)dataset);
+                if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot derive spatial extent for '" + *it + "'.");
+                GCBS_WARN("Failed to derive spatial extent from " + *it);
+                continue;
+            }
         } else {
             bbox.left = affine_in[0];
             bbox.right = affine_in[0] + affine_in[1] * dataset->GetRasterXSize() + affine_in[2] * dataset->GetRasterYSize();

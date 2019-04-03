@@ -218,7 +218,7 @@ struct aggregation_state_count_images : public aggregation_state {
         for (uint32_t ib = 0; ib < _size_btyx[0]; ++ib) {
             uint32_t chunk_buf_offset =
                 ib * _size_btyx[1] * _size_btyx[2] * _size_btyx[3] + t * _size_btyx[2] * _size_btyx[3];
-            uint32_t img_buf_offset = ib * _size_btyx[2] * _size_btyx[3];
+            //uint32_t img_buf_offset = ib * _size_btyx[2] * _size_btyx[3];
             // iterate over all pixels
             for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
                 if (std::isnan(((double *)chunk_buf)[chunk_buf_offset + i])) {

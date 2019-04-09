@@ -76,30 +76,36 @@ endif ()
 
 
 # find libcurl
-find_path(CURL_INCLUDEDIR "curl.h" HINTS $ENV{CURL_INCLUDEDIR} PATH_SUFFIXES curl NO_DEFAULT_PATH)
-find_path(CURL_INCLUDEDIR "curl.h" HINTS $ENV{CURL_INCLUDEDIR} PATH_SUFFIXES curl)
-if (CURL_INCLUDEDIR-NOTFOUND)
-    message(FATAL_ERROR "libcurl header not found")
-endif ()
+#find_path(CURL_INCLUDEDIR "curl.h" HINTS $ENV{CURL_INCLUDEDIR} PATH_SUFFIXES curl NO_DEFAULT_PATH)
+#find_path(CURL_INCLUDEDIR "curl.h" HINTS $ENV{CURL_INCLUDEDIR} PATH_SUFFIXES curl)
+#if (CURL_INCLUDEDIR-NOTFOUND)
+#    message(FATAL_ERROR "libcurl header not found")
+#endif ()
+#
+#find_library(CURL_LIBRARY NAMES curl curl-dualssl HINTS $ENV{CURL_LIBDIR} NO_DEFAULT_PATH)
+#find_library(CURL_LIBRARY NAMES curl curl-dualssl HINTS $ENV{CURL_LIBDIR})
+#if (NOT CURL_LIBRARY)
+#    message(FATAL_ERROR "libcurl not found!")
+#else ()
+#    message(STATUS "libcurl found at ${CURL_LIBRARY}")
+#endif ()
 
-find_library(CURL_LIBRARY NAMES curl curl-dualssl HINTS $ENV{CURL_LIBDIR} NO_DEFAULT_PATH)
-find_library(CURL_LIBRARY NAMES curl curl-dualssl HINTS $ENV{CURL_LIBDIR})
-if (NOT CURL_LIBRARY)
+find_package(CURL REQUIRED)
+if (NOT CURL_FOUND)
     message(FATAL_ERROR "libcurl not found!")
-else ()
-    message(STATUS "libcurl found at ${CURL_LIBRARY}")
-endif ()
+else()
+    message(STATUS "libcurl found at ${CURL_LIBRARIES}")
+endif()
 
 
 
 
-
-include_directories (${GDAL_INCLUDEDIR} ${CURL_INCLUDEDIR} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
+include_directories (${GDAL_INCLUDEDIR} ${CURL_INCLUDE_DIRS} ${sqlite_INCLUDEDIR} ${NETCDF_INCLUDEDIR})
 
 get_filename_component(LDIR_1  ${NETCDF_LIBRARY} DIRECTORY)
 get_filename_component(LDIR_2  ${SQLITE_LIBRARY} DIRECTORY)
 get_filename_component(LDIR_3  ${GDAL_LIBRARY}  DIRECTORY)
-get_filename_component(LDIR_4  ${CURL_LIBRARY} DIRECTORY)
+get_filename_component(LDIR_4  ${CURL_LIBRARIES} DIRECTORY)
 link_directories(${LDIR_1} ${LDIR_2} ${LDIR_3} ${LDIR_4})
 
 
@@ -137,13 +143,13 @@ list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp)
 add_library(libgdalcubes_static STATIC  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_static PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_static PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_static ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARIES})
 
 
 add_library(libgdalcubes_shared SHARED  ${SOURCE_FILES})
 #set_property(TARGET libgdalcubes_shared PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(libgdalcubes_shared PROPERTIES OUTPUT_NAME "gdalcubes")
-target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARY})
+target_link_libraries(libgdalcubes_shared ${GDAL_LIBRARY} ${SQLITE_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${NETCDF_LIBRARY} ${CURL_LIBRARIES})
 
 
 install(TARGETS libgdalcubes_static libgdalcubes_shared RUNTIME DESTINATION bin LIBRARY DESTINATION lib ARCHIVE DESTINATION lib/static)

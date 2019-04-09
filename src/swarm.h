@@ -17,7 +17,7 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <curl.h>
+#include <curl/curl.h>
 #include "cube.h"
 
 /**

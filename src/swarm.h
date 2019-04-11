@@ -17,7 +17,7 @@
 #ifndef SWARM_H
 #define SWARM_H
 
-#include <curl.h>
+#include <curl/curl.h>
 #include "cube.h"
 
 namespace gdalcubes {

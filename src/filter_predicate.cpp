@@ -20,7 +20,7 @@
 std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("filter_predicate_cube::read_chunk(" + std::to_string(id) + ")");
 
-    if (id < 0 || id >= count_chunks())
+    if (id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
 
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();

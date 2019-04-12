@@ -448,7 +448,7 @@ struct sd_reducer_singleband : public var_reducer_singleband {
 std::shared_ptr<chunk_data> reduce_time_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("reduce_time_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
-    if (id < 0 || id >= count_chunks())
+    if (id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     // If input cube is already "reduced", simply return corresponding input chunk

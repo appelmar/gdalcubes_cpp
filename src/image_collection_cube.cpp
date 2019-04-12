@@ -243,7 +243,7 @@ struct aggregation_state_none : public aggregation_state {
 std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("image_collection_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
-    if (id < 0 || id >= count_chunks()) {
+    if (id >= count_chunks()) {
         // chunk is outside of the cube, we don't need to read anything.
         GCBS_WARN("Chunk id " + std::to_string(id) + " is out of range");
         return out;

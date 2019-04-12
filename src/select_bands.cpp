@@ -18,7 +18,7 @@
 
 std::shared_ptr<chunk_data> select_bands_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("select_bands::read_chunk(" + std::to_string(id) + ")");
-    if (id < 0 || id >= count_chunks())
+    if (id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
 
     // if input cube is image_collection_cube, delegate (since in->select_bands has been called in the cosntructor)

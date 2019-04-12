@@ -334,31 +334,19 @@ class cube : public std::enable_shared_from_this<cube> {
         out_vcoords_high[2] = out_vcoords_low[2] + _chunk_size[2] - 1;
 
         // Shrink to view
-        if (out_vcoords_high[0] < 0)
-            out_vcoords_high[0] = 0;
-        else if (out_vcoords_high[0] >= _st_ref->nt())
+        if (out_vcoords_high[0] >= _st_ref->nt())
             out_vcoords_high[0] = _st_ref->nt() - 1;
-        if (out_vcoords_low[0] < 0)
-            out_vcoords_low[0] = 0;
-        else if (out_vcoords_low[0] >= _st_ref->nt())
+        if (out_vcoords_low[0] >= _st_ref->nt())
             out_vcoords_low[0] = _st_ref->nt() - 1;
 
-        if (out_vcoords_high[1] < 0)
-            out_vcoords_high[1] = 0;
-        else if (out_vcoords_high[1] >= _st_ref->ny())
+        if (out_vcoords_high[1] >= _st_ref->ny())
             out_vcoords_high[1] = _st_ref->ny() - 1;
-        if (out_vcoords_low[1] < 0)
-            out_vcoords_low[1] = 0;
-        else if (out_vcoords_low[1] >= _st_ref->ny())
+        if (out_vcoords_low[1] >= _st_ref->ny())
             out_vcoords_low[1] = _st_ref->ny() - 1;
 
-        if (out_vcoords_high[2] < 0)
-            out_vcoords_high[2] = 0;
-        else if (out_vcoords_high[2] >= _st_ref->nx())
+        if (out_vcoords_high[2] >= _st_ref->nx())
             out_vcoords_high[2] = _st_ref->nx() - 1;
-        if (out_vcoords_low[2] < 0)
-            out_vcoords_low[2] = 0;
-        else if (out_vcoords_low[2] >= _st_ref->nx())
+        if (out_vcoords_low[2] >= _st_ref->nx())
             out_vcoords_low[2] = _st_ref->nx() - 1;
 
         bounds_nd<uint32_t, 3> out;
@@ -399,31 +387,19 @@ class cube : public std::enable_shared_from_this<cube> {
         cumprod *= n;
 
         // Shrink to view
-        if (out_vcoords_high[0] < 0)
-            out_vcoords_high[0] = 0;
-        else if (out_vcoords_high[0] >= _st_ref->nt())
+        if (out_vcoords_high[0] >= _st_ref->nt())
             out_vcoords_high[0] = _st_ref->nt() - 1;
-        if (out_vcoords_low[0] < 0)
-            out_vcoords_low[0] = 0;
-        else if (out_vcoords_low[0] >= _st_ref->nt())
+        if (out_vcoords_low[0] >= _st_ref->nt())
             out_vcoords_low[0] = _st_ref->nt() - 1;
 
-        if (out_vcoords_high[1] < 0)
-            out_vcoords_high[1] = 0;
-        else if (out_vcoords_high[1] >= _st_ref->ny())
+        if (out_vcoords_high[1] >= _st_ref->ny())
             out_vcoords_high[1] = _st_ref->ny() - 1;
-        if (out_vcoords_low[1] < 0)
-            out_vcoords_low[1] = 0;
-        else if (out_vcoords_low[1] >= _st_ref->ny())
+        if (out_vcoords_low[1] >= _st_ref->ny())
             out_vcoords_low[1] = _st_ref->ny() - 1;
 
-        if (out_vcoords_high[2] < 0)
-            out_vcoords_high[2] = 0;
-        else if (out_vcoords_high[2] >= _st_ref->nx())
+        if (out_vcoords_high[2] >= _st_ref->nx())
             out_vcoords_high[2] = _st_ref->nx() - 1;
-        if (out_vcoords_low[2] < 0)
-            out_vcoords_low[2] = 0;
-        else if (out_vcoords_low[2] >= _st_ref->nx())
+        if (out_vcoords_low[2] >= _st_ref->nx())
             out_vcoords_low[2] = _st_ref->nx() - 1;
 
         bounds_nd<uint32_t, 3> out;

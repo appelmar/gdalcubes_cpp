@@ -19,7 +19,7 @@
 std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("join_bands_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
-    if (id < 0 || id >= count_chunks())
+    if (id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);

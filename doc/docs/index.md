@@ -17,7 +17,7 @@ simply links to and indexes existing files / GDAL datasets, i.e. it can also dir
 data in cloud environments with [GDAL virtual file systems](https://www.gdal.org/gdal_virtual_file_systems.html).  
 
 The library is written in C++ and includes a command line interface as well as a package for R. A python package is
-planned for the future. gdalcubes is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
+planned for the future. gdalcubes is licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
 ## Features
 

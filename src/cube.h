@@ -1,17 +1,25 @@
 /*
-   Copyright 2018 Marius Appel <marius.appel@uni-muenster.de>
+    MIT License
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
 
-       http://www.apache.org/licenses/LICENSE-2.0
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
 */
 
 #ifndef CUBE_H
@@ -334,31 +342,19 @@ class cube : public std::enable_shared_from_this<cube> {
         out_vcoords_high[2] = out_vcoords_low[2] + _chunk_size[2] - 1;
 
         // Shrink to view
-        if (out_vcoords_high[0] < 0)
-            out_vcoords_high[0] = 0;
-        else if (out_vcoords_high[0] >= _st_ref->nt())
+        if (out_vcoords_high[0] >= _st_ref->nt())
             out_vcoords_high[0] = _st_ref->nt() - 1;
-        if (out_vcoords_low[0] < 0)
-            out_vcoords_low[0] = 0;
-        else if (out_vcoords_low[0] >= _st_ref->nt())
+        if (out_vcoords_low[0] >= _st_ref->nt())
             out_vcoords_low[0] = _st_ref->nt() - 1;
 
-        if (out_vcoords_high[1] < 0)
-            out_vcoords_high[1] = 0;
-        else if (out_vcoords_high[1] >= _st_ref->ny())
+        if (out_vcoords_high[1] >= _st_ref->ny())
             out_vcoords_high[1] = _st_ref->ny() - 1;
-        if (out_vcoords_low[1] < 0)
-            out_vcoords_low[1] = 0;
-        else if (out_vcoords_low[1] >= _st_ref->ny())
+        if (out_vcoords_low[1] >= _st_ref->ny())
             out_vcoords_low[1] = _st_ref->ny() - 1;
 
-        if (out_vcoords_high[2] < 0)
-            out_vcoords_high[2] = 0;
-        else if (out_vcoords_high[2] >= _st_ref->nx())
+        if (out_vcoords_high[2] >= _st_ref->nx())
             out_vcoords_high[2] = _st_ref->nx() - 1;
-        if (out_vcoords_low[2] < 0)
-            out_vcoords_low[2] = 0;
-        else if (out_vcoords_low[2] >= _st_ref->nx())
+        if (out_vcoords_low[2] >= _st_ref->nx())
             out_vcoords_low[2] = _st_ref->nx() - 1;
 
         bounds_nd<uint32_t, 3> out;
@@ -399,31 +395,19 @@ class cube : public std::enable_shared_from_this<cube> {
         cumprod *= n;
 
         // Shrink to view
-        if (out_vcoords_high[0] < 0)
-            out_vcoords_high[0] = 0;
-        else if (out_vcoords_high[0] >= _st_ref->nt())
+        if (out_vcoords_high[0] >= _st_ref->nt())
             out_vcoords_high[0] = _st_ref->nt() - 1;
-        if (out_vcoords_low[0] < 0)
-            out_vcoords_low[0] = 0;
-        else if (out_vcoords_low[0] >= _st_ref->nt())
+        if (out_vcoords_low[0] >= _st_ref->nt())
             out_vcoords_low[0] = _st_ref->nt() - 1;
 
-        if (out_vcoords_high[1] < 0)
-            out_vcoords_high[1] = 0;
-        else if (out_vcoords_high[1] >= _st_ref->ny())
+        if (out_vcoords_high[1] >= _st_ref->ny())
             out_vcoords_high[1] = _st_ref->ny() - 1;
-        if (out_vcoords_low[1] < 0)
-            out_vcoords_low[1] = 0;
-        else if (out_vcoords_low[1] >= _st_ref->ny())
+        if (out_vcoords_low[1] >= _st_ref->ny())
             out_vcoords_low[1] = _st_ref->ny() - 1;
 
-        if (out_vcoords_high[2] < 0)
-            out_vcoords_high[2] = 0;
-        else if (out_vcoords_high[2] >= _st_ref->nx())
+        if (out_vcoords_high[2] >= _st_ref->nx())
             out_vcoords_high[2] = _st_ref->nx() - 1;
-        if (out_vcoords_low[2] < 0)
-            out_vcoords_low[2] = 0;
-        else if (out_vcoords_low[2] >= _st_ref->nx())
+        if (out_vcoords_low[2] >= _st_ref->nx())
             out_vcoords_low[2] = _st_ref->nx() - 1;
 
         bounds_nd<uint32_t, 3> out;

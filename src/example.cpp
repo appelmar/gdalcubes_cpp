@@ -43,6 +43,7 @@
 #include "select_bands.h"
 #include "stream.h"
 #include "window_time.h"
+#include "gdalcubes.h"
 
 using namespace gdalcubes;
 
@@ -87,13 +88,13 @@ int main(int argc, char *argv[]) {
 
         /**************************************************************************/
         // test fill_time
-        {
-            auto c = image_collection_cube::create("test.db", v);
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            cb->write_netcdf_file("test_fill_time_in.nc");
-            auto cf = fill_time_cube::create(cb, "linear");
-            cf->write_netcdf_file("test_fill_time_linear.nc");
-        }
+//        {
+//            auto c = image_collection_cube::create("test.db", v);
+//            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+//            cb->write_netcdf_file("test_fill_time_in.nc");
+//            auto cf = fill_time_cube::create(cb, "linear");
+//            cf->write_netcdf_file("test_fill_time_linear.nc");
+//        }
         /**************************************************************************/
 
         /**************************************************************************/
@@ -150,16 +151,20 @@ int main(int argc, char *argv[]) {
         //        }
         /**************************************************************************/
 
-        //        /**************************************************************************/
-        //        // test reduction over time
-        //        {
-        //            auto c = image_collection_cube::create("test.db", v);
-        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-        //            // auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
-        //            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
-        //            cr->write_gdal_image("test_reduce_new.tif");
-        //        }
-        //        /**************************************************************************/
+                /**************************************************************************/
+                // test reduction over time
+                {
+                    auto c = image_collection_cube::create("test.db", v);
+                    auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+                    // auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
+                    auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
+                    cr->write_gdal_image("test_reduce_new.tif");
+                    auto cc = rechunk_merge_time_cube::create(cb);
+                    auto cr2 = reduce_time_cube::create(cc, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
+                    cr->write_gdal_image("test_reduce_new_rechunk_merge_time.tif");
+
+                }
+                /**************************************************************************/
 
         //        /**************************************************************************/
         //        // test reduction over space

@@ -32,6 +32,7 @@
 #include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
+#include "rechunk_merge_time.h"
 #include "reduce.h"
 #include "reduce_time.h"
 #include "select_bands.h"
@@ -118,6 +119,12 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "join_bands", [](nlohmann::json& j) {
             auto x = join_bands_cube::create(instance()->create_from_json(j["A"]), instance()->create_from_json(j["B"]), j["prefix_A"].get<std::string>(), j["prefix_B"].get<std::string>());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "rechunk_merge_time", [](nlohmann::json& j) {
+            auto x = rechunk_merge_time_cube::create(instance()->create_from_json(j["in_cube"]));
             return x;
         }));
 

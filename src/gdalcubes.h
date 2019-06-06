@@ -37,6 +37,7 @@
 #include "image_collection_cube.h"
 #include "join_bands.h"
 #include "progress.h"
+#include "rechunk_merge_time.h"
 #include "reduce.h"
 #include "reduce_space.h"
 #include "reduce_time.h"

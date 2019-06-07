@@ -206,9 +206,9 @@ class config {
         }
 
         // use /dev/shm for file streaming if exists
-        if (filesystem::exists("/dev/shm")) {
-            config::instance()->set_streaming_dir("/dev/shm");
-        }
+//        if (filesystem::exists("/dev/shm")) {
+//            config::instance()->set_streaming_dir("/dev/shm");
+//        }
     }
 
     /**

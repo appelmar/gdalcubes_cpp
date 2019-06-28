@@ -204,11 +204,6 @@ class config {
                 config::instance()->add_collection_format_preset_dir(candidate_dirs[i]);
             }
         }
-
-        // use /dev/shm for file streaming if exists
-//        if (filesystem::exists("/dev/shm")) {
-//            config::instance()->set_streaming_dir("/dev/shm");
-//        }
     }
 
     /**

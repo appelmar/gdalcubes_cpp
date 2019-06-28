@@ -146,8 +146,6 @@ class select_bands_cube : public cube {
     }
 };
 
-
-
 }  // namespace gdalcubes
 
 #endif  //SELECT_BANDS_H

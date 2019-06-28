@@ -142,7 +142,12 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, std::s
     std::string xname = srs.IsProjected() ? "x" : "longitude";
 
     int ncout;
+
+#if defined R_PACKAGE && defined(__sun) && defined(__SVR4)
+    nc_create(op.c_str(), NC_CLASSIC_MODEL, &ncout);
+#else
     nc_create(op.c_str(), NC_NETCDF4, &ncout);
+#endif
 
     int d_t, d_y, d_x;
     nc_def_dim(ncout, "time", size_t(), &d_t);

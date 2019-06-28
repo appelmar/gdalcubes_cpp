@@ -425,7 +425,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         if (image_datasets.empty()) {
             continue;
         }
-        if (itime < 0 && itime >= (int)(out->size()[1])) {
+        if (itime < 0 || itime >= (int)(out->size()[1])) {
             continue;  // image would be written outside of the chunk buffer
         }
 

@@ -616,18 +616,46 @@ class cube : public std::enable_shared_from_this<cube> {
     }
 
     /**
-     * @brief Write a cube as a set of GeoTIFF files under a given directory
+     * @brief Write a data cube as a set of GeoTIFF files under a given directory
      *
      * @param dir directory where to store the files
      * @param p chunk processor instance, defaults to the global configuration
      */
-    void write_gtiff_directory(std::string dir,
-                               std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_chunks_gtiff(std::string dir,
+                            std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
-     * Export a cube to a single NetCDF file
+     * @brief Write a data cube as netCDF file collection, where each file contains data from one data cube chunk.
+     *
+     * Resulting netCDF files will be stored in the provided output directory where filenames correspond to chunk ids.
+     * In addition a single cube.json file stores the serialized JSON graph defining the creation process of the cube
+     *
+     * @param dir directory where to store the files
+     * @param compression_level deflate level, 0 = no compression, 1 = fast, 9 = small
+     * @param p chunk processor instance, defaults to the global configuration
+     */
+    void write_chunks_ncdf(std::string dir, uint8_t compression_level = 0, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+
+    /**
+     * @brief Writes a data cube as a collection of cloud-optimized GeoTIFF files
+     *
+     * @note NOT YET IMPLEMENTED
+     *
+     * For each time slice of the data cube, one subfolder under the given output directory will be created with name equal to the date/time.
+     * COGs are created for all spatial slices with spatial extents coming fom the data cube chunks.
+     * In addition, a single cube.json file at the output directory stores the serialized JSON graph defining the creation process of the cube.
+     *
+     *
+     * @param dir directory where to store the files
+     * @param creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
+     * @param p chunk processor instance, defaults to the global configuration
+     */
+    //void write_COG_collection(std::string dir, std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(), std::shared_ptr<chunk_processor> p=config::instance()->get_default_chunk_processor())
+
+    /**
+     * Write a data cube as a single NetCDF file
      * @param path path of the target file
-     * @param compression_level deflate level, 0=no compression, 1= fast, 9 = small
+     * @param compression_level deflate level, 0 = no compression, 1 = fast, 9 = small
      * @param p chunk processor instance, defaults to the global configuration
      */
     void write_netcdf_file(std::string path, uint8_t compression_level = 0,

@@ -2,11 +2,14 @@
 
 # 0.1.9999 (dev)
 
-* reimplementation of image_collection_cube::read_chunk(), supporting image masks and custom gdalwarp arguments 
-* renamed filter_predicate -> filter_pixel
+* reimplementation of `image_collection_cube::read_chunk()`, supporting image masks and custom gdalwarp arguments
+* renamed `filter_predicate` -> `filter_pixel`
 * added gdalcubes namespace
 * removed reduce and stream commands from command line interface
-* added exec command to command line interface
+* added `gdalcubes exec` command to command line interface
+* added experimental `gdalcubes exec` and `gdalcubes translate_cog` for batch processing of image collections
+* added `stream_reduce_time operator`, applying external processes on time series
+
 
 # 0.1.1
 

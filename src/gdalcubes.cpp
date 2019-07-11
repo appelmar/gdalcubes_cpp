@@ -33,6 +33,7 @@
 #include "filesystem.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
+#include "image_collection_ops.h"
 #include "reduce.h"
 #include "stream.h"
 #include "swarm.h"
@@ -74,13 +75,33 @@ void print_usage(std::string command = "") {
     } else if (command == "exec") {
         std::cout << "Usage: gdalcubes exec [options] SOURCE DEST" << std::endl;
         std::cout << std::endl;
-        std::cout << "Materialize a JSON-serialized SOURCE data cube as a NetCDF file (DEST)."
+        std::cout << "Evaluate a JSON-serialized SOURCE data cube and store the result as a NetCDF file (DEST)."
                   << std::endl;
         std::cout << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "    , --deflate            Deflate compression level for output NetCDF file (0=no compression, 9=max compression), defaults to 1" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
         std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
+        std::cout << "  -d, --debug              Print debug messages" << std::endl;
+        std::cout << std::endl;
+    } else if (command == "addo") {
+        std::cout << "Usage: gdalcubes addo [options] SOURCE" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Build overview images for an existing image collection (SOURCE)." << std::endl;
+        std::cout << std::endl;
+        std::cout << "Options:" << std::endl;
+        std::cout << "  -t, --threads            Number of threads used for parallel processing, defaults to 1" << std::endl;
+        std::cout << "  -l, --levels             Overview levels, defaults to 2 4 8 16 32" << std::endl;
+        std::cout << "  -r, --resampling         Resampling algorithm, one of \"AVERAGE\", \"AVERAGE_MAGPHASE\", \"BILINEAR\", \"CUBIC\", \"CUBICSPLINE\", \"GAUSS\", \"LANCZOS\", \"MODE\", \"NEAREST\", or \"NONE\"." << std::endl;
+        std::cout << "  -d, --debug              Print debug messages" << std::endl;
+        std::cout << std::endl;
+    } else if (command == "translate_cog") {
+        std::cout << "Usage: gdalcubes translate_cog [options] SOURCE DEST" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Translate all images in a collection (SOURCE) to cloud-optimized GeoTiffs under the DEST directory." << std::endl;
+        std::cout << std::endl;
+        std::cout << "Options:" << std::endl;
+        std::cout << "  -t, --threads            Number of threads used for parallel processing, defaults to 1" << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
     } else {
@@ -90,8 +111,9 @@ void print_usage(std::string command = "") {
         std::cout << "Commands:" << std::endl;
         std::cout << "  info                     Print metadata of a GDAL image collection file " << std::endl;
         std::cout << "  create_collection        Create a new image collection from GDAL datasets" << std::endl;
-        std::cout << "  reduce                   Reduce a GDAL cube over time to a single GDAL image" << std::endl;
-        std::cout << "  stream                   Stream chunks of a GDAL cube to stdin of other programs" << std::endl;
+        std::cout << "  exec                     Evaluate a data cube and store the result as a NetCDF file" << std::endl;
+        std::cout << "  addo                     Build overview images for an existing image collection" << std::endl;
+        std::cout << "  translate_cog            Translate all images in a collection to cloud-optimized GeoTiffs" << std::endl;
         std::cout << std::endl;
         std::cout << "Please use 'gdalcubes command --help' for further information about command-specific arguments." << std::endl;
     }
@@ -293,7 +315,66 @@ int main(int argc, char* argv[]) {
             std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(j);
             c->write_netcdf_file(output, deflate);
 
-        } else {
+        } else if (cmd == "addo") {
+            po::options_description addo_desc("addo arguments");
+            addo_desc.add_options()("input", po::value<std::string>(), "");
+            addo_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
+            addo_desc.add_options()("resampling,r", po::value<std::string>()->default_value("NEAREST"), "");
+            addo_desc.add_options()("levels,l", po::value<std::vector<int>>()->multitoken()->default_value(std::vector<int>{2, 4, 8, 16, 32}, "2 4 8 16 32"), "");
+
+            po::positional_options_description addo_pos;
+            addo_pos.add("input", 1);
+
+            try {
+                std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts).options(addo_desc).positional(addo_pos).run(), vm);
+            } catch (...) {
+                std::cout << "ERROR in gdalcubes addo: invalid arguments." << std::endl;
+                std::cout << addo_desc << std::endl;
+            }
+
+            std::string input = vm["input"].as<std::string>();
+
+            std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
+            uint16_t nthreads = vm["threads"].as<uint16_t>();
+            std::string resampling = vm["resampling"].as<std::string>();
+            std::vector<int> levels = vm["levels"].as<std::vector<int>>();
+
+            image_collection_ops::create_overviews(ic, levels, resampling, nthreads);
+
+        } else if (cmd == "translate_cog") {
+            po::options_description cog_desc("exec arguments");
+            cog_desc.add_options()("input", po::value<std::string>(), "");
+            cog_desc.add_options()("output", po::value<std::string>(), "");
+            cog_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
+
+            po::positional_options_description cog_pos;
+            cog_pos.add("input", 1);
+            cog_pos.add("output", 1);
+
+            try {
+                std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts).options(cog_desc).positional(cog_pos).run(), vm);
+            } catch (...) {
+                std::cout << "ERROR in gdalcubes translate_cog: invalid arguments." << std::endl;
+                print_usage("exec");
+                return 1;
+            }
+
+            std::string input = vm["input"].as<std::string>();
+            std::string output = vm["output"].as<std::string>();
+
+            uint16_t nthreads = vm["threads"].as<uint16_t>();
+
+            std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
+
+            image_collection_ops::translate_cog(ic, output, nthreads);
+
+        }
+
+        else {
             std::cout << "ERROR in gdalcubes: unrecognized command." << std::endl;
             print_usage();
             return 1;

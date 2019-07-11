@@ -21,24 +21,18 @@
 
 namespace gdalcubes {
 
-    /**
+/**
      * Batch processing operations over all GDAL datasets of a collection
      */
-    class image_collection_ops {
+class image_collection_ops {
+   public:
+    static void translate_cog(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads = 1);
 
+    static void create_overviews(std::shared_ptr<image_collection> in, std::vector<int> levels = std::vector<int>{2, 4, 8, 16, 32}, std::string resampling = "NEAREST", uint16_t nthreads = 1);
 
+    //static void filter_image(image_collection in, )
+};
 
-        // gdal_translate
-        static void translate(image_collection in, std::string out_filename, std::vector<std::string> gdal_translate_args);
-
-        // gdal_addo
-        static void addo(image_collection in, std::vector<std::string> gdaladdo_args);
-
-    };
-
-
-
-} // namespace gdalcubes
+}  // namespace gdalcubes
 
 #endif
-

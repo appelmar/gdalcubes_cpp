@@ -29,6 +29,7 @@
 
 #include <iostream>
 #include "gdalcubes.h"
+#include "image_collection_ops.h"
 
 using namespace gdalcubes;
 
@@ -60,13 +61,21 @@ int main(int argc, char *argv[]) {
 
         /**************************************************************************/
         // Test create image collection
-        //        {
-        //            collection_format f("Sentinel2_L2A");
-        //            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
-        //            ic->write("test.db");
-        //            std::cout << ic->to_string() << std::endl;
-        //            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
-        //        }
+        {
+            collection_format f("Sentinel2_L2A");
+            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
+            ic->write("test.db");
+            std::cout << ic->to_string() << std::endl;
+            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
+        }
+        /**************************************************************************/
+
+        /**************************************************************************/
+        // Test addo
+        {
+            auto ic = std::make_shared<image_collection>("test.db");
+            image_collection_ops::create_overviews(ic);
+        }
         /**************************************************************************/
 
         cube_view v = cube_view::read_json("view.json");

@@ -43,11 +43,10 @@
 #include "reduce_time.h"
 #include "select_bands.h"
 #include "stream.h"
-#include "stream_reduce_time.h"
 #include "stream_apply_pixel.h"
+#include "stream_reduce_time.h"
 #include "swarm.h"
 #include "utils.h"
 #include "window_time.h"
-
 
 #endif  //GDALCUBES_H

@@ -571,6 +571,14 @@ std::string image_collection::to_string() {
     ss << std::to_string(count_images()) << " images with ";
     ss << std::to_string(count_bands()) << " bands from ";
     ss << std::to_string(count_gdalrefs()) << " GDAL dataset references";
+
+    auto images_per_band = count_images_per_band();
+    ss << std::endl
+       << "BAND \t | IMAGE COUNT" << std::endl;
+    for (uint16_t i = 0; i < images_per_band.size(); ++i) {
+        ss << images_per_band[i].band_name << "\t | " << images_per_band[i].image_count << std::endl;
+    }
+
     return ss.str();
 }
 
@@ -800,6 +808,29 @@ std::vector<image_collection::images_row> image_collection::get_images() {
         row.right = sqlite3_column_double(stmt, 5);
         row.datetime = sqlite_as_string(stmt, 6);
         row.proj = sqlite_as_string(stmt, 7);
+        out.push_back(row);
+    }
+    sqlite3_finalize(stmt);
+    return out;
+}
+
+std::vector<image_collection::count_images_by_bands_row> image_collection::count_images_per_band() {
+    std::vector<image_collection::count_images_by_bands_row> out;
+    std::string sql =
+        "SELECT id, name, sum(n) FROM (SELECT bands.id, bands.name, count(*) as n FROM bands"
+        " INNER JOIN gdalrefs ON bands.id = gdalrefs.band_id GROUP BY bands.id"
+        " UNION SELECT bands.id, bands.name, 0 FROM bands) GROUP BY id";
+
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
+    if (!stmt) {
+        throw std::string("ERROR in image_collection::count_images_per_band(): cannot prepare query statement");
+    }
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        image_collection::count_images_by_bands_row row;
+        row.band_id = sqlite3_column_int(stmt, 0);
+        row.band_name = sqlite_as_string(stmt, 1);
+        row.image_count = sqlite3_column_int(stmt, 2);
         out.push_back(row);
     }
     sqlite3_finalize(stmt);

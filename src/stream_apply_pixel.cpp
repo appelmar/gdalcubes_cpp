@@ -19,10 +19,8 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
 
-
     coords_nd<uint32_t, 4> in_size_btyx = {uint32_t(_in_cube->size_bands()), size_tyx[0], size_tyx[1],
                                            size_tyx[2]};
-
 
     // generate in and out filename
     std::string f_in = filesystem::join(config::instance()->get_streaming_dir(),

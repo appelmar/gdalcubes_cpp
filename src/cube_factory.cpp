@@ -37,8 +37,8 @@
 #include "reduce_time.h"
 #include "select_bands.h"
 #include "stream.h"
-#include "stream_reduce_time.h"
 #include "stream_apply_pixel.h"
+#include "stream_reduce_time.h"
 #include "window_time.h"
 
 namespace gdalcubes {
@@ -182,10 +182,10 @@ void cube_factory::register_default() {
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
-            "stream_apply_pixel", [](nlohmann::json& j) {
-                auto x = stream_apply_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].get<std::string>(), j["nbands"].get<uint16_t>(), j["names"].get<std::vector<std::string>>());
-                return x;
-            }));
+        "stream_apply_pixel", [](nlohmann::json& j) {
+            auto x = stream_apply_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].get<std::string>(), j["nbands"].get<uint16_t>(), j["names"].get<std::vector<std::string>>());
+            return x;
+        }));
 }
 
 }  // namespace gdalcubes

@@ -155,6 +155,7 @@ class image_collection {
         double scale;
         std::string unit;
         std::string nodata;
+        uint32_t image_count;
     };
 
     struct images_row {
@@ -173,12 +174,6 @@ class image_collection {
         uint32_t band_id;
         std::string descriptor;
         uint16_t band_num;
-    };
-
-    struct count_images_by_bands_row {
-        uint32_t band_id;
-        std::string band_name;
-        uint32_t image_count;
     };
 
    public:
@@ -313,8 +308,6 @@ class image_collection {
     std::vector<image_collection::gdalrefs_row> get_gdalrefs();
 
     std::vector<image_collection::images_row> get_images();
-
-    std::vector<count_images_by_bands_row> count_images_per_band();
 
     /**
      * Helper function to create image collections programatically,

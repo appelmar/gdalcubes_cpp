@@ -27,6 +27,8 @@
 
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief A data cube that applies reducer functions over selected bands of a data cube over time
  * @note This is a reimplementation of reduce_cube. The new implementation allows to apply different reducers to different bands instead of just one reducer to all bands of the input data cube
@@ -128,5 +130,6 @@ class reduce_time_cube : public cube {
         //assert(_st_ref->nt() == 1);
     }
 };
+}  // namespace gdalcubes
 
 #endif  // REDUCE_TIME_H

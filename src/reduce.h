@@ -26,6 +26,8 @@
 
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief A data cube that applies a reducer function to another data cube over time
  * @deprecated This class will be eventually replace by the more flexible reduce_time_cube, which allows to apply
@@ -118,5 +120,7 @@ class reduce_cube : public cube {
         //assert(_st_ref->nt() == 1);
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  //REDUCE_H

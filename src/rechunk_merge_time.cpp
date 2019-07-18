@@ -22,22 +22,19 @@
     SOFTWARE.
 */
 
-#include "join_bands.h"
+#include "rechunk_merge_time.h"
 
 namespace gdalcubes {
 
-std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
-    GCBS_TRACE("join_bands_cube::read_chunk(" + std::to_string(id) + ")");
+std::shared_ptr<chunk_data> rechunk_merge_time_cube::read_chunk(chunkid_t id) {
+    GCBS_TRACE("rechunk_merge_time_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
-    coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
+    coords_nd<uint32_t, 4> size_btyx = {_in_cube->size_bands(), _in_cube->size_t(), size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
-
-    std::shared_ptr<chunk_data> dat_A = _in_A->read_chunk(id);
-    std::shared_ptr<chunk_data> dat_B = _in_B->read_chunk(id);
 
     // Fill buffers accordingly
     out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
@@ -45,8 +42,22 @@ std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
 
-    memcpy(((double *)out->buf()), ((double *)dat_A->buf()), dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3] * sizeof(double));
-    memcpy(((double *)out->buf()) + dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3], ((double *)dat_B->buf()), dat_B->size()[0] * dat_B->size()[1] * dat_B->size()[2] * dat_B->size()[3] * sizeof(double));
+    uint32_t ichunk = 0;
+    for (chunkid_t i = id;
+         i < _in_cube->count_chunks(); i += _in_cube->count_chunks_x() * _in_cube->count_chunks_y()) {
+        std::shared_ptr<chunk_data> x = _in_cube->read_chunk(i);
+        for (uint16_t ib = 0; ib < x->size()[0]; ++ib) {
+            for (uint32_t it = 0; it < x->size()[1]; ++it) {
+                for (uint32_t ixy = 0; ixy < x->size()[2] * x->size()[3]; ++ixy) {
+                    ((double *)out->buf())[ib * x->size()[1] * x->size()[2] * x->size()[3] +
+                                           (it + ichunk * x->size()[1]) * x->size()[2] * x->size()[3] + ixy] =
+                        ((double *)x->buf())[ib * x->size()[1] * x->size()[2] * x->size()[3] +
+                                             it * x->size()[2] * x->size()[3] + ixy];
+                }
+            }
+        }
+        ++ichunk;
+    }
 
     return out;
 }

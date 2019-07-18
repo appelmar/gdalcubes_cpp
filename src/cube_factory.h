@@ -29,6 +29,8 @@
 #include <memory>
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief Factory to create (nested) cubes from its JSON representation
  */
@@ -80,5 +82,7 @@ class cube_factory {
 
     std::map<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>> cube_generators;
 };
+
+}  // namespace gdalcubes
 
 #endif  //CUBE_FACTORY_H

@@ -25,6 +25,8 @@
 #include "config.h"
 #include "cube.h"
 
+namespace gdalcubes {
+
 config* config::_instance = nullptr;
 
 config::config() : _chunk_processor(std::make_shared<chunk_processor_singlethread>()),
@@ -49,3 +51,5 @@ version_info config::get_version_info() {
     v.GIT_DESC = GDALCUBES_GIT_DESC;
     return v;
 }
+
+}  // namespace gdalcubes

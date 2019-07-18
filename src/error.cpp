@@ -26,6 +26,8 @@
 
 #include "config.h"
 
+namespace gdalcubes {
+
 std::mutex logger::_m;
 // TODO: move mutex to specific error handler implementations
 void logger::error(std::string msg, std::string where, int error_code) {
@@ -58,3 +60,5 @@ void logger::info(std::string msg, std::string where, int error_code) {
     config::instance()->get_error_handler()(error_level::ERRLVL_INFO, msg, where, error_code);
     _m.unlock();
 }
+
+}  // namespace gdalcubes

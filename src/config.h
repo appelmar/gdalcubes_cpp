@@ -32,6 +32,9 @@
 #include "error.h"
 #include "filesystem.h"
 #include "progress.h"
+
+namespace gdalcubes {
+
 // forward declarations
 class chunk_processor;
 class chunk_processor_singlethread;
@@ -201,11 +204,6 @@ class config {
                 config::instance()->add_collection_format_preset_dir(candidate_dirs[i]);
             }
         }
-
-        // use /dev/shm for file streaming if exists
-        if (filesystem::exists("/dev/shm")) {
-            config::instance()->set_streaming_dir("/dev/shm");
-        }
     }
 
     /**
@@ -281,5 +279,7 @@ class config {
         }
     };
 };
+
+}  // namespace gdalcubes
 
 #endif  //CONFIG_H

@@ -24,6 +24,8 @@
 
 #include "select_bands.h"
 
+namespace gdalcubes {
+
 std::shared_ptr<chunk_data> select_bands_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("select_bands::read_chunk(" + std::to_string(id) + ")");
     if (id >= count_chunks())
@@ -53,3 +55,5 @@ std::shared_ptr<chunk_data> select_bands_cube::read_chunk(chunkid_t id) {
 
     return out;
 }
+
+}  // namespace gdalcubes

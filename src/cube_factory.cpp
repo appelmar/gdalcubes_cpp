@@ -28,14 +28,20 @@
 #include "dummy.h"
 #include "external/json.hpp"
 #include "filesystem.h"
-#include "filter_predicate.h"
+#include "fill_time.h"
+#include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
+#include "rechunk_merge_time.h"
 #include "reduce.h"
 #include "reduce_time.h"
 #include "select_bands.h"
 #include "stream.h"
+#include "stream_apply_pixel.h"
+#include "stream_reduce_time.h"
 #include "window_time.h"
+
+namespace gdalcubes {
 
 cube_factory* cube_factory::_instance = 0;
 
@@ -91,8 +97,14 @@ void cube_factory::register_default() {
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
-        "filter_predicate", [](nlohmann::json& j) {
-            auto x = filter_predicate_cube::create(instance()->create_from_json(j["in_cube"]), j["predicate"].get<std::string>());
+        "filter_pixel", [](nlohmann::json& j) {
+            auto x = filter_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["predicate"].get<std::string>());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "fill_time", [](nlohmann::json& j) {
+            auto x = fill_time_cube::create(instance()->create_from_json(j["in_cube"]), j["method"].get<std::string>());
             return x;
         }));
 
@@ -113,6 +125,12 @@ void cube_factory::register_default() {
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "rechunk_merge_time", [](nlohmann::json& j) {
+            auto x = rechunk_merge_time_cube::create(instance()->create_from_json(j["in_cube"]));
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
         "stream", [](nlohmann::json& j) {
             auto x = stream_cube::create(instance()->create_from_json(j["in_cube"]), j["command"].get<std::string>(), j["file_streaming"].get<bool>());
             return x;
@@ -126,6 +144,26 @@ void cube_factory::register_default() {
             cube_view v = cube_view::read_json_string(j["view"].dump());
             auto x = image_collection_cube::create(j["file"].get<std::string>(), v);
             x->set_chunk_size(j["chunk_size"][0].get<uint32_t>(), j["chunk_size"][1].get<uint32_t>(), j["chunk_size"][2].get<uint32_t>());
+
+            if (j.count("mask") > 0) {
+                if (j["mask"].count("mask_type") == 0) {
+                    GCBS_WARN("ERROR in cube_generators[\"image_collection\"](): missing mask type, mask will be ignored");
+                } else {
+                    std::string mask_type = j["mask"]["mask_type"];
+                    if (mask_type == "value_mask") {
+                        x->set_mask(j["mask_band"], std::make_shared<value_mask>(j["mask"]["values"].get<std::unordered_set<double>>(), j["mask"]["invert"].get<bool>(), j["mask"]["bits"].get<std::vector<uint8_t>>()));
+                    } else if (mask_type == "range_mask") {
+                        x->set_mask(j["mask_band"], std::make_shared<range_mask>(j["mask"]["min"].get<double>(), j["mask"]["max"].get<double>(), j["mask"]["invert"].get<bool>(), j["mask"]["bits"].get<std::vector<uint8_t>>()));
+                    } else {
+                        GCBS_WARN("ERROR in cube_generators[\"image_collection\"](): invalid mask type, mask will be ignored");
+                    }
+                }
+            }
+
+            if (j.count("warp_args") > 0) {
+                x->set_warp_args(j["warp_args"].get<std::vector<std::string>>());
+            }
+
             return x;
         }));
 
@@ -136,4 +174,18 @@ void cube_factory::register_default() {
             x->set_chunk_size(j["chunk_size"][0].get<uint32_t>(), j["chunk_size"][1].get<uint32_t>(), j["chunk_size"][2].get<uint32_t>());
             return x;
         }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "stream_reduce_time", [](nlohmann::json& j) {
+            auto x = stream_reduce_time_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].get<std::string>(), j["nbands"].get<uint16_t>(), j["names"].get<std::vector<std::string>>());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(nlohmann::json&)>>(
+        "stream_apply_pixel", [](nlohmann::json& j) {
+            auto x = stream_apply_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].get<std::string>(), j["nbands"].get<uint16_t>(), j["names"].get<std::vector<std::string>>());
+            return x;
+        }));
 }
+
+}  // namespace gdalcubes

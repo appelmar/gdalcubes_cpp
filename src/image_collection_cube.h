@@ -24,7 +24,130 @@
 #ifndef IMAGE_COLLECTION_CUBE_H
 #define IMAGE_COLLECTION_CUBE_H
 
+#include <unordered_set>
 #include "cube.h"
+
+namespace gdalcubes {
+
+struct image_mask {
+    virtual void apply(double *mask_buf, double *pixel_buf, uint32_t nb, uint32_t ny, uint32_t nx) = 0;
+    virtual nlohmann::json as_json() = 0;
+};
+
+struct value_mask : public image_mask {
+   public:
+    value_mask(std::unordered_set<double> mask_values, bool invert = false, std::vector<uint8_t> bits = std::vector<uint8_t>()) : _mask_values(mask_values), _invert(invert), _bits(bits) {}
+    void apply(double *mask_buf, double *pixel_buf, uint32_t nb, uint32_t ny, uint32_t nx) override {
+        uint32_t bitmask = 0;
+        if (!_bits.empty()) {
+            for (uint8_t ib = 0; ib < _bits.size(); ++ib) {
+                bitmask += (uint32_t)std::pow(2.0, (double)_bits[ib]);
+            }
+        }
+        if (!_invert) {
+            for (uint32_t ixy = 0; ixy < ny * nx; ++ixy) {
+                if (!_bits.empty()) {
+                    mask_buf[ixy] = (uint32_t)(mask_buf[ixy]) & bitmask;
+                }
+                if (_mask_values.count(mask_buf[ixy]) == 1) {  // if mask has value
+                    // set all bands to NAN
+                    for (uint32_t ib = 0; ib < nb; ++ib) {
+                        pixel_buf[ib * nx * ny + ixy] = NAN;
+                    }
+                }
+            }
+        } else {
+            for (uint32_t ixy = 0; ixy < ny * nx; ++ixy) {
+                if (!_bits.empty()) {
+                    mask_buf[ixy] = (uint32_t)(mask_buf[ixy]) & bitmask;
+                }
+                if (_mask_values.count(mask_buf[ixy]) == 0) {
+                    // set all bands to NAN
+                    for (uint32_t ib = 0; ib < nb; ++ib) {
+                        pixel_buf[ib * nx * ny + ixy] = NAN;
+                    }
+                }
+            }
+        }
+    }
+
+    nlohmann::json as_json() override {
+        nlohmann::json out;
+        out["mask_type"] = "value_mask";
+        out["values"] = _mask_values;
+        out["invert"] = _invert;
+        out["bits"] = _bits;
+        return out;
+    }
+
+   private:
+    std::unordered_set<double> _mask_values;
+    bool _invert;
+    std::vector<uint8_t> _bits;
+};
+
+struct range_mask : public image_mask {
+   public:
+    range_mask(double min, double max, bool invert = false, std::vector<uint8_t> bits = std::vector<uint8_t>()) : _min(min), _max(max), _invert(invert), _bits(bits) {}
+
+    void apply(double *mask_buf, double *pixel_buf, uint32_t nb, uint32_t ny, uint32_t nx) override {
+        uint32_t bitmask = 0;
+        if (!_bits.empty()) {
+            for (uint8_t ib = 0; ib < _bits.size(); ++ib) {
+                bitmask += (uint32_t)std::pow(2.0, (double)_bits[ib]);
+            }
+        }
+        if (!_invert) {
+            for (uint32_t ixy = 0; ixy < ny * nx; ++ixy) {
+                if (!_bits.empty()) {
+                    mask_buf[ixy] = (uint32_t)(mask_buf[ixy]) & bitmask;
+                }
+                if (mask_buf[ixy] >= _min && mask_buf[ixy] <= _max) {
+                    // set all bands to NAN
+                    for (uint32_t ib = 0; ib < nb; ++ib) {
+                        pixel_buf[ib * nx * ny + ixy] = NAN;
+                    }
+                }
+            }
+        } else {
+            for (uint32_t ixy = 0; ixy < ny * nx; ++ixy) {
+                if (!_bits.empty()) {
+                    mask_buf[ixy] = (uint32_t)(mask_buf[ixy]) & bitmask;
+                }
+                if (mask_buf[ixy] < _min || mask_buf[ixy] > _max) {
+                    // set all bands to NAN
+                    for (uint32_t ib = 0; ib < nb; ++ib) {
+                        pixel_buf[ib * nx * ny + ixy] = NAN;
+                    }
+                }
+            }
+        }
+    }
+
+    nlohmann::json as_json() override {
+        nlohmann::json out;
+        out["mask_type"] = "range_mask";
+        out["min"] = _min;
+        out["max"] = _max;
+        out["invert"] = _invert;
+        out["bits"] = _bits;
+        return out;
+    }
+
+   private:
+    double _min;
+    double _max;
+    bool _invert;
+    std::vector<uint8_t> _bits;
+};
+
+// TODO: mask that applies a lambda expression / std::function on the mask band
+//struct functor_mask : public image_mask {
+//public:
+//
+//
+//private:
+//};
 
 /**
  * @brief A data cube that reads data from an image collection
@@ -140,6 +263,24 @@ class image_collection_cube : public cube {
      */
     void select_bands(std::vector<uint16_t> bands);
 
+    void set_mask(std::string band, std::shared_ptr<image_mask> mask) {
+        std::vector<image_collection::bands_row> bands = _collection->get_bands();
+        for (uint16_t ib = 0; ib < bands.size(); ++ib) {
+            if (bands[ib].name == band) {
+                _mask = mask;
+                _mask_band = band;
+                return;
+            }
+        }
+        GCBS_ERROR("Band '" + band + "' does not exist in image collection, image mask will not be modified.");
+    }
+
+    // set additional GDAL warp arguments like whether or not to use overviews, how GCPs should be interpolated, or
+    // performance settings
+    void set_warp_args(std::vector<std::string> args) {
+        _warp_args = args;  // TODO: do some checks that users do not overwrite settings like -of, -r, -tr, -ts, -te, -s_srs, -t_srs, -ot, -wt
+    }
+
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     // image_collection_cube is the only class that supports changing chunk sizes from outside!
@@ -157,6 +298,11 @@ class image_collection_cube : public cube {
         out["chunk_size"] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
         out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
         out["file"] = _collection->get_filename();
+        if (_mask) {
+            out["mask"] = _mask->as_json();
+            out["mask_band"] = _mask_band;
+        }
+        out["warp_args"] = _warp_args;
         return out;
     }
 
@@ -189,6 +335,12 @@ class image_collection_cube : public cube {
     void load_bands();
 
     band_collection _input_bands;
+
+    std::shared_ptr<image_mask> _mask;
+    std::string _mask_band;
+    std::vector<std::string> _warp_args;
 };
+
+}  // namespace gdalcubes
 
 #endif  //IMAGE_COLLECTION_CUBE_H

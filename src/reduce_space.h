@@ -27,6 +27,8 @@
 
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief A data cube that applies reducer functions over selected bands of a data cube over space
  */
@@ -123,5 +125,7 @@ class reduce_space_cube : public cube {
         _st_ref->dt(stref->dt());
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  // REDUCE_SPACE_H

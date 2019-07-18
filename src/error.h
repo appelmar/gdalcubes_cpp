@@ -30,6 +30,8 @@
 #include <string>
 #include "utils.h"
 
+namespace gdalcubes {
+
 #define GCBS_FATAL(MSG) logger::fatal(MSG, std::string(__FILE__) + ":" + std::string(__func__) + ":" + std::to_string(__LINE__) + "")
 #define GCBS_ERROR(MSG) logger::error(MSG, std::string(__FILE__) + ":" + std::string(__func__) + ":" + std::to_string(__LINE__) + "")
 #define GCBS_WARN(MSG) logger::warn(MSG, std::string(__FILE__) + ":" + std::string(__func__) + ":" + std::to_string(__LINE__) + "")
@@ -164,5 +166,7 @@ class error_handler {
 #endif
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  // ERROR_H

@@ -22,11 +22,13 @@
     SOFTWARE.
 */
 
-#include "filter_predicate.h"
+#include "filter_pixel.h"
 #include "external/tinyexpr/tinyexpr.h"
 
-std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
-    GCBS_TRACE("filter_predicate_cube::read_chunk(" + std::to_string(id) + ")");
+namespace gdalcubes {
+
+std::shared_ptr<chunk_data> filter_pixel_cube::read_chunk(chunkid_t id) {
+    GCBS_TRACE("filter_pixel_cube::read_chunk(" + std::to_string(id) + ")");
 
     if (id >= count_chunks())
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
@@ -91,10 +93,10 @@ std::shared_ptr<chunk_data> filter_predicate_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
-bool filter_predicate_cube::parse_predicate() {
+bool filter_pixel_cube::parse_predicate() {
     bool res = true;
     std::vector<double> dummy_values;
-    std::vector<te_variable> vars;
+    std::vector<::te_variable> vars;
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         dummy_values.push_back(1.0);
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
@@ -120,3 +122,5 @@ bool filter_predicate_cube::parse_predicate() {
     }
     return res;
 }
+
+}  // namespace gdalcubes

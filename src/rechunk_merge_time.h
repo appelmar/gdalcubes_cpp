@@ -21,64 +21,62 @@
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 */
-
-#ifndef DUMMY_H
-#define DUMMY_H
+#ifndef RECHUNK_MERGE_TIME_H
+#define RECHUNK_MERGE_TIME_H
 
 #include "cube.h"
 
 namespace gdalcubes {
 
 /**
-     * @brief A dummy data cube with n bands and a simple fill value
-     */
-class dummy_cube : public cube {
+* @brief A data cube that merges chunks over time, i.e. the
+ * result cube will contain the same data but with larger chunks that contain complete time series
+*/
+
+class rechunk_merge_time_cube : public cube {
    public:
     /**
-         * @brief Create a dummy data cube with a simple fill value
-         * @note This static creation method should preferably be used instead of the constructors as
-         * the constructors will not set connections between cubes properly.
-         * @param v shape of the cube
-         * @param nbands number of bands
-         * @param fill fill value
-         * @return a shared pointer to the created data cube instance
-         */
-    static std::shared_ptr<dummy_cube> create(cube_view v, uint16_t nbands = 1, double fill = 1.0) {
-        std::shared_ptr<dummy_cube> out = std::make_shared<dummy_cube>(v, nbands, fill);
+        * @brief Create a data cube merges chunks of an input cube over time
+        * @note This static creation method should preferably be used instead of the constructors as
+        * the constructors will not set connections between cubes properly.
+        * @param in input data cube
+        * @param reducer reducer function
+        * @return a shared pointer to the created data cube instance
+        */
+    static std::shared_ptr<rechunk_merge_time_cube> create(std::shared_ptr<cube> in) {
+        std::shared_ptr<rechunk_merge_time_cube> out = std::make_shared<rechunk_merge_time_cube>(in);
+        in->add_child_cube(out);
+        out->add_parent_cube(in);
         return out;
     }
 
    public:
-    dummy_cube(cube_view v, uint16_t nbands = 1, double fill = 1.0) : cube(std::make_shared<cube_view>(v)),
-                                                                      _fill(fill) {
-        for (uint16_t ib = 0; ib < nbands; ++ib) {
-            band b("band" + std::to_string(ib + 1));
-            b.scale = 1.0;
-            b.offset = 0.0;
-            _bands.add(b);
+    rechunk_merge_time_cube(std::shared_ptr<cube> in) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+        _st_ref->dt((_st_ref->t1() - _st_ref->t0()) + 1);
+        _st_ref->t1() = _st_ref->t0();  // set nt=1
+        _chunk_size[0] = _in_cube->size_t();
+        _chunk_size[1] = _in_cube->chunk_size()[1];
+        _chunk_size[2] = _in_cube->chunk_size()[2];
+
+        for (uint16_t i = 0; i < _in_cube->size_bands(); ++i) {
+            _bands.add(_in_cube->bands().get(i));
         }
     }
 
-    void set_chunk_size(uint32_t t, uint32_t y, uint32_t x) {
-        _chunk_size = {t, y, x};
-    }
-
    public:
-    ~dummy_cube() {}
+    ~rechunk_merge_time_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     nlohmann::json make_constructible_json() override {
         nlohmann::json out;
-        out["cube_type"] = "dummy";
-        out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
-        out["fill"] = _fill;
-        out["chunk_size"] = _chunk_size;
+        out["cube_type"] = "rechunk_merge_time";
+        out["in_cube"] = _in_cube->make_constructible_json();
         return out;
     }
 
    private:
-    double _fill;
+    std::shared_ptr<cube> _in_cube;
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         // copy fields from st_reference type
@@ -91,6 +89,7 @@ class dummy_cube : public cube {
         _st_ref->dt(stref->dt());
     }
 };
+
 }  // namespace gdalcubes
 
-#endif  //DUMMY_H
+#endif  //RECHUNK_MERGE_TIME_H

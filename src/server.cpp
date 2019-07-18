@@ -47,6 +47,8 @@ GET /cube/{cube_id}/{chunk_id}/download
  - implement whitelist to accept connections from selected clients only
 **/
 
+namespace gdalcubes {
+
 server_chunk_cache* server_chunk_cache::_instance = nullptr;
 std::mutex server_chunk_cache::_singleton_mutex;
 
@@ -362,6 +364,8 @@ void gdalcubes_server::handle_head(web::http::http_request req) {
     }
 }
 
+}  // namespace gdalcubes
+
 void print_usage() {
     std::cout << "Usage: gdalcubes_server [options]" << std::endl;
     std::cout << std::endl;
@@ -378,6 +382,8 @@ void print_usage() {
     std::cout << "  -d, --debug                 Print debug messages" << std::endl;
     std::cout << std::endl;
 }
+
+using namespace gdalcubes;
 
 std::unique_ptr<gdalcubes_server> server;
 int main(int argc, char* argv[]) {

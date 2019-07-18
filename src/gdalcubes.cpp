@@ -29,13 +29,17 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
 #include "build_info.h"
+#include "cube_factory.h"
 #include "filesystem.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
+#include "image_collection_ops.h"
 #include "reduce.h"
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"
+
+using namespace gdalcubes;
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {
     std::vector<std::string> out;
@@ -68,43 +72,38 @@ void print_usage(std::string command = "") {
         std::cout << std::endl;
         std::cout << "Print information about a specified GDAL image collection (SOURCE)." << std::endl;
         std::cout << std::endl;
-    } else if (command == "reduce") {
-        std::cout << "Usage: gdalcubes reduce [options] SOURCE DEST" << std::endl;
+    } else if (command == "exec") {
+        std::cout << "Usage: gdalcubes exec [options] SOURCE DEST" << std::endl;
         std::cout << std::endl;
-        std::cout << "Reduce a given image collection (SOURCE) over time with the specified method and produce a single output image (DEST). The specified reducer "
-                     "will be applied over all bands of the input collection. To convert the image collection to a cube, a data view "
-                     "JSON file must be specified as -v or --view option. Depending on the collection's size and the location of their data "
-                     "the reduction might be time-consuming."
+        std::cout << "Evaluate a JSON-serialized SOURCE data cube and store the result as a NetCDF file (DEST)."
                   << std::endl;
         std::cout << std::endl;
         std::cout << "Options:" << std::endl;
-        std::cout << "  -v, --view               Filename of the JSON data view description, this option is required" << std::endl;
-        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', 'max', or 'count', defaults to 'mean'" << std::endl;
-        std::cout << "      --gdal-of            GDAL output format, defaults to GTiff" << std::endl;
-        std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings, can be passed multiple times" << std::endl;
+        std::cout << "    , --deflate            Deflate compression level for output NetCDF file (0=no compression, 9=max compression), defaults to 1" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
         std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
-    } else if (command == "stream") {
-        std::cout << "Usage: gdalcubes stream [options] SOURCE DEST" << std::endl;
+    } else if (command == "addo") {
+        std::cout << "Usage: gdalcubes addo [options] SOURCE" << std::endl;
         std::cout << std::endl;
-        std::cout << "Streams chunks of a cube (SOURCE) to stdin of an external program call such as R and stores output as DEST. THIS IS HIGHLY EXPERIMENTAL AND UNDER DEVELOPMENT."
-                  << std::endl;
+        std::cout << "Build overview images for an existing image collection (SOURCE)." << std::endl;
         std::cout << std::endl;
         std::cout << "Options:" << std::endl;
-        std::cout << "      --exec               External program call, this option is required" << std::endl;
-        std::cout << "  -v, --view               Filename of the JSON data view description, this option is required" << std::endl;
-        std::cout << "  -c, --chunking           Chunk sizes in t,y,x dimensions as integer numbers, e.g. -c 16 256 256" << std::endl;
-        std::cout << "  -r, --reducer            Reduction method, currently 'mean', 'median', 'min', or 'max', if not given, no reduction is performed on the result chunks." << std::endl;
-        std::cout << "      --gdal-of            GDAL output format for optional reduction, defaults to GTiff, only relevant if -r is given" << std::endl;
-        std::cout << "      --gdal-co            GDAL create options as 'KEY=VALUE' strings for optional redutction, can be passed multiple times, only relevant if -r is given" << std::endl;
-        std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
-        std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
+        std::cout << "  -t, --threads            Number of threads used for parallel processing, defaults to 1" << std::endl;
+        std::cout << "  -l, --levels             Overview levels, defaults to 2 4 8 16 32" << std::endl;
+        std::cout << "  -r, --resampling         Resampling algorithm, one of \"AVERAGE\", \"AVERAGE_MAGPHASE\", \"BILINEAR\", \"CUBIC\", \"CUBICSPLINE\", \"GAUSS\", \"LANCZOS\", \"MODE\", \"NEAREST\", or \"NONE\"." << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
-
         std::cout << std::endl;
-
+    } else if (command == "translate_cog") {
+        std::cout << "Usage: gdalcubes translate_cog [options] SOURCE DEST" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Translate all images in a collection (SOURCE) to cloud-optimized GeoTiffs under the DEST directory." << std::endl;
+        std::cout << std::endl;
+        std::cout << "Options:" << std::endl;
+        std::cout << "  -t, --threads            Number of threads used for parallel processing, defaults to 1" << std::endl;
+        std::cout << "  -d, --debug              Print debug messages" << std::endl;
+        std::cout << std::endl;
     } else {
         std::cout << "Usage: gdalcubes command [arguments]" << std::endl;
         std::cout << "   or: gdalcubes [--help | --version]" << std::endl;
@@ -112,8 +111,9 @@ void print_usage(std::string command = "") {
         std::cout << "Commands:" << std::endl;
         std::cout << "  info                     Print metadata of a GDAL image collection file " << std::endl;
         std::cout << "  create_collection        Create a new image collection from GDAL datasets" << std::endl;
-        std::cout << "  reduce                   Reduce a GDAL cube over time to a single GDAL image" << std::endl;
-        std::cout << "  stream                   Stream chunks of a GDAL cube to stdin of other programs" << std::endl;
+        std::cout << "  exec                     Evaluate a data cube and store the result as a NetCDF file" << std::endl;
+        std::cout << "  addo                     Build overview images for an existing image collection" << std::endl;
+        std::cout << "  translate_cog            Translate all images in a collection to cloud-optimized GeoTiffs" << std::endl;
         std::cout << std::endl;
         std::cout << "Please use 'gdalcubes command --help' for further information about command-specific arguments." << std::endl;
     }
@@ -270,43 +270,33 @@ int main(int argc, char* argv[]) {
             std::cout << "  X / LON:     "
                       << "(" << e.s.left << " - " << e.s.right << ")" << std::endl;
 
-        } else if (cmd == "reduce") {
-            po::options_description reduce_desc("reduce arguments");
-            reduce_desc.add_options()("view,v", po::value<std::string>(), "Path to the JSON data view description");
-            reduce_desc.add_options()("reducer,r", po::value<std::string>()->default_value("mean"), "Reduction method, currently mean, median, min, and max are implemented.");
-            reduce_desc.add_options()("gdal-of", po::value<std::string>()->default_value("GTiff"), "GDAL output format, defaults to GTiff");
-            reduce_desc.add_options()("gdal-co", po::value<std::vector<std::string>>(), "GDAL create options");
-            reduce_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");
-            reduce_desc.add_options()("output", po::value<std::string>(), "Filename of the output image.");
-            reduce_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), " Number of threads used for parallel chunk processing, defaults to 1");
-            reduce_desc.add_options()("swarm", po::value<std::string>(), "Simple text file defining a gdalcubes_server swarm");
+        } else if (cmd == "exec") {
+            po::options_description exec_desc("exec arguments");
+            exec_desc.add_options()("input", po::value<std::string>(), "");
+            exec_desc.add_options()("output", po::value<std::string>(), "");
+            exec_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
+            exec_desc.add_options()("swarm", po::value<std::string>(), "");
+            exec_desc.add_options()("deflate", po::value<uint8_t>()->default_value(1), "");
 
-            po::positional_options_description reduce_pos;
-            reduce_pos.add("input", 1);
-            reduce_pos.add("output", 1);
+            po::positional_options_description exec_pos;
+            exec_pos.add("input", 1);
+            exec_pos.add("output", 1);
 
             try {
                 std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
                 opts.erase(opts.begin());
-                po::store(po::command_line_parser(opts).options(reduce_desc).positional(reduce_pos).run(), vm);
+                po::store(po::command_line_parser(opts).options(exec_desc).positional(exec_pos).run(), vm);
             } catch (...) {
-                std::cout << "ERROR in gdalcubes reduce: invalid arguments." << std::endl;
-                print_usage("reduce");
+                std::cout << "ERROR in gdalcubes exec: invalid arguments." << std::endl;
+                print_usage("exec");
                 return 1;
             }
 
             std::string input = vm["input"].as<std::string>();
             std::string output = vm["output"].as<std::string>();
 
-            std::vector<std::string> create_options;
-            if (vm.count("gdal-co") > 0) {
-                create_options = vm["gdal-co"].as<std::vector<std::string>>();
-            }
-            std::string reducer = vm["reducer"].as<std::string>();
-            std::string outformat = vm["gdal-of"].as<std::string>();
-            std::string json_view_path = vm["view"].as<std::string>();
-
             uint16_t nthreads = vm["threads"].as<uint16_t>();
+            uint8_t deflate = vm["deflate"].as<uint8_t>();
 
             if (vm.count("swarm")) {
                 auto p = gdalcubes_swarm::from_txtfile(vm["swarm"].as<std::string>());
@@ -318,108 +308,73 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
-            auto c_in = image_collection_cube::create(ic, json_view_path);
-            auto c_reduce = reduce_cube::create(c_in, reducer);
-            c_reduce->write_gdal_image(output, outformat, create_options);
+            std::ifstream i(input);
+            nlohmann::json j;
+            i >> j;
 
-        } else if (cmd == "stream") {
-            po::options_description stream_desc("stream arguments");
-            stream_desc.add_options()("exec", po::value<std::string>(), "External program call for each chunk");
-            stream_desc.add_options()("view,v", po::value<std::string>(), "Path to the JSON data view description");
-            stream_desc.add_options()("chunking,c", po::value<std::string>(), "Chunk sizes in order t,y,x");
-            stream_desc.add_options()("reducer,r", po::value<std::string>(), "Reduction method, currently mean, median, min, and max are implemented.");
-            stream_desc.add_options()("gdal-of", po::value<std::string>(), "GDAL output format");
-            stream_desc.add_options()("gdal-co", po::value<std::vector<std::string>>(), "GDAL create options");
-            stream_desc.add_options()("input", po::value<std::string>(), "Filename of the input image collection.");
-            stream_desc.add_options()("output", po::value<std::string>(), "Output file / directory.");
-            stream_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), " Number of threads used for parallel chunk processing, defaults to 1");
+            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(j);
+            c->write_netcdf_file(output, deflate);
 
-            po::positional_options_description stream_pos;
-            stream_pos.add("input", 1);
-            stream_pos.add("output", 1);
+        } else if (cmd == "addo") {
+            po::options_description addo_desc("addo arguments");
+            addo_desc.add_options()("input", po::value<std::string>(), "");
+            addo_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
+            addo_desc.add_options()("resampling,r", po::value<std::string>()->default_value("NEAREST"), "");
+            addo_desc.add_options()("levels,l", po::value<std::vector<int>>()->multitoken()->default_value(std::vector<int>{2, 4, 8, 16, 32}, "2 4 8 16 32"), "");
+
+            po::positional_options_description addo_pos;
+            addo_pos.add("input", 1);
 
             try {
                 std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
                 opts.erase(opts.begin());
-                po::store(po::command_line_parser(opts).options(stream_desc).positional(stream_pos).run(), vm);
+                po::store(po::command_line_parser(opts).options(addo_desc).positional(addo_pos).run(), vm);
             } catch (...) {
-                print_usage("stream");
+                std::cout << "ERROR in gdalcubes addo: invalid arguments." << std::endl;
+                std::cout << addo_desc << std::endl;
+            }
+
+            std::string input = vm["input"].as<std::string>();
+
+            std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
+            uint16_t nthreads = vm["threads"].as<uint16_t>();
+            std::string resampling = vm["resampling"].as<std::string>();
+            std::vector<int> levels = vm["levels"].as<std::vector<int>>();
+
+            image_collection_ops::create_overviews(ic, levels, resampling, nthreads);
+
+        } else if (cmd == "translate_cog") {
+            po::options_description cog_desc("exec arguments");
+            cog_desc.add_options()("input", po::value<std::string>(), "");
+            cog_desc.add_options()("output", po::value<std::string>(), "");
+            cog_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
+
+            po::positional_options_description cog_pos;
+            cog_pos.add("input", 1);
+            cog_pos.add("output", 1);
+
+            try {
+                std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
+                opts.erase(opts.begin());
+                po::store(po::command_line_parser(opts).options(cog_desc).positional(cog_pos).run(), vm);
+            } catch (...) {
+                std::cout << "ERROR in gdalcubes translate_cog: invalid arguments." << std::endl;
+                print_usage("exec");
                 return 1;
             }
 
             std::string input = vm["input"].as<std::string>();
             std::string output = vm["output"].as<std::string>();
-            std::string exec = vm["exec"].as<std::string>();
-            std::string json_view_path = vm["view"].as<std::string>();
+
             uint16_t nthreads = vm["threads"].as<uint16_t>();
-            if (vm.count("swarm")) {
-                auto p = gdalcubes_swarm::from_txtfile(vm["swarm"].as<std::string>());
-                p->set_threads(nthreads);
-                config::instance()->set_default_chunk_processor(p);
-            } else {
-                if (nthreads > 1) {
-                    config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
-                }
-            }
 
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
 
-            auto c_in = image_collection_cube::create(ic, json_view_path);
+            image_collection_ops::translate_cog(ic, output, nthreads);
 
-            std::vector<uint32_t> chunk_sizes;
-            std::string chunkstr = vm["chunking"].as<std::string>();
-            std::vector<std::string> chunkstr_tokens;
-            // split chunkstr
-            boost::split(chunkstr_tokens, chunkstr, boost::is_any_of(" ,;"));
-            if (chunkstr_tokens.size() == 3) {
-                chunk_sizes.push_back(std::stoi(chunkstr_tokens[0]));
-                chunk_sizes.push_back(std::stoi(chunkstr_tokens[1]));
-                chunk_sizes.push_back(std::stoi(chunkstr_tokens[2]));
-            } else if (chunkstr_tokens.size() == 1) {
-                if (chunkstr == "auto_temporal") {
-                    chunk_sizes.push_back(c_in->size()[1]);
-                    uint32_t csspatial = (uint32_t)std::ceil(std::sqrt((double)(1024 * 1024 * 8) / (double)(sizeof(double) * chunk_sizes[0] * c_in->bands().count())));  // default 8 MB
-                    chunk_sizes.push_back(csspatial);
-                    chunk_sizes.push_back(csspatial);
-                    std::cout << "Using chunk size (t,y,x)=(" << chunk_sizes[0] << "," << chunk_sizes[1] << "," << chunk_sizes[2] << ")" << std::endl;
-                } else if (chunkstr == "auto_spatial") {
-                    chunk_sizes.push_back(1);
-                    chunk_sizes.push_back(c_in->size()[2]);
-                    chunk_sizes.push_back(c_in->size()[3]);
+        }
 
-                    uint32_t cstemporal = (uint32_t)std::ceil((double)(1024 * 1024 * 8) / (double)(sizeof(double) * chunk_sizes[1] * chunk_sizes[2] * c_in->bands().count()));  // default 8 MB
-                    chunk_sizes[0] = cstemporal;
-                    std::cout << "Using chunk size (t,y,x)=(" << chunk_sizes[0] << "," << chunk_sizes[1] << "," << chunk_sizes[2] << ")" << std::endl;
-                } else {
-                    throw std::string("ERROR in gdalcubes stream: expected exactly three numbers, 'auto_temporal', or 'auto_spatial' as chunk size.");
-                }
-            } else {
-                throw std::string("ERROR in gdalcubes stream: expected exactly three numbers, 'auto_temporal', or 'auto_spatial' as chunk size.");
-            }
-
-            c_in->set_chunk_size(chunk_sizes[0], chunk_sizes[1], chunk_sizes[2]);
-
-            auto c_stream = stream_cube::create(c_in, exec);
-
-            // TODO: do something even if no reducer is given
-
-            if (vm.count("reducer")) {
-                std::string reducer = vm["reducer"].as<std::string>();
-                std::vector<std::string> create_options;
-                if (vm.count("gdal-co") > 0) {
-                    create_options = vm["gdal-co"].as<std::vector<std::string>>();
-                }
-                std::string outformat = "GTiff";
-                if (vm.count("gdal-of") > 0) {
-                    outformat = vm["gdal-of"].as<std::string>();
-                }
-
-                auto c_reduce = reduce_cube::create(c_stream, reducer);
-                c_reduce->write_gdal_image(output, outformat, create_options);
-            }
-
-        } else {
+        else {
             std::cout << "ERROR in gdalcubes: unrecognized command." << std::endl;
             print_usage();
             return 1;

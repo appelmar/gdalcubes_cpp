@@ -24,6 +24,8 @@
 
 #include "reduce_space.h"
 
+namespace gdalcubes {
+
 struct reducer_singleband_s {
     virtual ~reducer_singleband_s() {}
 
@@ -416,3 +418,5 @@ std::shared_ptr<chunk_data> reduce_space_cube::read_chunk(chunkid_t id) {
 
     return out;
 }
+
+}  // namespace gdalcubes

@@ -25,6 +25,8 @@
 #include "swarm.h"
 #include <thread>
 
+namespace gdalcubes {
+
 size_t post_file_read_callback(char *buffer, size_t size, size_t nitems, void *userdata) {
     std::ifstream *is = ((std::ifstream *)userdata);
     is->read(buffer, size * nitems);  // or use readsome() ?
@@ -289,3 +291,5 @@ void gdalcubes_swarm::apply(std::shared_ptr<cube> c, std::function<void(chunkid_
         workers[it].join();
     }
 }
+
+}  // namespace gdalcubes

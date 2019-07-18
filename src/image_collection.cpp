@@ -24,11 +24,15 @@
 
 #include "image_collection.h"
 
+#include <gdalwarper.h>
 #include <regex>
+#include <unordered_set>
 #include "config.h"
 #include "external/date.h"
 #include "filesystem.h"
 #include "utils.h"
+
+namespace gdalcubes {
 
 image_collection::image_collection(collection_format format) : _format(format), _filename(""), _db(nullptr) {
     if (sqlite3_open_v2("", &_db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, NULL) != SQLITE_OK) {
@@ -41,14 +45,19 @@ image_collection::image_collection(collection_format format) : _format(format), 
 
     // Create tables
 
-    // key value metadata table
-    std::string sql_schema_md = "CREATE TABLE md(key TEXT PRIMARY KEY, value TEXT);";
-    if (sqlite3_exec(_db, sql_schema_md.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+    // key value metadata for collection
+    std::string sql_schema_collection_md = "CREATE TABLE collection_md(key TEXT PRIMARY KEY, value TEXT);";
+    if (sqlite3_exec(_db, sql_schema_collection_md.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
         throw std::string("ERROR in image_collection::create(): cannot create image collection schema (i).");
     }
-    std::string sql_insert_format = "INSERT INTO md(key, value) VALUES('collection_format','" + _format.json().dump() + "');";
+    std::string sql_insert_format = "INSERT INTO collection_md(key, value) VALUES('collection_format','" + _format.json().dump() + "');";
     if (sqlite3_exec(_db, sql_insert_format.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
         throw std::string("ERROR in image_collection::create(): cannot insert collection format to database.");
+    }
+
+    std::string sql_insert_gdalcubes_version = "INSERT INTO collection_md(key, value) VALUES('GDALCUBES_VERSION','" + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH) + "');";
+    if (sqlite3_exec(_db, sql_insert_gdalcubes_version.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+        throw std::string("ERROR in image_collection::create(): cannot insert gdalcubes version to database.");
     }
 
     // Create Bands
@@ -66,30 +75,51 @@ image_collection::image_collection(collection_format format) : _format(format), 
 
     uint16_t band_id = 0;
     for (auto it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
+        // TODO: add scale and offset if given in collection format
         std::string sql_insert_band;
-        if (it.value().count("nodata")) {
-            sql_insert_band = "INSERT INTO bands(id, name, nodata) VALUES(" + std::to_string(band_id) + ",'" + it.key() + "','" + std::to_string(it.value()["nodata"].get<double>()) + "');";
-        } else {
-            sql_insert_band = "INSERT INTO bands(id, name) VALUES(" + std::to_string(band_id) + ",'" + it.key() + "');";
-        }
+        sql_insert_band = "INSERT INTO bands(id, name";
+        if (it.value().count("nodata")) sql_insert_band += ",nodata";
+        if (it.value().count("offset")) sql_insert_band += ",offset";
+        if (it.value().count("scale")) sql_insert_band += ",scale";
+        if (it.value().count("unit")) sql_insert_band += ",unit";
+        sql_insert_band += ") VALUES(" + std::to_string(band_id) + ",'" + it.key() + "'";
+        if (it.value().count("nodata")) sql_insert_band += ",'" + std::to_string(it.value()["nodata"].get<double>()) + "'";
+        if (it.value().count("offset")) sql_insert_band += "," + std::to_string(it.value()["offset"].get<double>()) + "";
+        if (it.value().count("scale")) sql_insert_band += "," + std::to_string(it.value()["scale"].get<double>()) + "";
+        if (it.value().count("unit")) sql_insert_band += ",'" + it.value()["unit"].get<std::string>() + "'";
+        sql_insert_band += ");";
+
         ++band_id;
         if (sqlite3_exec(_db, sql_insert_band.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
             throw std::string("ERROR in collection_format::apply(): cannot insert bands to collection database.");
         }
     }
 
+    // Create band metadata table
+    std::string sql_schema_band_md = "CREATE TABLE band_md(band_id INTEGER, key TEXT, value TEXT, PRIMARY KEY (band_id, key), FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE);";
+    if (sqlite3_exec(_db, sql_schema_band_md.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+        throw std::string("ERROR in image_collection::create(): cannot create image collection schema (iii).");
+    }
+
     // Create image table
     std::string sql_schema_images = "CREATE TABLE images (id INTEGER PRIMARY KEY, name TEXT, left NUMERIC, top NUMERIC, bottom NUMERIC, right NUMERIC, datetime TEXT, proj TEXT, UNIQUE(name));CREATE INDEX idx_image_names ON images(name);";
     if (sqlite3_exec(_db, sql_schema_images.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-        throw std::string("ERROR in collection_format::apply(): cannot create image collection schema (iii).");
+        throw std::string("ERROR in collection_format::apply(): cannot create image collection schema (iv).");
     }
 
+    // Create image metadata table
+    std::string sql_schema_image_md = "CREATE TABLE image_md(image_id INTEGER, key TEXT, value TEXT, PRIMARY KEY (image_id, key), FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE);";
+    if (sqlite3_exec(_db, sql_schema_image_md.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+        throw std::string("ERROR in image_collection::create(): cannot create image collection schema (v).");
+    }
+
+    // create gdal references table
     std::string sql_schema_gdalrefs =
         "CREATE TABLE gdalrefs (image_id INTEGER, band_id INTEGER, descriptor TEXT, band_num INTEGER, FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE CASCADE, PRIMARY KEY (image_id, band_id), FOREIGN KEY (band_id) REFERENCES bands(id) ON DELETE CASCADE);"
         "CREATE INDEX idx_gdalrefs_bandid ON gdalrefs(band_id);"
         "CREATE INDEX idx_gdalrefs_imageid ON gdalrefs(image_id);";
     if (sqlite3_exec(_db, sql_schema_gdalrefs.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-        throw std::string("ERROR in collection_format::apply(): cannot create image collection schema (iv).");
+        throw std::string("ERROR in collection_format::apply(): cannot create image collection schema (vi).");
     }
 }
 
@@ -105,7 +135,7 @@ image_collection::image_collection(std::string filename) : _format(), _filename(
     sqlite3_db_config(_db, SQLITE_DBCONFIG_ENABLE_FKEY, 1, NULL);
 
     // load format from database
-    std::string sql_select_format = "SELECT value FROM md WHERE key='collection_format';";
+    std::string sql_select_format = "SELECT value FROM \"collection_md\" WHERE key='collection_format';";
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql_select_format.c_str(), -1, &stmt, NULL);
     if (!stmt) {
@@ -113,7 +143,8 @@ image_collection::image_collection(std::string filename) : _format(), _filename(
         throw msg;
     }
     if (sqlite3_step(stmt) == SQLITE_DONE) {
-        std::string msg = "ERROR in image_collection::image_collection(): cannot extract collection format from existing image collection file.";
+        std::string msg = "ERROR in image_collection::image_collection(): cannot extract collection format from existing image collection file; please make sure that the version of the provided image collection is compatible with the current gdalcubes version.";
+        GCBS_ERROR(msg);
         throw msg;
     } else {
         _format.load_string(sqlite_as_string(stmt, 0));
@@ -138,12 +169,10 @@ struct image_band {
 void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::vector<std::regex> regex_band_pattern;
 
-    /* TODO: The following will fail if other applications create image collections and assign ids to bands differently. A better solution would be to load band ids, names, and nums from the database bands table directly
+    /* TODO: The following will fail if other applications create image collections and assign ids to bands differently.
+     * A better solution would be to load band ids, names, and nums from the database bands table directly
      */
 
-    /**
-     * TODO: enable .zip, .gz, .tar, .tar.gz...
-     */
     std::vector<std::string> band_name;
     std::vector<uint16_t> band_num;
     std::vector<uint16_t> band_ids;
@@ -187,8 +216,6 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
         ++counter;
 
-        // if .zip, .tar.gz, .gz, or .tar
-
         p->set((double)counter / (double)descriptors.size());
         if (!global_pattern.empty()) {  // prevent unnecessary GDALOpen calls
             if (!std::regex_match(*it, regex_global_pattern)) {
@@ -211,10 +238,91 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         char* proj4;
         if (dataset->GetGeoTransform(affine_in) != CE_None) {
             // No affine transformation, maybe GCPs?
-            GDALClose((GDALDatasetH)dataset);
-            if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot derive affine transformation for '" + *it + "'. GCPs or unreferenced images are currently not supported.");
-            GCBS_WARN("Failed to derive affine transformation from " + *it);
-            continue;
+            if (dataset->GetGCPCount() > 0) {
+                dataset->GetGCPProjection();  // TODO replace with GetGCPSpatialRef if available (GDAL > 2.5)
+
+                // First try, find GCPs for corner pixels
+                double xmin = std::numeric_limits<double>::infinity();
+                double ymin = std::numeric_limits<double>::infinity();
+                double xmax = -std::numeric_limits<double>::infinity();
+                double ymax = -std::numeric_limits<double>::infinity();
+                bool x1 = false, x2 = false, x3 = false, x4 = false;
+
+                for (int32_t igcp = 0; igcp < dataset->GetGCPCount(); ++igcp) {
+                    GDAL_GCP gcp = dataset->GetGCPs()[igcp];
+                    if (gcp.dfGCPLine == 0 && gcp.dfGCPPixel == 0) {
+                        x1 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    } else if (gcp.dfGCPLine == dataset->GetRasterYSize() - 1 && gcp.dfGCPPixel == 0) {
+                        x2 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    } else if (gcp.dfGCPLine == 0 && gcp.dfGCPPixel == dataset->GetRasterXSize() - 1) {
+                        x3 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    } else if (gcp.dfGCPLine == dataset->GetRasterYSize() - 1 && gcp.dfGCPPixel == dataset->GetRasterXSize() - 1) {
+                        x4 = true;
+                        if (gcp.dfGCPX < xmin) xmin = gcp.dfGCPX;
+                        if (gcp.dfGCPX > xmax) xmax = gcp.dfGCPX;
+                        if (gcp.dfGCPY < ymin) ymin = gcp.dfGCPY;
+                        if (gcp.dfGCPY > ymax) ymax = gcp.dfGCPY;
+                    }
+                }
+
+                if (x1 && x2 && x3 && x4) {
+                    // use extent from corner GCPS
+                    bbox.left = xmin;
+                    bbox.right = xmax;
+                    bbox.top = ymax;
+                    bbox.bottom = ymin;
+                    OGRSpatialReference srs_in;
+                    srs_in.SetFromUserInput(dataset->GetGCPProjection());
+                    srs_in.exportToProj4(&proj4);
+                    bbox.transform(proj4, "EPSG:4326");
+                } else {
+                    //approximate extent based on gdalwarp
+                    double approx_geo_transform[6];
+                    int nx = 0, ny = 0;
+                    double extent[4];
+                    OGRSpatialReference srs_in;
+                    srs_in.SetFromUserInput(dataset->GetGCPProjection());
+                    srs_in.exportToProj4(&proj4);
+
+                    CPLStringList transform_args;
+                    transform_args.AddString(("SRC_SRS=" + std::string(proj4)).c_str());
+                    transform_args.AddString("DST_SRS=EPSG:4326");
+                    transform_args.AddString("GCPS_OK=TRUE");
+
+                    // TODO: add further transformation options if needed
+                    void* transform = GDALCreateGenImgProjTransformer2(dataset, NULL, transform_args.List());
+                    if (GDALSuggestedWarpOutput2(dataset,
+                                                 GDALGenImgProjTransform, transform,
+                                                 approx_geo_transform, &nx, &ny, extent, 0) != CE_None) {
+                        if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot derive extent for '" + *it + "'.");
+                        GCBS_WARN("Failed to derive spatial extent from " + *it);
+                    }
+
+                    // TODO: error handling
+                    bbox.left = extent[0];
+                    bbox.right = extent[2];
+                    bbox.top = extent[3];
+                    bbox.bottom = extent[1];
+                }
+
+            } else {
+                GDALClose((GDALDatasetH)dataset);
+                if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot derive spatial extent for '" + *it + "'.");
+                GCBS_WARN("Failed to derive spatial extent from " + *it);
+                continue;
+            }
         } else {
             bbox.left = affine_in[0];
             bbox.right = affine_in[0] + affine_in[1] * dataset->GetRasterXSize() + affine_in[2] * dataset->GetRasterYSize();
@@ -245,7 +353,6 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             GCBS_WARN("Dataset " + *it + " doesn't contain any band data and will be ignored");
             continue;
         }
-        GDALClose((GDALDatasetH)dataset);
 
         // TODO: check consistency for all files of an image?!
         // -> add parameter checks=true / false
@@ -301,7 +408,6 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         sqlite3_finalize(stmt);
 
         // Insert into gdalrefs table
-
         for (uint16_t i = 0; i < band_name.size(); ++i) {
             if (std::regex_match(*it, regex_band_pattern[i])) {
                 // TODO: if checks, check whether bandnum exists in GDALdataset
@@ -331,6 +437,50 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             }
         }
         CPLFree(proj4);
+
+        // Read image metadata from GDALDataset
+        std::unordered_set<std::string> image_md_fields;
+
+        if (_format.json().count("image_md_fields")) {
+            image_md_fields = _format.json()["image_md_fields"].get<std::unordered_set<std::string>>();
+        }
+
+        if (image_md_fields.size() > 0) {
+            char** md_domains = dataset->GetMetadataDomainList();
+            for (auto cur_md_key = image_md_fields.begin(); cur_md_key != image_md_fields.end(); ++cur_md_key) {
+                // has domain?
+                std::size_t sep_pos = cur_md_key->find_first_of(":");
+                if (sep_pos != std::string::npos) {
+                    // has domain
+
+                    std::string domain = cur_md_key->substr(0, sep_pos);
+                    std::string field = cur_md_key->substr(sep_pos + 1, std::string::npos);
+
+                    // does the domain exist?
+                    if (CSLFindString(md_domains, domain.c_str()) == -1) {
+                        // no
+                        continue;
+                    } else {
+                        // yes
+                        const char* value = CSLFetchNameValue(dataset->GetMetadata(domain.c_str()), field.c_str());
+                        if (value) {
+                            std::string sql_insert_image_md = "INSERT OR IGNORE INTO image_md(image_id, key, value) VALUES(" + std::to_string(image_id) + ",'" + *cur_md_key + "','" + std::string(value) + "');";
+                            sqlite3_exec(_db, sql_insert_image_md.c_str(), NULL, NULL, NULL);
+                        }
+                    }
+                } else {
+                    // default domain
+                    const char* value = CSLFetchNameValue(dataset->GetMetadata(), cur_md_key->c_str());
+                    if (value) {
+                        std::string sql_insert_image_md = "INSERT OR IGNORE INTO image_md(image_id, key, value) VALUES(" + std::to_string(image_id) + ",'" + *cur_md_key + "','" + std::string(value) + "');";
+                        sqlite3_exec(_db, sql_insert_image_md.c_str(), NULL, NULL, NULL);
+                    }
+                }
+            }
+            CSLDestroy(md_domains);
+        }
+
+        GDALClose((GDALDatasetH)dataset);
     }
     p->set(1);
     p->finalize();
@@ -421,6 +571,14 @@ std::string image_collection::to_string() {
     ss << std::to_string(count_images()) << " images with ";
     ss << std::to_string(count_bands()) << " bands from ";
     ss << std::to_string(count_gdalrefs()) << " GDAL dataset references";
+
+    auto band_info = get_bands();
+    ss << std::endl
+    << "NAME | OFFSET | SCALE | UNIT | NODATA | IMAGE COUNT" << std::endl;
+    for (uint16_t i = 0; i < band_info.size(); ++i) {
+        ss << band_info[i].name << " | " << band_info[i].offset << " | " << band_info[i].scale << " | " << band_info[i].nodata << " | " << band_info[i].image_count << std::endl;
+    }
+
     return ss.str();
 }
 
@@ -515,10 +673,10 @@ bounds_st image_collection::extent() {
 }
 
 std::vector<image_collection::find_range_st_row> image_collection::find_range_st(bounds_st range, std::string srs,
-                                                                                 std::vector<std::string> bands, std::string order_by) {
+                                                                                 std::vector<std::string> bands, std::vector<std::string> order_by) {
     bounds_2d<double> range_trans = (srs == "EPSG:4326") ? range.s : range.s.transform(srs, "EPSG:4326");
-    std::string sql =
-        "SELECT images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
+    std::string sql =  // TODO: do we really need image_name ?
+        "SELECT gdalrefs.image_id, images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
         "images.datetime >= '" +
         range.t0.to_string(datetime_unit::SECOND) + "' AND images.datetime <= '" + range.t1.to_string(datetime_unit::SECOND) +
@@ -534,15 +692,29 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
         bandlist += "'" + bands[bands.size() - 1] + "'";
         sql += " AND bands.name IN (" + bandlist + ")";
     }
-    if (!order_by.empty()) {  // explicitly test order by column if given to avoid SQL injection
-        if (order_by == "images.name" ||
-            order_by == "gdalrefs.descriptor" ||
-            order_by == "images.datetime" ||
-            order_by == "bands.name" ||
-            order_by == "gdalrefs.band_num")
-            sql += " ORDER BY " + order_by;
-
-        else {
+    if (!order_by.empty()) {
+        sql += "ORDER BY ";
+        for (uint16_t io = 0; io < order_by.size() - 1; ++io) {
+            if (order_by[io] == "gdalrefs.image_id" ||
+                order_by[io] == "images.name" ||
+                order_by[io] == "gdalrefs.descriptor" ||
+                order_by[io] == "images.datetime" ||
+                order_by[io] == "bands.name" ||
+                order_by[io] == "gdalrefs.band_num") {
+                sql += order_by[io] + ",";
+            } else {
+                throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
+            }
+        }
+        uint16_t io = order_by.size() - 1;
+        if (order_by[io] == "gdalrefs.image_id" ||
+            order_by[io] == "images.name" ||
+            order_by[io] == "gdalrefs.descriptor" ||
+            order_by[io] == "images.datetime" ||
+            order_by[io] == "bands.name" ||
+            order_by[io] == "gdalrefs.band_num") {
+            sql += order_by[io];
+        } else {
             throw std::string("ERROR in image_collection::find_range_st(): invalid column for sorting");
         }
     }
@@ -556,11 +728,12 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     std::vector<find_range_st_row> out;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
         find_range_st_row r;
-        r.image_name = sqlite_as_string(stmt, 0);
-        r.descriptor = sqlite_as_string(stmt, 1);
-        r.datetime = sqlite_as_string(stmt, 2);
-        r.band_name = sqlite_as_string(stmt, 3);
-        r.band_num = sqlite3_column_int(stmt, 4);
+        r.image_id = sqlite3_column_int(stmt, 0);
+        r.image_name = sqlite_as_string(stmt, 1);
+        r.descriptor = sqlite_as_string(stmt, 2);
+        r.datetime = sqlite_as_string(stmt, 3);
+        r.band_name = sqlite_as_string(stmt, 4);
+        r.band_num = sqlite3_column_int(stmt, 5);
 
         out.push_back(r);
     }
@@ -571,7 +744,10 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
 std::vector<image_collection::bands_row> image_collection::get_bands() {
     std::vector<image_collection::bands_row> out;
 
-    std::string sql = "SELECT id, name, type, offset,scale, unit, nodata FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
+    //std::string sql = "SELECT id, name, type, offset,scale, unit, nodata FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
+
+    // all bands with image count
+    std::string sql = "SELECT id, name, type, offset,scale, unit, nodata , sum(n) FROM (SELECT bands.id, bands.name, bands.type, bands.offset, bands.scale, bands.unit, bands.nodata, count(*) as n FROM bands INNER JOIN gdalrefs ON bands.id = gdalrefs.band_id GROUP BY bands.id UNION SELECT bands.id, bands.name, bands.type, bands.offset, bands.scale, bands.unit, bands.nodata, 0 FROM bands) GROUP BY id ORDER BY name";
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {
@@ -587,6 +763,7 @@ std::vector<image_collection::bands_row> image_collection::get_bands() {
         row.scale = sqlite3_column_double(stmt, 4);
         row.unit = sqlite_as_string(stmt, 5);
         row.nodata = sqlite_as_string(stmt, 6);
+        row.image_count = sqlite3_column_int(stmt, 7);
         out.push_back(row);
     }
     sqlite3_finalize(stmt);
@@ -726,3 +903,5 @@ std::string image_collection::sqlite_as_string(sqlite3_stmt* stmt, uint16_t col)
         return std::string(reinterpret_cast<const char*>(a));
     }
 }
+
+}  // namespace gdalcubes

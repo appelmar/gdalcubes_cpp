@@ -23,6 +23,8 @@
 */
 #include "window_time.h"
 
+namespace gdalcubes {
+
 std::function<double(double* buf, uint16_t n)> window_time_cube::get_default_reducer_by_name(std::string name) {
     if (name == "mean") {
         return std::function<double(double* buf, uint16_t n)>([](double* buf, uint16_t n) {
@@ -232,3 +234,5 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
     std::free(cur_ts);
     return out;
 }
+
+}  // namespace gdalcubes

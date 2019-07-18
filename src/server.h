@@ -32,6 +32,8 @@
 #include <thread>
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief An in-memory singleton cache for successfully read / computed chunks
  *
@@ -279,5 +281,7 @@ class gdalcubes_server {
 
     std::set<std::string> _whitelist;
 };
+
+}  // namespace gdalcubes
 
 #endif  //SERVER_H

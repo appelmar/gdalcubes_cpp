@@ -22,11 +22,13 @@
     SOFTWARE.
 */
 
-#ifndef CLIENT_H
-#define CLIENT_H
+#ifndef SWARM_H
+#define SWARM_H
 
 #include <curl/curl.h>
 #include "cube.h"
+
+namespace gdalcubes {
 
 /**
  * @brief Chunk processor implementation for distributed processing by connecting to gdalcubes_server instances
@@ -81,4 +83,6 @@ class gdalcubes_swarm : public chunk_processor {
     uint16_t _nthreads;
 };
 
-#endif  //CLIENT_H
+}  // namespace gdalcubes
+
+#endif  //SWARM_H

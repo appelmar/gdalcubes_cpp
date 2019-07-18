@@ -25,6 +25,8 @@
 #include "../external/catch.hpp"
 #include "../filesystem.h"
 
+using namespace gdalcubes;
+
 TEST_CASE("Filesystem join, parent, stem, extension", "[filesystem]") {
     REQUIRE(filesystem::stem("xyz.txt") == "xyz");
     REQUIRE(filesystem::stem("xyz") == "xyz");

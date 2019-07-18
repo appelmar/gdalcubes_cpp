@@ -29,6 +29,8 @@
 #include <string>
 #include "cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief A data cube that applies one or more arithmetic expressions on band values per pixel
  *
@@ -151,5 +153,7 @@ class apply_pixel_cube : public cube {
 
     bool parse_expressions();
 };
+
+}  // namespace gdalcubes
 
 #endif  //APPLY_PIXEL_H

@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include "external/tiny-process-library/process.hpp"
 
+namespace gdalcubes {
+
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("stream_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
@@ -159,13 +161,13 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
         f_in_stream.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
-    for (int i = 0; i < size[1]; ++i) {
+    for (int i = 0; i < size[1]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
         dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
     }
-    for (int i = size[1]; i < size[1] + size[2]; ++i) {
+    for (int i = size[1]; i < size[1] + size[2]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
         dims[i] = _in_cube->st_reference()->win().bottom + i * _in_cube->st_reference()->dy();
     }
-    for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
+    for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
         dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
     }
     f_in_stream.write((char *)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
@@ -235,3 +237,5 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
 
     return out;
 }
+
+}  // namespace gdalcubes

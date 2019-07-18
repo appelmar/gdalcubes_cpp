@@ -28,6 +28,8 @@
 #include "cube.h"
 #include "image_collection_cube.h"
 
+namespace gdalcubes {
+
 /**
  * @brief A data cube that subsets and / or reorders bands of an input data cube
  * @note Where possible select_bands should be called directly on image_collection_cube objects as input
@@ -143,5 +145,7 @@ class select_bands_cube : public cube {
         _st_ref->dt(stref->dt());
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  //SELECT_BANDS_H

@@ -32,6 +32,8 @@
 #include <sstream>
 #include <string>
 
+namespace gdalcubes {
+
 /**
  * @brief A utility class for commonly used functions
  */
@@ -149,5 +151,7 @@ class utils {
         return ss.str();
     }
 };
+
+}  // namespace gdalcubes
 
 #endif  //UTILS_H

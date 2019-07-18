@@ -26,6 +26,8 @@
 #include "../external/catch.hpp"
 #include "../view.h"
 
+using namespace gdalcubes;
+
 TEST_CASE("Create", "[view]") {
     cube_view v;
     v.srs() = "EPSG:4326";

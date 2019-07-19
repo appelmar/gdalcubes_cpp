@@ -264,7 +264,7 @@ class image_collection_cube : public cube {
     void select_bands(std::vector<uint16_t> bands);
 
     void set_mask(std::string band, std::shared_ptr<image_mask> mask) {
-        std::vector<image_collection::bands_row> bands = _collection->get_bands();
+        std::vector<image_collection::bands_row> bands = _collection->get_available_bands();
         for (uint16_t ib = 0; ib < bands.size(); ++ib) {
             if (bands[ib].name == band) {
                 _mask = mask;

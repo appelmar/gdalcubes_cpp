@@ -303,7 +303,19 @@ class image_collection {
         return find_range_st(range, srs, std::vector<std::string>(), order_by);
     };
 
-    std::vector<image_collection::bands_row> get_bands();
+    /**
+     * Return available bands of an image collection. Bands without
+     * correspoding datasets are omitted.
+     * @return
+     */
+    std::vector<image_collection::bands_row> get_available_bands();
+
+    /**
+     * Return all bands, including bands of the collection format
+     * without corresponding datasets in the collection
+     * @return
+     */
+    std::vector<image_collection::bands_row> get_all_bands();
 
     std::vector<image_collection::gdalrefs_row> get_gdalrefs();
 

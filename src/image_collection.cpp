@@ -572,9 +572,9 @@ std::string image_collection::to_string() {
     ss << std::to_string(count_bands()) << " bands from ";
     ss << std::to_string(count_gdalrefs()) << " GDAL dataset references";
 
-    auto band_info = get_bands();
+    auto band_info = get_available_bands();
     ss << std::endl
-    << "NAME | OFFSET | SCALE | UNIT | NODATA | IMAGE COUNT" << std::endl;
+       << "NAME | OFFSET | SCALE | UNIT | NODATA | IMAGE COUNT" << std::endl;
     for (uint16_t i = 0; i < band_info.size(); ++i) {
         ss << band_info[i].name << " | " << band_info[i].offset << " | " << band_info[i].scale << " | " << band_info[i].nodata << " | " << band_info[i].image_count << std::endl;
     }
@@ -741,7 +741,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     return out;
 }
 
-std::vector<image_collection::bands_row> image_collection::get_bands() {
+std::vector<image_collection::bands_row> image_collection::get_all_bands() {
     std::vector<image_collection::bands_row> out;
 
     //std::string sql = "SELECT id, name, type, offset,scale, unit, nodata FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
@@ -751,7 +751,7 @@ std::vector<image_collection::bands_row> image_collection::get_bands() {
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {
-        throw std::string("ERROR in image_collection::get_bands(): cannot prepare query statement");
+        throw std::string("ERROR in image_collection::get_all_bands(): cannot prepare query statement");
     }
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -767,6 +767,17 @@ std::vector<image_collection::bands_row> image_collection::get_bands() {
         out.push_back(row);
     }
     sqlite3_finalize(stmt);
+    return out;
+}
+
+std::vector<image_collection::bands_row> image_collection::get_available_bands() {
+    std::vector<image_collection::bands_row> out;
+    std::vector<image_collection::bands_row> all_bands = get_all_bands();
+    for (auto it = all_bands.begin(); it != all_bands.end(); ++it) {
+        if (it->image_count > 0)
+            out.push_back(*it);
+    }
+
     return out;
 }
 

@@ -639,7 +639,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
 void image_collection_cube::load_bands() {
     // Access image collection and fetch band information
-    std::vector<image_collection::bands_row> band_info = _collection->get_bands();
+    std::vector<image_collection::bands_row> band_info = _collection->get_available_bands();
 
     // this is the band information of the cube, not of the original image bands
     for (uint16_t ib = 0; ib < band_info.size(); ++ib) {

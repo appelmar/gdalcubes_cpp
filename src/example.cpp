@@ -144,20 +144,7 @@ int main(int argc, char *argv[]) {
         //            cr->write_gdal_image("test_filter_predicate_2.tif");
         //        }
         /**************************************************************************/
-
-        /**************************************************************************/
-        // test reduction over time
-        {
-            auto c = image_collection_cube::create("test.db", v);
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            // auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
-            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
-            cr->write_gdal_image("test_reduce_new.tif");
-            auto cc = rechunk_merge_time_cube::create(cb);
-            auto cr2 = reduce_time_cube::create(cc, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
-            cr->write_gdal_image("test_reduce_new_rechunk_merge_time.tif");
-        }
-        /**************************************************************************/
+        
 
         //        /**************************************************************************/
         //        // test reduction over space

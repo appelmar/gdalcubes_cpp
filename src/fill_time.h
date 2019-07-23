@@ -39,7 +39,7 @@ class fill_time_cube : public cube {
             _bands.add(b);
         }
 
-        if (method != "near" && method != "linear" && method != "repeat_prec" && method != "repeat_succ") {
+        if (method != "near" && method != "linear" && method != "locf" && method != "nocb") {
             GCBS_WARN("Invalid time-series interpolation method, using default (nearest neighbor)");
             _method = "near";
         }

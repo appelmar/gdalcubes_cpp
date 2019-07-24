@@ -414,11 +414,18 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                 // TODO: if checks, compare band type, offset, scale, unit, etc. with current GDAL dataset
 
                 if (!band_complete[i]) {
-                    std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'," +
-                                                  "scale=" + std::to_string(bands[band_num[i] - 1].scale) + "," +
-                                                  "offset=" + std::to_string(bands[band_num[i] - 1].offset) + "," +
-                                                  "unit='" + bands[band_num[i] - 1].unit + "' WHERE name='" + band_name[i] + "';";
-                    // if has no data
+                    std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'";
+
+
+                    if (!_format.json()["bands"][band_name[i]].count("scale"))
+                        sql_band_update += ",scale=" + std::to_string(bands[band_num[i] - 1].scale) ;
+                    if (!_format.json()["bands"][band_name[i]].count("offset"))
+                        sql_band_update += ",offset=" + std::to_string(bands[band_num[i] - 1].offset) ;
+                    if (!_format.json()["bands"][band_name[i]].count("unit"))
+                        sql_band_update += ",unit='" + bands[band_num[i] - 1].unit + "'";
+
+                    // TODO: also add no data if not defined in image collection?
+                    sql_band_update += "WHERE name='" + band_name[i] + "';";
 
                     if (sqlite3_exec(_db, sql_band_update.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                         if (strict) throw std::string("ERROR in image_collection::add(): cannot update band table.");

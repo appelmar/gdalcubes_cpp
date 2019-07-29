@@ -120,7 +120,7 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
 
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = filesystem::join(dir, prefix + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
         GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), GDT_Float64, out_co.List());
         char *wkt_out;
         OGRSpatialReference srs_out;
@@ -145,7 +145,7 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
 
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-            std::string name = filesystem::join(dir, prefix + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+            std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
 
             uint32_t cur_t_index = chunk_limits(id).low[0] + it;
             mtx[cur_t_index].lock();
@@ -156,7 +156,7 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
                 continue;
             }
 
-            CPLErr res = gdal_out->RasterIO(GF_Write, chunk_limits(id).low[2], chunk_limits(id).low[1], dat->size()[3], dat->size()[2], dat->buf(), dat->size()[3], dat->size()[2],
+            CPLErr res = gdal_out->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2], dat->buf(), dat->size()[3], dat->size()[2],
                                             GDT_Float64, size_bands(), NULL, 0, 0, 0);
             if (res != CE_None) {
                 GCBS_WARN("RasterIO (write) failed for " + name);
@@ -175,7 +175,7 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
 
     // TODO: build overviews with multiple threads
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = filesystem::join(dir, prefix + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
         GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
         if (!gdal_out) {
             continue;
@@ -616,11 +616,11 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
             std::ofstream fout(outfile);
             fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
             fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
-            fout << "<GeoTransform>" << st_reference()->left() << " " << st_reference()->dx() << " "
+            fout << "<GeoTransform>" << st_reference()->left() << ", " << st_reference()->dx() << ", "
                  << "0.0"
-                 << " " << st_reference()->top() << " "
+                 << ", " << st_reference()->top() << ", "
                  << "0.0"
-                 << " "
+                 << ", "
                  << "-" << st_reference()->dy() << "</GeoTransform>" << std::endl;
 
             for (uint16_t ib = 0; ib < size_bands(); ++ib) {

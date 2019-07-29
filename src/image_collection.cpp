@@ -416,11 +416,10 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                 if (!band_complete[i]) {
                     std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'";
 
-
                     if (!_format.json()["bands"][band_name[i]].count("scale"))
-                        sql_band_update += ",scale=" + std::to_string(bands[band_num[i] - 1].scale) ;
+                        sql_band_update += ",scale=" + std::to_string(bands[band_num[i] - 1].scale);
                     if (!_format.json()["bands"][band_name[i]].count("offset"))
-                        sql_band_update += ",offset=" + std::to_string(bands[band_num[i] - 1].offset) ;
+                        sql_band_update += ",offset=" + std::to_string(bands[band_num[i] - 1].offset);
                     if (!_format.json()["bands"][band_name[i]].count("unit"))
                         sql_band_update += ",unit='" + bands[band_num[i] - 1].unit + "'";
 

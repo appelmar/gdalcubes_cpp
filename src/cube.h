@@ -43,6 +43,28 @@ typedef std::array<uint32_t, 3> chunk_size_tyx;
 
 typedef uint32_t chunkid_t;
 
+/**
+ * Data structure for defining packed data exports (dividing and adding data values by a scale and offset value
+ * respectively, before conversion to smaller integer types during the export.
+ */
+struct packed_export {
+    // Enum definitions for output types, PACK_NONE will not
+    // apply any packing whereas PACK_AUTO will ignore
+    // scale and offset and try to derive these values automatically
+    // TODO Packing has not yet been implemented in write methods
+    enum class packing_type {
+        PACK_NONE,
+        PACK_UINT8,
+        PACK_UINT16,
+        PACK_INT8,
+        PACK_INT16,
+        PACK_AUTO
+    };
+    packing_type type;
+    double scale;
+    double offset;
+};
+
 class cube;
 
 class chunk_data;
@@ -641,24 +663,25 @@ class cube : public std::enable_shared_from_this<cube> {
      *
      * @note NOT YET IMPLEMENTED
      *
-     * For each time slice of the data cube, one subfolder under the given output directory will be created with name equal to the date/time.
-     * COGs are created for all spatial slices with spatial extents coming fom the data cube chunks.
+     * Each time slice of the cube will be written to one cloud-optimized GeoTIFF files.
      * In addition, a single cube.json file at the output directory stores the serialized JSON graph defining the creation process of the cube.
      *
-     *
-     * @param dir directory where to store the files
-     * @param creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
+     * @param dir output directory
+     * @param prefix name prefix for created files
+     * @param additional creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
      * @param p chunk processor instance, defaults to the global configuration
      */
-    //void write_COG_collection(std::string dir, std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(), std::shared_ptr<chunk_processor> p=config::instance()->get_default_chunk_processor())
+    void write_COG_collection(std::string dir, std::string prefix = "", std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Write a data cube as a single NetCDF file
      * @param path path of the target file
      * @param compression_level deflate level, 0 = no compression, 1 = fast, 9 = small
+     * @param with_VRT additional write VRT files for time slices that are easier to display, e.g., in QGIS
      * @param p chunk processor instance, defaults to the global configuration
      */
     void write_netcdf_file(std::string path, uint8_t compression_level = 0,
+                           bool with_VRT = false,
                            std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**

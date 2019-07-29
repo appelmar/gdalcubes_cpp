@@ -93,6 +93,116 @@ void cube::write_chunks_gtiff(std::string dir, std::shared_ptr<chunk_processor> 
 }
 
 // TODO: testing
+void cube::write_COG_collection(std::string dir, std::string prefix, std::map<std::string, std::string> creation_options,
+                                std::shared_ptr<chunk_processor> p) {
+    if (!filesystem::exists(dir)) {
+        filesystem::mkdir_recursive(dir);
+    }
+    if (!filesystem::is_directory(dir)) {
+        throw std::string("ERROR in cube::write_COG_collection(): invalid output directory.");
+    }
+
+    GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
+    if (gtiff_driver == NULL) {
+        throw std::string("ERROR: cannot find GDAL driver for GTiff.");
+    }
+
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
+    // avoid parallel RasterIO calls to the same file
+    std::map<uint32_t, std::mutex> mtx;  // time_slice_index -> mutex
+
+    CPLStringList out_co;
+    out_co.AddNameValue("TILED", "YES");
+    out_co.AddNameValue("BLOCKXSIZE", "256");
+    out_co.AddNameValue("BLOCKYSIZE", "256");
+
+    // create all datasets
+    for (uint32_t it = 0; it < size_t(); ++it) {
+        std::string name = filesystem::join(dir, prefix + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), GDT_Float64, out_co.List());
+        char *wkt_out;
+        OGRSpatialReference srs_out;
+        srs_out.SetFromUserInput(_st_ref->srs().c_str());
+        srs_out.exportToWkt(&wkt_out);
+        GDALSetProjection(gdal_out, wkt_out);
+
+        double affine[6];
+        affine[0] = st_reference()->left();
+        affine[3] = st_reference()->top();
+        affine[1] = st_reference()->dx();
+        affine[5] = -st_reference()->dy();
+        affine[2] = 0.0;
+        affine[4] = 0.0;
+        GDALSetGeoTransform(gdal_out, affine);
+        CPLFree(wkt_out);
+        for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+            gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(std::stod(_bands.get(ib).no_data_value));
+        }
+        GDALClose((GDALDatasetH)gdal_out);
+    }
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+        for (uint32_t it = 0; it < dat->size()[1]; ++it) {
+            std::string name = filesystem::join(dir, prefix + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+
+            uint32_t cur_t_index = chunk_limits(id).low[0] + it;
+            mtx[cur_t_index].lock();
+            GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
+            if (!gdal_out) {
+                GCBS_WARN("GDAL failed to open " + name);
+                mtx[cur_t_index].unlock();
+                continue;
+            }
+
+            CPLErr res = gdal_out->RasterIO(GF_Write, chunk_limits(id).low[2], chunk_limits(id).low[1], dat->size()[3], dat->size()[2], dat->buf(), dat->size()[3], dat->size()[2],
+                                            GDT_Float64, size_bands(), NULL, 0, 0, 0);
+            if (res != CE_None) {
+                GCBS_WARN("RasterIO (write) failed for " + name);
+                GDALClose(gdal_out);
+                mtx[cur_t_index].unlock();
+                continue;
+            }
+
+            GDALClose(gdal_out);
+            mtx[cur_t_index].unlock();
+        }
+        prg->increment((double)0.5 / (double)this->count_chunks());
+    };
+
+    p->apply(shared_from_this(), f);
+
+    // TODO: build overviews with multiple threads
+    for (uint32_t it = 0; it < size_t(); ++it) {
+        std::string name = filesystem::join(dir, prefix + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
+        if (!gdal_out) {
+            continue;
+        }
+
+        int n_overviews = (int)std::ceil(std::log2(std::fmax(double(size_x()), double(size_y())) / 512));
+        std::vector<int> overview_list;
+        for (int i = 1; i <= n_overviews; ++i) {
+            overview_list.push_back(std::pow(2, i));
+        }
+
+        // TODO: configurable rasampling
+        CPLErr res =  GDALBuildOverviews(gdal_out, "NEAREST", n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
+        if (res != CE_None) {
+            GCBS_WARN("GDALBuildOverviews failed for " + name);
+            GDALClose(gdal_out);
+            continue;
+        }
+        GDALClose((GDALDatasetH)gdal_out);
+        prg->increment((double)0.5 / (double)size_t());
+    }
+
+    prg->set(1.0);
+    prg->finalize();
+}
+
+// TODO: testing
 void cube::write_chunks_ncdf(std::string dir, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
     if (!filesystem::exists(dir)) {
         filesystem::mkdir_recursive(dir);
@@ -282,7 +392,7 @@ void cube::write_chunks_ncdf(std::string dir, uint8_t compression_level, std::sh
     prg->finalize();
 }
 
-void cube::write_netcdf_file(std::string path, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
+void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, std::shared_ptr<chunk_processor> p) {
     std::string op = filesystem::make_absolute(path);
 
     if (filesystem::is_directory(op)) {
@@ -497,6 +607,43 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, std::s
     p->apply(shared_from_this(), f);
     nc_close(ncout);
     prg->finalize();
+
+    if (with_VRT) {
+        for (uint32_t it = 0; it < size_t(); ++it) {
+            std::string dir = filesystem::directory(path);
+            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".vrt");
+
+            std::ofstream fout(outfile);
+            fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
+            fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
+            fout << "<GeoTransform>" << st_reference()->left() << " " << st_reference()->dx() << " "
+                 << "0.0"
+                 << " " << st_reference()->top() << " "
+                 << "0.0"
+                 << " "
+                 << "-" << st_reference()->dy() << "</GeoTransform>" << std::endl;
+
+            for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                fout << "<VRTRasterBand dataType=\"Float64\" band=\"" << ib + 1 << "\">" << std::endl;
+                fout << "<SimpleSource>" << std::endl;
+
+                fout << "<NoDataValue>" << std::stod(_bands.get(ib).no_data_value) << "</NoDataValue>" << std::endl;
+                fout << "<UnitType>" << _bands.get(ib).unit << "</UnitType>" << std::endl;
+                fout << "<Offset>" << _bands.get(ib).offset << "</Offset>" << std::endl;
+                fout << "<Scale>" << _bands.get(ib).scale << "</Scale>" << std::endl;
+
+                std::string in_dataset = "NETCDF:\"" + filesystem::filename(path) + "\":" + _bands.get(ib).name;
+                fout << "<SourceFilename relativeToVRT=\"1\">" << in_dataset << "</SourceFilename>" << std::endl;
+                fout << "<SourceBand>" << it + 1 << "</SourceBand>" << std::endl;
+                fout << "<SrcRect xOff=\"0\" yOff=\"0\" xSize=\"" << size_x() << "\" ySize=\"" << size_y() << "\"/>" << std::endl;
+                fout << "<DstRect xOff=\"0\" yOff=\"0\" xSize=\"" << size_x() << "\" ySize=\"" << size_y() << "\"/>" << std::endl;
+                fout << "</SimpleSource>" << std::endl;
+                fout << "</VRTRasterBand>" << std::endl;
+            }
+            fout << "</VRTDataset>" << std::endl;
+            fout.close();
+        }
+    }
 }
 
 void chunk_processor_singlethread::apply(std::shared_ptr<cube> c,

@@ -137,9 +137,9 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
         affine[4] = 0.0;
         GDALSetGeoTransform(gdal_out, affine);
         CPLFree(wkt_out);
-        for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-            gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(std::stod(_bands.get(ib).no_data_value));
-        }
+
+        gdal_out->GetRasterBand(1)->SetNoDataValue(NAN); // GeoTIFF supports only one NoData value for all bands
+
         GDALClose((GDALDatasetH)gdal_out);
     }
 

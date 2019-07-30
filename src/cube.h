@@ -661,8 +661,6 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * @brief Writes a data cube as a collection of cloud-optimized GeoTIFF files
      *
-     * @note NOT YET IMPLEMENTED
-     *
      * Each time slice of the cube will be written to one cloud-optimized GeoTIFF files.
      * In addition, a single cube.json file at the output directory stores the serialized JSON graph defining the creation process of the cube.
      *
@@ -670,8 +668,14 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param prefix name prefix for created files
      * @param additional creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
      * @param p chunk processor instance, defaults to the global configuration
+     *
+     * @note COGs are created in three steps:
+     * 1. time slices of cubes of the cube are exported as tiled normal GeoTIFFs (no overviews)
+     * 2. Overviews are generated
+     * 3. A new copy of the TIF with overviews is created, moving the IFDs of overviews to the beginning of the file (using gdal_translate -co COPY_SRC_OVERVIEWS=YES)
+     * Improvements are welcome (maybe the COG driver of GDAL > 3.1 helps?)
      */
-    void write_COG_collection(std::string dir, std::string prefix = "", std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_COG_collection(std::string dir, std::string prefix = "", std::string overview_resampling = "NEAREST", std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Write a data cube as a single NetCDF file

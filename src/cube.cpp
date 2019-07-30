@@ -25,7 +25,9 @@
 #include "cube.h"
 #include <thread>
 
+#include <gdal_utils.h>  // for GDAL translate
 #include <netcdf.h>
+#include <algorithm>  // std::transform
 #include "build_info.h"
 #include "filesystem.h"
 
@@ -92,9 +94,8 @@ void cube::write_chunks_gtiff(std::string dir, std::shared_ptr<chunk_processor> 
     prg->finalize();
 }
 
-// TODO: testing
-void cube::write_COG_collection(std::string dir, std::string prefix, std::map<std::string, std::string> creation_options,
-                                std::shared_ptr<chunk_processor> p) {
+void cube::write_COG_collection(std::string dir, std::string prefix, std::string overview_resampling,
+                                std::map<std::string, std::string> creation_options, std::shared_ptr<chunk_processor> p) {
     if (!filesystem::exists(dir)) {
         filesystem::mkdir_recursive(dir);
     }
@@ -115,12 +116,31 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
 
     CPLStringList out_co;
     out_co.AddNameValue("TILED", "YES");
-    out_co.AddNameValue("BLOCKXSIZE", "256");
-    out_co.AddNameValue("BLOCKYSIZE", "256");
+    if (creation_options.find("BLOCKXSIZE") != creation_options.end()) {
+        out_co.AddNameValue("BLOCKXSIZE", creation_options["BLOCKXSIZE"].c_str());
+    } else {
+        out_co.AddNameValue("BLOCKXSIZE", "256");
+    }
+    if (creation_options.find("BLOCKYSIZE") != creation_options.end()) {
+        out_co.AddNameValue("BLOCKYSIZE", creation_options["BLOCKYSIZE"].c_str());
+    } else {
+        out_co.AddNameValue("BLOCKYSIZE", "256");
+    }
+
+    for (auto it = creation_options.begin(); it != creation_options.end(); ++it) {
+        std::string key = it->first;
+        std::transform(key.begin(), key.end(), key.begin(), (int (*)(int))std::toupper);
+        if (key == "TILED") {
+            GCBS_WARN("Setting" + it->first + "=" + it->second + "is not allowed, ignoring GeoTIFF creation option.");
+            continue;
+        }
+        if (key == "BLOCKXSIZE" || key == "BLOCKYSIZE") continue;
+        out_co.AddNameValue(it->first.c_str(), it->second.c_str());
+    }
 
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
         GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), GDT_Float64, out_co.List());
         char *wkt_out;
         OGRSpatialReference srs_out;
@@ -138,14 +158,15 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
         GDALSetGeoTransform(gdal_out, affine);
         CPLFree(wkt_out);
 
-        gdal_out->GetRasterBand(1)->SetNoDataValue(NAN); // GeoTIFF supports only one NoData value for all bands
+        // Setting NoData value seems to be not needed for Float64 GeoTIFFs
+        //gdal_out->GetRasterBand(1)->SetNoDataValue(NAN); // GeoTIFF supports only one NoData value for all bands
 
         GDALClose((GDALDatasetH)gdal_out);
     }
 
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-            std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+            std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
 
             uint32_t cur_t_index = chunk_limits(id).low[0] + it;
             mtx[cur_t_index].lock();
@@ -175,28 +196,81 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
 
     p->apply(shared_from_this(), f);
 
-    // TODO: build overviews with multiple threads
+    // build overviews and convert to COG (with IFDs of overviews at the beginning of the file)
+    // TODO: use multiple threads
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
         GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
         if (!gdal_out) {
             continue;
         }
 
-        int n_overviews = (int)std::ceil(std::log2(std::fmax(double(size_x()), double(size_y())) / 512));
+        int n_overviews = (int)std::ceil(std::log2(std::fmax(double(size_x()), double(size_y())) / 256));
         std::vector<int> overview_list;
         for (int i = 1; i <= n_overviews; ++i) {
             overview_list.push_back(std::pow(2, i));
         }
 
-        // TODO: configurable rasampling
-        CPLErr res = GDALBuildOverviews(gdal_out, "NEAREST", n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
+        CPLErr res = GDALBuildOverviews(gdal_out, overview_resampling.c_str(), n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
         if (res != CE_None) {
             GCBS_WARN("GDALBuildOverviews failed for " + name);
             GDALClose(gdal_out);
             continue;
         }
+
+        CPLStringList translate_args;
+        translate_args.AddString("-of");
+        translate_args.AddString("GTiff");
+        translate_args.AddString("-co");
+        translate_args.AddString("COPY_SRC_OVERVIEWS=YES");
+        translate_args.AddString("-co");
+        translate_args.AddString("TILED=YES");
+
+        if (creation_options.find("BLOCKXSIZE") != creation_options.end()) {
+            translate_args.AddString("-co");
+            translate_args.AddString(("BLOCKXSIZE=" + creation_options["BLOCKXSIZE"]).c_str());
+        } else {
+            translate_args.AddString("-co");
+            translate_args.AddString("BLOCKXSIZE=256");
+        }
+        if (creation_options.find("BLOCKYSIZE") != creation_options.end()) {
+            translate_args.AddString("-co");
+            translate_args.AddString(("BLOCKYSIZE=" + creation_options["BLOCKYSIZE"]).c_str());
+        } else {
+            translate_args.AddString("-co");
+            translate_args.AddString("BLOCKYSIZE=256");
+        }
+        for (auto it = creation_options.begin(); it != creation_options.end(); ++it) {
+            std::string key = it->first;
+            std::transform(key.begin(), key.end(), key.begin(), (int (*)(int))std::toupper);
+            if (key == "TILED") {
+                GCBS_WARN("Setting" + it->first + "=" + it->second + "is not allowed, ignoring GeoTIFF creation option.");
+                continue;
+            }
+            if (key == "BLOCKXSIZE" || key == "BLOCKYSIZE") continue;
+            if (key == "COPY_SRC_OVERVIEWS") {
+                GCBS_WARN("Setting" + it->first + "=" + it->second + "is not allowed, ignoring GeoTIFF creation option.");
+                continue;
+            }
+            out_co.AddNameValue(it->first.c_str(), it->second.c_str());
+            translate_args.AddString("-co");
+            translate_args.AddString((it->first + "=" + it->second).c_str());
+        }
+
+        GDALTranslateOptions *trans_options = GDALTranslateOptionsNew(translate_args.List(), NULL);
+        if (trans_options == NULL) {
+            GCBS_ERROR("ERROR in cube::write_COG_collection(): Cannot create gdal_translate options.");
+            throw std::string("ERROR in cube::write_COG_collection(): Cannot create gdal_translate options.");
+        }
+
+        std::string cogname = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        GDALDatasetH gdal_cog = GDALTranslate(cogname.c_str(), (GDALDatasetH)gdal_out, trans_options, NULL);
+
         GDALClose((GDALDatasetH)gdal_out);
+        filesystem::remove(name);
+        GDALClose((GDALDatasetH)gdal_cog);
+        GDALTranslateOptionsFree(trans_options);
+
         prg->increment((double)0.5 / (double)size_t());
     }
 

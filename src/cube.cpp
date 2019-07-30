@@ -156,13 +156,15 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
                 continue;
             }
 
-            CPLErr res = gdal_out->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2], dat->buf(), dat->size()[3], dat->size()[2],
-                                            GDT_Float64, size_bands(), NULL, 0, 0, 0);
-            if (res != CE_None) {
-                GCBS_WARN("RasterIO (write) failed for " + name);
-                GDALClose(gdal_out);
-                mtx[cur_t_index].unlock();
-                continue;
+            for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
+                                                                       ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]),
+                                                                       dat->size()[3], dat->size()[2],
+                                                                       GDT_Float64, 0, 0, NULL);
+                if (res != CE_None) {
+                    GCBS_WARN("RasterIO (write) failed for " + name);
+                    break;
+                }
             }
 
             GDALClose(gdal_out);
@@ -188,7 +190,7 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::map<st
         }
 
         // TODO: configurable rasampling
-        CPLErr res =  GDALBuildOverviews(gdal_out, "NEAREST", n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
+        CPLErr res = GDALBuildOverviews(gdal_out, "NEAREST", n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
         if (res != CE_None) {
             GCBS_WARN("GDALBuildOverviews failed for " + name);
             GDALClose(gdal_out);
@@ -616,12 +618,12 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
             std::ofstream fout(outfile);
             fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
             fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
-            fout << "<GeoTransform>" << st_reference()->left() << ", " << st_reference()->dx() << ", "
+            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(st_reference()->dx()) << ", "
                  << "0.0"
-                 << ", " << st_reference()->top() << ", "
+                 << ", " << utils::dbl_to_string(st_reference()->top()) << ", "
                  << "0.0"
                  << ", "
-                 << "-" << st_reference()->dy() << "</GeoTransform>" << std::endl;
+                 << "-" << utils::dbl_to_string(st_reference()->dy()) << "</GeoTransform>" << std::endl;
 
             for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                 fout << "<VRTRasterBand dataType=\"Float64\" band=\"" << ib + 1 << "\">" << std::endl;

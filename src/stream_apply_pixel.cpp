@@ -10,7 +10,7 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
-    coords_nd<uint32_t, 4> size_btyx = {_nbands, size_tyx[0], size_tyx[1], size_tyx[2]};
+    coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
     // Fill buffers accordingly
@@ -131,7 +131,14 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
     f_out_stream.close();
 
     // Copy results to chunk buffer, at most the size of the output
-    std::memcpy(out->buf(), buffer + (4 * sizeof(int)), std::min(length - 4 * sizeof(int), size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3] * sizeof(double)));
+
+    uint32_t offset = _keep_bands ? (inbuf->size()[0] * inbuf->size()[1] * inbuf->size()[2] * inbuf->size()[3]) : 0;
+    if (_keep_bands) {
+        std::memcpy(out->buf(), inbuf->buf(),
+                    sizeof(double) * offset);
+    }
+
+    std::memcpy(((double *)(out->buf())) + offset, buffer + (4 * sizeof(int)), std::min(length - 4 * sizeof(int), _nbands * size_btyx[1] * size_btyx[2] * size_btyx[3] * sizeof(double)));
     std::free(buffer);
 
     if (filesystem::exists(f_out)) {

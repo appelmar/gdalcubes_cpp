@@ -81,12 +81,13 @@ class apply_pixel_cube : public cube {
         }
 
         if (_keep_bands) {
+            // TODO: check for band name conflicts here
             for (uint16_t i = 0; i < _in_cube->size_bands(); ++i) {
                 _bands.add(_in_cube->bands().get(i));
             }
         }
         for (uint16_t i = 0; i < _expr.size(); ++i) {
-            band b(_band_names.empty() ? ("band" + std::to_string(i + 1)) : _band_names[i]);
+            band b(_band_names.empty() ? ("x" + std::to_string(i + 1)) : _band_names[i]);
             b.unit = "";
             b.no_data_value = "nan";
             b.type = "float64";
@@ -108,7 +109,7 @@ class apply_pixel_cube : public cube {
             throw std::string("ERROR in apply_pixel_cube::apply_pixel_cube(): Invalid expression(s)");
         }
 
-        // Find out, which expressions are actually used per expression
+        // Find out, which bands are actually used per expression
         for (uint16_t i = 0; i < _expr.size(); ++i) {
             _band_usage.push_back(std::set<std::string>());
             for (uint16_t ib = 0; ib < _in_cube->bands().count(); ++ib) {

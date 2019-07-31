@@ -133,7 +133,7 @@ bool apply_pixel_cube::parse_expressions() {
     }
 
     int err = 0;
-    for (uint16_t i = 0; i < _bands.count(); ++i) {
+    for (uint16_t i = 0; i < _expr.size(); ++i) {
         te_expr* expr = te_compile(_expr[i].c_str(), vars.data(), vars.size(), &err);
         if (expr) {
             te_free(expr);

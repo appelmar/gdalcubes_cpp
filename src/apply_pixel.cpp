@@ -39,10 +39,9 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     // Parse expressions and create symbol table
     std::vector<double> values;
     values.resize(_in_cube->bands().count(), NAN);
-    // WARNING: never change size of values from now
+    // CAUTION: never change size of values from now
 
     // TODO: add further variables like x, y, t to symbol table
-
     std::vector<te_variable> vars;
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
@@ -59,7 +58,7 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     //    symbol_table.add_function("isfinite", f_isfinite);
 
     std::vector<te_expr*> expr;
-    for (uint16_t i = 0; i < _bands.count(); ++i) {
+    for (uint16_t i = 0; i < _expr.size(); ++i) {
         int err;
 
         te_expr* x = te_compile(_expr[i].c_str(), vars.data(), vars.size(), &err);
@@ -81,22 +80,31 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
     out->buf(std::calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
 
-    // We do not need to fill with NAN because we can be sure that it is completeley filled from the input cube
+    // We do not need to fill with NAN because we can be sure that it is completly filled from the input cube
     //double *begin = (double *)out->buf();
     //double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     // std::fill(begin, end, NAN);
 
-    for (uint16_t outb = 0; outb < _bands.count(); ++outb) {
+    if (_keep_bands) {
+        std::memcpy(out->buf(), in->buf(),
+                    sizeof(double) * in->size()[0] * in->size()[1] * in->size()[2] * in->size()[3]);
+    }
+
+    uint16_t outb = (_keep_bands) ? _in_cube->size_bands() : 0;
+    uint16_t expr_idx = 0;
+    while (outb < _bands.count()) {
         std::vector<uint16_t> bidx;
-        for (auto it = _band_usage[outb].begin(); it != _band_usage[outb].end(); ++it) {
+        for (auto it = _band_usage[expr_idx].begin(); it != _band_usage[expr_idx].end(); ++it) {
             bidx.push_back(_in_cube->bands().get_index(*it));
         }
         for (uint32_t i = 0; i < in->size()[1] * in->size()[2] * in->size()[3]; ++i) {
             for (uint16_t inb = 0; inb < bidx.size(); ++inb) {
                 values[bidx[inb]] = ((double*)in->buf())[bidx[inb] * in->size()[1] * in->size()[2] * in->size()[3] + i];
             }
-            ((double*)out->buf())[outb * in->size()[1] * in->size()[2] * in->size()[3] + i] = te_eval(expr[outb]);
+            ((double*)out->buf())[outb * in->size()[1] * in->size()[2] * in->size()[3] + i] = te_eval(expr[expr_idx]);
         }
+        ++outb;
+        ++expr_idx;
     }
 
     // free expressions

@@ -47,10 +47,11 @@ class apply_pixel_cube : public cube {
      * @param in input data cube
      * @param expr vector of string expressions, each expression will result in a new band in the resulting cube where values are derived from the input cube according to the specific expression
      * @param band_names specify names for the bands of the resulting cube, if empty, "band1", "band2", "band3", etc. will be used as names
+     * @param keep_bands if true, bands will be added to the existing bands of the input cube, otherwise (default) they are dropped
      * @return a shared pointer to the created data cube instance
      */
-    static std::shared_ptr<apply_pixel_cube> create(std::shared_ptr<cube> in, std::vector<std::string> expr, std::vector<std::string> band_names = {}) {
-        std::shared_ptr<apply_pixel_cube> out = std::make_shared<apply_pixel_cube>(in, expr, band_names);
+    static std::shared_ptr<apply_pixel_cube> create(std::shared_ptr<cube> in, std::vector<std::string> expr, std::vector<std::string> band_names = {}, bool keep_bands = false) {
+        std::shared_ptr<apply_pixel_cube> out = std::make_shared<apply_pixel_cube>(in, expr, band_names, keep_bands);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
@@ -61,8 +62,9 @@ class apply_pixel_cube : public cube {
      * @brief Create a data cube that applies arithmetic expressions on pixels of an input data cube
      * @param expr vector of string expressions, each expression will result in a new band in the resulting cube where values are derived from the input cube according to the specific expression
      * @param band_names specify names for the bands of the resulting cube, if empty, "band1", "band2", "band3", etc. will be used as names
+     * @param keep_bands if true, bands will be added to the existing bands of the input cube, otherwise (default) they are dropped
      */
-    apply_pixel_cube(std::shared_ptr<cube> in, std::vector<std::string> expr, std::vector<std::string> band_names = {}) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _expr(expr), _band_names(band_names), _band_usage(), _band_usage_all() {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    apply_pixel_cube(std::shared_ptr<cube> in, std::vector<std::string> expr, std::vector<std::string> band_names = {}, bool keep_bands = false) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _expr(expr), _band_names(band_names), _band_usage(), _band_usage_all(), _keep_bands(keep_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -78,6 +80,11 @@ class apply_pixel_cube : public cube {
             }
         }
 
+        if (_keep_bands) {
+            for (uint16_t i = 0; i < _in_cube->size_bands(); ++i) {
+                _bands.add(_in_cube->bands().get(i));
+            }
+        }
         for (uint16_t i = 0; i < _expr.size(); ++i) {
             band b(_band_names.empty() ? ("band" + std::to_string(i + 1)) : _band_names[i]);
             b.unit = "";
@@ -131,6 +138,7 @@ class apply_pixel_cube : public cube {
         if (!_band_names.empty())
             out["band_names"] = _band_names;
         out["in_cube"] = _in_cube->make_constructible_json();
+        out["keep_bands"] = _keep_bands;
         return out;
     }
 
@@ -140,6 +148,7 @@ class apply_pixel_cube : public cube {
     std::vector<std::string> _band_names;
     std::vector<std::set<std::string>> _band_usage;  // store which bands are really used per expression
     std::set<std::string> _band_usage_all;
+    bool _keep_bands;
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         _st_ref->win() = stref->win();

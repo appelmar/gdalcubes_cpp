@@ -666,6 +666,7 @@ class cube : public std::enable_shared_from_this<cube> {
      *
      * @param dir output directory
      * @param prefix name prefix for created files
+     * @param overview_resampling resampling algorithm used to generate overviews (see https://gdal.org/programs/gdaladdo.html)
      * @param additional creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
      * @param p chunk processor instance, defaults to the global configuration
      *

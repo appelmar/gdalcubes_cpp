@@ -9,6 +9,7 @@
 * added `gdalcubes exec` command to command line interface
 * added experimental `gdalcubes exec` and `gdalcubes translate_cog` for batch processing of image collections
 * added `stream_reduce_time operator`, applying external processes on time series
+* added `keep_bands` option to `apply_pixel` operation, keeping all bands from the input data cube
 
 
 # 0.1.1

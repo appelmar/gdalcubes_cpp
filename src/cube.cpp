@@ -1,25 +1,25 @@
 /*
-    MIT License
+ MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 */
 
 #include "cube.h"
@@ -94,13 +94,65 @@ void cube::write_chunks_gtiff(std::string dir, std::shared_ptr<chunk_processor> 
     prg->finalize();
 }
 
+// TODO: implement packing
+// TODO: allow dir to be a file if cube has size_t() == 1
 void cube::write_COG_collection(std::string dir, std::string prefix, std::string overview_resampling,
-                                std::map<std::string, std::string> creation_options, std::shared_ptr<chunk_processor> p) {
+                                std::map<std::string, std::string> creation_options, packed_export packing,
+                                std::shared_ptr<chunk_processor> p) {
     if (!filesystem::exists(dir)) {
         filesystem::mkdir_recursive(dir);
     }
     if (!filesystem::is_directory(dir)) {
         throw std::string("ERROR in cube::write_COG_collection(): invalid output directory.");
+    }
+
+    GDALDataType ot = GDT_Float64;
+    if (packing.type != packed_export::packing_type::PACK_NONE) {
+        if (packing.type == packed_export::packing_type::PACK_UINT8) {
+            ot = GDT_Byte;
+        } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
+            ot = GDT_UInt16;
+        } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
+            ot = GDT_UInt32;
+        } else if (packing.type == packed_export::packing_type::PACK_INT16) {
+            ot = GDT_Int16;
+        } else if (packing.type == packed_export::packing_type::PACK_INT32) {
+            ot = GDT_Int32;
+        } else if (packing.type == packed_export::packing_type::PACK_DEFAULT) {
+            ot = GDT_Int16;  // default
+            packing.scale = {{(double)1 / (double)10000}};
+            packing.offset = {{0}};
+            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
+            packing.type = packed_export::packing_type::PACK_INT16;
+        } else if (packing.type == packed_export::packing_type::PACK_AUTO) {
+            ot = GDT_Int16;  // default
+            packing.scale = {{(double)1 / (double)10000}};
+            packing.offset = {{0}};
+            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
+            packing.type = packed_export::packing_type::PACK_INT16;
+            GCBS_WARN("Automatic packing is not yet implemented; using default offset 0, scale 1/10000.");
+        }
+
+        if (!(packing.scale.size() == 1 || packing.scale.size() == size_bands())) {
+            std::string msg;
+            if (size_bands() == 1) {
+                msg = "Packed export needs exactly 1 scale and offset value.";
+            } else {
+                msg = "Packed export needs either n or 1 scale / offset values for n bands.";
+            }
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+        if (packing.scale.size() != packing.offset.size()) {
+            std::string msg = "Unequal number of scale and offset values provided for packed export.";
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+        if (packing.scale.size() != packing.nodata.size()) {
+            std::string msg = "Unequal number of scale and nodata values provided for packed export.";
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
     }
 
     GDALDriver *gtiff_driver = (GDALDriver *)GDALGetDriverByName("GTiff");
@@ -141,7 +193,7 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
         std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
-        GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), GDT_Float64, out_co.List());
+        GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), ot, out_co.List());
         char *wkt_out;
         OGRSpatialReference srs_out;
         srs_out.SetFromUserInput(_st_ref->srs().c_str());
@@ -161,10 +213,25 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
         // Setting NoData value seems to be not needed for Float64 GeoTIFFs
         //gdal_out->GetRasterBand(1)->SetNoDataValue(NAN); // GeoTIFF supports only one NoData value for all bands
 
+        if (packing.type != packed_export::packing_type::PACK_NONE) {
+            if (packing.scale.size() > 1) {
+                for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                    // TODO: GeoTIFF supports only one NoData value for all bands,
+                    //  does it work for offset and scale?
+                    gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[ib]);
+                    gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[ib]);
+                    gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[ib]);
+                }
+            } else {
+                gdal_out->GetRasterBand(1)->SetNoDataValue(packing.nodata[0]);
+                gdal_out->GetRasterBand(1)->SetOffset(packing.offset[0]);
+                gdal_out->GetRasterBand(1)->SetScale(packing.scale[0]);
+            }
+        }
         GDALClose((GDALDatasetH)gdal_out);
     }
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, &ot](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         for (uint32_t it = 0; it < dat->size()[1]; ++it) {
             std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
 
@@ -177,11 +244,45 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
                 continue;
             }
 
+            // apply packing
+            if (packing.type != packed_export::packing_type::PACK_NONE) {
+                for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                    double cur_scale;
+                    double cur_offset;
+                    double cur_nodata;
+                    if (packing.scale.size() == size_bands()) {
+                        cur_scale = packing.scale[ib];
+                        cur_offset = packing.offset[ib];
+                        cur_nodata = packing.nodata[ib];
+                    } else {
+                        cur_scale = packing.scale[0];
+                        cur_offset = packing.offset[0];
+                        cur_nodata = packing.nodata[0];
+                    }
+
+                    //if band of cube already has scale + offset, we must unpack before!
+                    if (bands().get(ib).scale != 1 || bands().get(ib).offset != 0) {
+                        for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
+                            double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                            v = v * bands().get(ib).scale + bands().get(ib).offset;
+                        }
+                    }
+
+                    for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
+                        double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                    }
+                }
+            }
+
             for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                 CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
                                                                        ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]),
-                                                                       dat->size()[3], dat->size()[2],
-                                                                       GDT_Float64, 0, 0, NULL);
+                                                                       dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
                 if (res != CE_None) {
                     GCBS_WARN("RasterIO (write) failed for " + name);
                     break;
@@ -278,197 +379,8 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
     prg->finalize();
 }
 
-// TODO: testing
-void cube::write_chunks_ncdf(std::string dir, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
-    if (!filesystem::exists(dir)) {
-        filesystem::mkdir_recursive(dir);
-    }
-
-    if (!filesystem::is_directory(dir)) {
-        throw std::string("ERROR in cube::write_chunks_ncdf(): output is not a directory.");
-    }
-
-    // TODO: write json file
-    std::ofstream o(filesystem::join(dir, "cube.json"));
-    o << std::setw(4) << this->make_constructible_json() << std::endl;
-    o.close();
-
-    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
-    prg->set(0);  // explicitly set to zero to show progress bar immediately
-
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, compression_level](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
-        bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
-        chunk_size_btyx csize = dat->size();
-
-        std::string outfile = filesystem::join(dir, std::to_string(id) + ".nc");
-
-        double *dim_x = (double *)std::calloc(size_x(), sizeof(double));  //TODO: check for std::free()
-        double *dim_y = (double *)std::calloc(size_y(), sizeof(double));
-        int *dim_t = (int *)std::calloc(size_t(), sizeof(int));
-
-        if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-            _st_ref->dt_unit() = datetime_unit::DAY;
-            _st_ref->dt_interval() *= 7;  // UDUNIT does not support week
-        }
-
-        for (uint32_t i = 0; i < chunk_size()[0]; ++i) {
-            dim_t[i] = (i + chunk_size()[0] * chunk_limits(id).low[0]) * st_reference()->dt().dt_interval;
-        }
-        for (uint32_t i = 0; i < chunk_size()[1]; ++i) {
-            dim_y[i] = cextent.s.bottom + chunk_size(id)[1] * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
-        }
-        for (uint32_t i = 0; i < chunk_size()[2]; ++i) {
-            dim_x[i] = cextent.s.left + (i + 0.5) * st_reference()->dx();
-        }
-
-        OGRSpatialReference srs = st_reference()->srs_ogr();
-        std::string yname = srs.IsProjected() ? "y" : "latitude";
-        std::string xname = srs.IsProjected() ? "x" : "longitude";
-
-        int ncout;
-
-#if defined R_PACKAGE && defined(__sun) && defined(__SVR4)
-        nc_create(outfile.c_str(), NC_CLASSIC_MODEL, &ncout);
-#else
-        nc_create(outfile.c_str(), NC_NETCDF4, &ncout);
-#endif
-
-        int d_t, d_y, d_x;
-        nc_def_dim(ncout, "time", size_t(), &d_t);
-        nc_def_dim(ncout, yname.c_str(), size_y(), &d_y);
-        nc_def_dim(ncout, xname.c_str(), size_x(), &d_x);
-
-        int v_t, v_y, v_x;
-        nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
-        nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
-        nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
-
-        std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
-
-        nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
-        nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
-
-        // write json graph as metadata
-        //    std::string j = make_constructible_json().dump();
-        //    nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
-
-        char *wkt;
-        srs.exportToWkt(&wkt);
-
-        double geoloc_array[6] = {cextent.s.left, st_reference()->dx(), 0.0, cextent.s.top, 0.0, st_reference()->dy()};
-        nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
-        nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-
-        std::string dtunit_str;
-        if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
-            dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
-        } else if (_st_ref->dt().dt_unit == datetime_unit::MONTH) {
-            dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
-        } else if (_st_ref->dt().dt_unit == datetime_unit::DAY) {
-            dtunit_str = "days";
-        } else if (_st_ref->dt().dt_unit == datetime_unit::HOUR) {
-            dtunit_str = "hours";
-        } else if (_st_ref->dt().dt_unit == datetime_unit::MINUTE) {
-            dtunit_str = "minutes";
-        } else if (_st_ref->dt().dt_unit == datetime_unit::SECOND) {
-            dtunit_str = "seconds";
-        }
-        dtunit_str += " since ";
-        dtunit_str += _st_ref->t0().to_string(datetime_unit::SECOND);
-
-        nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
-        nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-        nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
-        nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
-
-        if (srs.IsProjected()) {
-            char *unit = nullptr;
-            srs.GetLinearUnits(&unit);
-
-            nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
-            nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
-
-            int v_crs;
-            nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
-            nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-            nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
-
-        } else {
-            // char* unit;
-            // double scale = srs.GetAngularUnits(&unit);
-            nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
-            nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
-            nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
-
-            nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
-            nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
-            nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
-
-            int v_crs;
-            nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
-            nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
-            nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
-        }
-        CPLFree(wkt);
-        int d_all[] = {d_t, d_y, d_x};
-
-        std::vector<int> v_bands;
-
-        for (uint16_t i = 0; i < bands().count(); ++i) {
-            int v;
-            nc_def_var(ncout, bands().get(i).name.c_str(), NC_DOUBLE, 3, d_all, &v);
-            std::size_t csize_temp[3] = {csize[1], csize[2], csize[3]};
-            nc_def_var_chunking(ncout, v, NC_CHUNKED, csize_temp);
-            if (compression_level > 0) {
-                nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
-            }
-
-            if (!bands().get(i).unit.empty())
-                nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
-
-            double pscale = bands().get(i).scale;
-            double poff = bands().get(i).offset;
-            nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
-            nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
-            nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
-            nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
-
-            // this doesn't seem to solve missing spatial reference for multitemporal nc files
-            //        nc_put_att_text(ncout, v, "spatial_ref", strlen(wkt), wkt);
-            //        nc_put_att_double(ncout, v, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-
-            double pNAN = NAN;
-            nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
-
-            v_bands.push_back(v);
-        }
-
-        nc_enddef(ncout);  ////////////////////////////////////////////////////
-
-        nc_put_var(ncout, v_t, (void *)dim_t);
-        nc_put_var(ncout, v_y, (void *)dim_y);
-        nc_put_var(ncout, v_x, (void *)dim_x);
-
-        if (dim_t) std::free(dim_t);
-        if (dim_y) std::free(dim_y);
-        if (dim_x) std::free(dim_x);
-
-        std::size_t startp[] = {0, 0, 0};
-        std::size_t countp[] = {csize[1], csize[2], csize[3]};
-
-        for (uint16_t i = 0; i < bands().count(); ++i) {
-            nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
-        }
-        prg->increment((double)1 / (double)this->count_chunks());
-
-        nc_close(ncout);
-    };
-
-    p->apply(shared_from_this(), f);
-    prg->finalize();
-}
-
-void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, std::shared_ptr<chunk_processor> p) {
+void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, bool write_bounds,
+                             packed_export packing, std::shared_ptr<chunk_processor> p) {
     std::string op = filesystem::make_absolute(path);
 
     if (filesystem::is_directory(op)) {
@@ -485,32 +397,97 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    double *dim_x = (double *)std::calloc(size_x(), sizeof(double));  //TODO: check for std::free()
+    int ot = NC_DOUBLE;
+    if (packing.type != packed_export::packing_type::PACK_NONE) {
+        if (packing.type == packed_export::packing_type::PACK_UINT8) {
+            ot = NC_UBYTE;
+        } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
+            ot = NC_USHORT;
+        } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
+            ot = NC_UINT;
+        } else if (packing.type == packed_export::packing_type::PACK_INT16) {
+            ot = NC_SHORT;
+        } else if (packing.type == packed_export::packing_type::PACK_INT32) {
+            ot = NC_INT;
+        } else if (packing.type == packed_export::packing_type::PACK_DEFAULT) {
+            ot = NC_SHORT;  // default
+            packing.scale = {{(double)1 / (double)10000}};
+            packing.offset = {{0}};
+            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
+            packing.type = packed_export::packing_type::PACK_INT16;
+        } else if (packing.type == packed_export::packing_type::PACK_AUTO) {
+            ot = NC_SHORT;  // default
+            packing.scale = {{(double)1 / (double)10000}};
+            packing.offset = {{0}};
+            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
+            packing.type = packed_export::packing_type::PACK_INT16;
+            GCBS_WARN("Automatic packing is not yet implemented; using default offset 0, scale 1/10000.");
+        }
+
+        if (!(packing.scale.size() == 1 || packing.scale.size() == size_bands())) {
+            std::string msg;
+            if (size_bands() == 1) {
+                msg = "Packed export needs exactly 1 scale and offset value.";
+            } else {
+                msg = "Packed export needs either n or 1 scale / offset values for n bands.";
+            }
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+        if (packing.scale.size() != packing.offset.size()) {
+            std::string msg = "Unequal number of scale and offset values provided for packed export.";
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+        if (packing.scale.size() != packing.nodata.size()) {
+            std::string msg = "Unequal number of scale and nodata values provided for packed export.";
+            GCBS_ERROR(msg);
+            throw(msg);
+        }
+    }
+
+    double *dim_x = (double *)std::calloc(size_x(), sizeof(double));  // TODO: check for std::free()
     double *dim_y = (double *)std::calloc(size_y(), sizeof(double));
     int *dim_t = (int *)std::calloc(size_t(), sizeof(int));
 
-    double *dim_x_bnds = (double *)std::calloc(size_x() * 2, sizeof(double));  //TODO: check for std::free()
-    double *dim_y_bnds = (double *)std::calloc(size_y() * 2, sizeof(double));
-    int *dim_t_bnds = (int *)std::calloc(size_t() * 2, sizeof(int));
+    double *dim_x_bnds = nullptr;
+    double *dim_y_bnds = nullptr;
+    int *dim_t_bnds = nullptr;
+
+    if (write_bounds) {
+        dim_x_bnds = (double *)std::calloc(size_x() * 2, sizeof(double));  //TODO: check for std::free()
+        dim_y_bnds = (double *)std::calloc(size_y() * 2, sizeof(double));
+        dim_t_bnds = (int *)std::calloc(size_t() * 2, sizeof(int));
+    }
 
     if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
         _st_ref->dt_unit() = datetime_unit::DAY;
         _st_ref->dt_interval() *= 7;  // UDUNIT does not support week
     }
+
     for (uint32_t i = 0; i < size_t(); ++i) {
         dim_t[i] = (i * st_reference()->dt().dt_interval);
-        dim_t_bnds[2 * i] = (i * st_reference()->dt().dt_interval);
-        dim_t_bnds[2 * i + 1] = ((i + 1) * st_reference()->dt().dt_interval);
     }
     for (uint32_t i = 0; i < size_y(); ++i) {
         dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
-        dim_y_bnds[2 * i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i)*st_reference()->dy();
-        dim_y_bnds[2 * i + 1] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 1) * st_reference()->dy();
     }
     for (uint32_t i = 0; i < size_x(); ++i) {
         dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
-        dim_x_bnds[2 * i] = st_reference()->win().left + (i + 0) * st_reference()->dx();
-        dim_x_bnds[2 * i + 1] = st_reference()->win().left + (i + 1) * st_reference()->dx();
+    }
+
+    if (write_bounds) {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t_bnds[2 * i] = (i * st_reference()->dt().dt_interval);
+            dim_t_bnds[2 * i + 1] = ((i + 1) * st_reference()->dt().dt_interval);
+        }
+        for (uint32_t i = 0; i < size_y(); ++i) {
+            dim_y_bnds[2 * i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i)*st_reference()->dy();
+            dim_y_bnds[2 * i + 1] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 1) * st_reference()->dy();
+        }
+        for (uint32_t i = 0; i < size_x(); ++i) {
+            dim_x_bnds[2 * i] = st_reference()->win().left + (i + 0) * st_reference()->dx();
+            dim_x_bnds[2 * i + 1] = st_reference()->win().left + (i + 1) * st_reference()->dx();
+        }
     }
 
     OGRSpatialReference srs = st_reference()->srs_ogr();
@@ -531,7 +508,9 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     nc_def_dim(ncout, xname.c_str(), size_x(), &d_x);
 
     int d_bnds;
-    nc_def_dim(ncout, "nv", 2, &d_bnds);
+    if (write_bounds) {
+        nc_def_dim(ncout, "nv", 2, &d_bnds);
+    }
 
     int v_t, v_y, v_x;
     nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
@@ -542,9 +521,11 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     int d_tbnds[] = {d_t, d_bnds};
     int d_ybnds[] = {d_y, d_bnds};
     int d_xbnds[] = {d_x, d_bnds};
-    nc_def_var(ncout, "time_bnds", NC_INT, 2, d_tbnds, &v_tbnds);
-    nc_def_var(ncout, "y_bnds", NC_DOUBLE, 2, d_ybnds, &v_ybnds);
-    nc_def_var(ncout, "x_bnds", NC_DOUBLE, 2, d_xbnds, &v_xbnds);
+    if (write_bounds) {
+        nc_def_var(ncout, "time_bnds", NC_INT, 2, d_tbnds, &v_tbnds);
+        nc_def_var(ncout, "y_bnds", NC_DOUBLE, 2, d_ybnds, &v_ybnds);
+        nc_def_var(ncout, "x_bnds", NC_DOUBLE, 2, d_xbnds, &v_xbnds);
+    }
 
     std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
 
@@ -619,10 +600,11 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
     for (uint16_t i = 0; i < bands().count(); ++i) {
         int v;
-        nc_def_var(ncout, bands().get(i).name.c_str(), NC_DOUBLE, 3, d_all, &v);
+        nc_def_var(ncout, bands().get(i).name.c_str(), ot, 3, d_all, &v);
         std::size_t csize[3] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
-        nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);
+        nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);  // TODO: ifdef USE_NCDF4
         if (compression_level > 0) {
+            // TODO: ifdef USE_NCDF4
             nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
         }
 
@@ -631,6 +613,20 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
         double pscale = bands().get(i).scale;
         double poff = bands().get(i).offset;
+        double pNAN = NAN;
+
+        if (packing.type != packed_export::packing_type::PACK_NONE) {
+            if (packing.scale.size() > 1) {
+                pscale = packing.scale[i];
+                poff = packing.offset[i];
+                pNAN = packing.nodata[i];
+            } else {
+                pscale = packing.scale[0];
+                poff = packing.offset[0];
+                pNAN = packing.nodata[0];
+            }
+        }
+
         nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
         nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
         nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
@@ -640,8 +636,8 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         //        nc_put_att_text(ncout, v, "spatial_ref", strlen(wkt), wkt);
         //        nc_put_att_double(ncout, v, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
-        double pNAN = NAN;
-        nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
+        // TODO: does the following call automatically converts double nodata value to ot?
+        nc_put_att_double(ncout, v, "_FillValue", ot, 1, &pNAN);
 
         v_bands.push_back(v);
     }
@@ -652,30 +648,131 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     nc_put_var(ncout, v_y, (void *)dim_y);
     nc_put_var(ncout, v_x, (void *)dim_x);
 
-    nc_put_var(ncout, v_tbnds, (void *)dim_t_bnds);
-    nc_put_var(ncout, v_ybnds, (void *)dim_y_bnds);
-    nc_put_var(ncout, v_xbnds, (void *)dim_x_bnds);
+    if (write_bounds) {
+        nc_put_var(ncout, v_tbnds, (void *)dim_t_bnds);
+        nc_put_var(ncout, v_ybnds, (void *)dim_y_bnds);
+        nc_put_var(ncout, v_xbnds, (void *)dim_x_bnds);
+    }
 
     if (dim_t) std::free(dim_t);
     if (dim_y) std::free(dim_y);
     if (dim_x) std::free(dim_x);
-    if (dim_t_bnds) std::free(dim_t_bnds);
-    if (dim_y_bnds) std::free(dim_y_bnds);
-    if (dim_x_bnds) std::free(dim_x_bnds);
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    if (write_bounds) {
+        if (dim_t_bnds) std::free(dim_t_bnds);
+        if (dim_y_bnds) std::free(dim_y_bnds);
+        if (dim_x_bnds) std::free(dim_x_bnds);
+    }
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout, &packing](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         chunk_size_btyx csize = dat->size();
         bounds_nd<uint32_t, 3> climits = chunk_limits(id);
-
-        //std::vector<std::size_t> startp = {climits.low[0], climits.low[1], climits.low[2]};
         std::size_t startp[] = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
-
         std::size_t countp[] = {csize[1], csize[2], csize[3]};
 
         for (uint16_t i = 0; i < bands().count(); ++i) {
-            m.lock();
-            nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
-            m.unlock();
+            if (packing.type != packed_export::packing_type::PACK_NONE) {
+                double cur_scale;
+                double cur_offset;
+                double cur_nodata;
+                if (packing.scale.size() == size_bands()) {
+                    cur_scale = packing.scale[i];
+                    cur_offset = packing.offset[i];
+                    cur_nodata = packing.nodata[i];
+                } else {
+                    cur_scale = packing.scale[0];
+                    cur_offset = packing.offset[0];
+                    cur_nodata = packing.nodata[0];
+                }
+
+                // if band of cube already has scale + offset, we must unpack before!
+                if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
+                    for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                        v = v * bands().get(i).scale + bands().get(i).offset;
+                    }
+                }
+
+                uint8_t *packedbuf = nullptr;
+                ;
+                if (packing.type == packed_export::packing_type::PACK_UINT8) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint8_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((uint8_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint16_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((uint16_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint32_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((uint32_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_INT16) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int16_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((int16_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_INT32) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int32_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((int32_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                }
+                // No need to check PACK_AUTO and PACK_DEFAULT because the type has been replaced at the beginning of the function
+                if (packedbuf) std::free(packedbuf);
+            } else {
+                m.lock();
+                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
+                m.unlock();
+            }
         }
         prg->increment((double)1 / (double)this->count_chunks());
     };
@@ -683,6 +780,8 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     p->apply(shared_from_this(), f);
     nc_close(ncout);
     prg->finalize();
+
+    // netCDF is now written, write additional per-time-slice VRT datasets if needed
 
     if (with_VRT) {
         for (uint32_t it = 0; it < size_t(); ++it) {

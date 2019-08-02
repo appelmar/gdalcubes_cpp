@@ -62,19 +62,19 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // Test create image collection
         {
-            collection_format f("Sentinel2_L2A");
-            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
-            ic->write("test.db");
-            std::cout << ic->to_string() << std::endl;
-            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
+            //            collection_format f("Sentinel2_L2A");
+            //            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
+            //            ic->write("test.db");
+            //            std::cout << ic->to_string() << std::endl;
+            //            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
         }
         /**************************************************************************/
 
         /**************************************************************************/
         // Test addo
         {
-            auto ic = std::make_shared<image_collection>("test.db");
-            image_collection_ops::create_overviews(ic);
+            //            auto ic = std::make_shared<image_collection>("test.db");
+            //            image_collection_ops::create_overviews(ic);
         }
         /**************************************************************************/
 
@@ -105,6 +105,17 @@ int main(int argc, char *argv[]) {
         //            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
         //            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
         //        }
+        /**************************************************************************/
+
+        /**************************************************************************/
+        // test packed export
+        {
+            auto c = image_collection_cube::create("test.db", v);
+
+            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+            cb->write_COG_collection("/home/marius/Desktop/test_pack1",
+                                     "", "NEAREST", std::map<std::string, std::string>(), packed_export::make_default());
+        }
         /**************************************************************************/
 
         /**************************************************************************/

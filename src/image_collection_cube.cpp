@@ -526,7 +526,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 if (b_internal < 0 || b_internal >= out->size()[0])
                     continue;
 
-                CPLErr res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                CPLErr res = gdal_out->GetRasterBand(std::get<1>(it->second[b]))->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                 if (res != CE_None) {
                     GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                 }

@@ -94,16 +94,17 @@ void cube::write_chunks_gtiff(std::string dir, std::shared_ptr<chunk_processor> 
     prg->finalize();
 }
 
-// TODO: implement packing
-// TODO: allow dir to be a file if cube has size_t() == 1
-void cube::write_COG_collection(std::string dir, std::string prefix, std::string overview_resampling,
-                                std::map<std::string, std::string> creation_options, packed_export packing,
+void cube::write_tif_collection(std::string dir, std::string prefix,
+                                bool overviews, bool cog,
+                                std::map<std::string, std::string> creation_options,
+                                std::string overview_resampling,
+                                packed_export packing,
                                 std::shared_ptr<chunk_processor> p) {
     if (!filesystem::exists(dir)) {
         filesystem::mkdir_recursive(dir);
     }
     if (!filesystem::is_directory(dir)) {
-        throw std::string("ERROR in cube::write_COG_collection(): invalid output directory.");
+        throw std::string("ERROR in cube::write_tif_collection(): invalid output directory.");
     }
 
     GDALDataType ot = GDT_Float64;
@@ -118,19 +119,11 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
             ot = GDT_Int16;
         } else if (packing.type == packed_export::packing_type::PACK_INT32) {
             ot = GDT_Int32;
-        } else if (packing.type == packed_export::packing_type::PACK_DEFAULT) {
-            ot = GDT_Int16;  // default
-            packing.scale = {{(double)1 / (double)10000}};
-            packing.offset = {{0}};
-            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
-            packing.type = packed_export::packing_type::PACK_INT16;
-        } else if (packing.type == packed_export::packing_type::PACK_AUTO) {
-            ot = GDT_Int16;  // default
-            packing.scale = {{(double)1 / (double)10000}};
-            packing.offset = {{0}};
-            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
-            packing.type = packed_export::packing_type::PACK_INT16;
-            GCBS_WARN("Automatic packing is not yet implemented; using default offset 0, scale 1/10000.");
+        } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
+            ot = GDT_Float32;
+            packing.offset = {{0.0}};
+            packing.scale = {{1.0}};
+            packing.nodata = {{std::numeric_limits<float>::quiet_NaN()}};
         }
 
         if (!(packing.scale.size() == 1 || packing.scale.size() == size_bands())) {
@@ -192,7 +185,8 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
 
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
+        std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+
         GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), ot, out_co.List());
         char *wkt_out;
         OGRSpatialReference srs_out;
@@ -231,11 +225,11 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
         GDALClose((GDALDatasetH)gdal_out);
     }
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, &ot](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, cog, overviews](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-            std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
-
             uint32_t cur_t_index = chunk_limits(id).low[0] + it;
+            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * cur_t_index).to_string() + ".tif");
+
             mtx[cur_t_index].lock();
             GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
             if (!gdal_out) {
@@ -260,16 +254,24 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
                         cur_nodata = packing.nodata[0];
                     }
 
-                    //if band of cube already has scale + offset, we must unpack before!
+                    /*
+                     * If band of cube already has scale + offset, we do not apply this before.
+                     * As a consequence, provided scale and offset values refer to actual data values
+                     * but ignore band metadata. The following commented code would apply the
+                     * unpacking before
+                     */
+                    /*
                     if (bands().get(ib).scale != 1 || bands().get(ib).offset != 0) {
-                        for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
-                            double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                        for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
+                            double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
+                                                                 it * dat->size()[2] * dat->size()[3]  + i];
                             v = v * bands().get(ib).scale + bands().get(ib).offset;
                         }
-                    }
+                    } */
 
-                    for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
-                        double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                    for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
+                        double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
+                                                             it * dat->size()[2] * dat->size()[3] + i];
                         if (std::isnan(v)) {
                             v = cur_nodata;
                         } else {
@@ -277,7 +279,7 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
                         }
                     }
                 }
-            }
+            }  // if packing
 
             for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                 CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
@@ -299,80 +301,86 @@ void cube::write_COG_collection(std::string dir, std::string prefix, std::string
 
     // build overviews and convert to COG (with IFDs of overviews at the beginning of the file)
     // TODO: use multiple threads
-    for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif");
-        GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
-        if (!gdal_out) {
-            continue;
-        }
 
-        int n_overviews = (int)std::ceil(std::log2(std::fmax(double(size_x()), double(size_y())) / 256));
-        std::vector<int> overview_list;
-        for (int i = 1; i <= n_overviews; ++i) {
-            overview_list.push_back(std::pow(2, i));
-        }
+    if (overviews) {
+        for (uint32_t it = 0; it < size_t(); ++it) {
+            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
 
-        CPLErr res = GDALBuildOverviews(gdal_out, overview_resampling.c_str(), n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
-        if (res != CE_None) {
-            GCBS_WARN("GDALBuildOverviews failed for " + name);
-            GDALClose(gdal_out);
-            continue;
-        }
-
-        CPLStringList translate_args;
-        translate_args.AddString("-of");
-        translate_args.AddString("GTiff");
-        translate_args.AddString("-co");
-        translate_args.AddString("COPY_SRC_OVERVIEWS=YES");
-        translate_args.AddString("-co");
-        translate_args.AddString("TILED=YES");
-
-        if (creation_options.find("BLOCKXSIZE") != creation_options.end()) {
-            translate_args.AddString("-co");
-            translate_args.AddString(("BLOCKXSIZE=" + creation_options["BLOCKXSIZE"]).c_str());
-        } else {
-            translate_args.AddString("-co");
-            translate_args.AddString("BLOCKXSIZE=256");
-        }
-        if (creation_options.find("BLOCKYSIZE") != creation_options.end()) {
-            translate_args.AddString("-co");
-            translate_args.AddString(("BLOCKYSIZE=" + creation_options["BLOCKYSIZE"]).c_str());
-        } else {
-            translate_args.AddString("-co");
-            translate_args.AddString("BLOCKYSIZE=256");
-        }
-        for (auto it = creation_options.begin(); it != creation_options.end(); ++it) {
-            std::string key = it->first;
-            std::transform(key.begin(), key.end(), key.begin(), (int (*)(int))std::toupper);
-            if (key == "TILED") {
-                GCBS_WARN("Setting" + it->first + "=" + it->second + "is not allowed, ignoring GeoTIFF creation option.");
+            GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
+            if (!gdal_out) {
                 continue;
             }
-            if (key == "BLOCKXSIZE" || key == "BLOCKYSIZE") continue;
-            if (key == "COPY_SRC_OVERVIEWS") {
-                GCBS_WARN("Setting" + it->first + "=" + it->second + "is not allowed, ignoring GeoTIFF creation option.");
+
+            int n_overviews = (int)std::ceil(std::log2(std::fmax(double(size_x()), double(size_y())) / 256));
+            std::vector<int> overview_list;
+            for (int i = 1; i <= n_overviews; ++i) {
+                overview_list.push_back(std::pow(2, i));
+            }
+
+            CPLErr res = GDALBuildOverviews(gdal_out, overview_resampling.c_str(), n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
+            if (res != CE_None) {
+                GCBS_WARN("GDALBuildOverviews failed for " + name);
+                GDALClose(gdal_out);
                 continue;
             }
-            out_co.AddNameValue(it->first.c_str(), it->second.c_str());
-            translate_args.AddString("-co");
-            translate_args.AddString((it->first + "=" + it->second).c_str());
+
+            if (cog) {
+                CPLStringList translate_args;
+                translate_args.AddString("-of");
+                translate_args.AddString("GTiff");
+                translate_args.AddString("-co");
+                translate_args.AddString("COPY_SRC_OVERVIEWS=YES");
+                translate_args.AddString("-co");
+                translate_args.AddString("TILED=YES");
+
+                if (creation_options.find("BLOCKXSIZE") != creation_options.end()) {
+                    translate_args.AddString("-co");
+                    translate_args.AddString(("BLOCKXSIZE=" + creation_options["BLOCKXSIZE"]).c_str());
+                } else {
+                    translate_args.AddString("-co");
+                    translate_args.AddString("BLOCKXSIZE=256");
+                }
+                if (creation_options.find("BLOCKYSIZE") != creation_options.end()) {
+                    translate_args.AddString("-co");
+                    translate_args.AddString(("BLOCKYSIZE=" + creation_options["BLOCKYSIZE"]).c_str());
+                } else {
+                    translate_args.AddString("-co");
+                    translate_args.AddString("BLOCKYSIZE=256");
+                }
+                for (auto it = creation_options.begin(); it != creation_options.end(); ++it) {
+                    std::string key = it->first;
+                    std::transform(key.begin(), key.end(), key.begin(), (int (*)(int))std::toupper);
+                    if (key == "TILED") {
+                        GCBS_WARN("Setting" + it->first + "=" + it->second + "is not allowed, ignoring GeoTIFF creation option.");
+                        continue;
+                    }
+                    if (key == "BLOCKXSIZE" || key == "BLOCKYSIZE") continue;
+                    if (key == "COPY_SRC_OVERVIEWS") {
+                        GCBS_WARN("Setting" + it->first + "=" + it->second + "is not allowed, ignoring GeoTIFF creation option.");
+                        continue;
+                    }
+                    out_co.AddNameValue(it->first.c_str(), it->second.c_str());
+                    translate_args.AddString("-co");
+                    translate_args.AddString((it->first + "=" + it->second).c_str());
+                }
+
+                GDALTranslateOptions *trans_options = GDALTranslateOptionsNew(translate_args.List(), NULL);
+                if (trans_options == NULL) {
+                    GCBS_ERROR("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
+                    throw std::string("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
+                }
+
+                std::string cogname = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+                GDALDatasetH gdal_cog = GDALTranslate(cogname.c_str(), (GDALDatasetH)gdal_out, trans_options, NULL);
+
+                GDALClose((GDALDatasetH)gdal_out);
+                filesystem::remove(name);
+                GDALClose((GDALDatasetH)gdal_cog);
+                GDALTranslateOptionsFree(trans_options);
+            }
+
+            prg->increment((double)0.5 / (double)size_t());
         }
-
-        GDALTranslateOptions *trans_options = GDALTranslateOptionsNew(translate_args.List(), NULL);
-        if (trans_options == NULL) {
-            GCBS_ERROR("ERROR in cube::write_COG_collection(): Cannot create gdal_translate options.");
-            throw std::string("ERROR in cube::write_COG_collection(): Cannot create gdal_translate options.");
-        }
-
-        std::string cogname = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
-        GDALDatasetH gdal_cog = GDALTranslate(cogname.c_str(), (GDALDatasetH)gdal_out, trans_options, NULL);
-
-        GDALClose((GDALDatasetH)gdal_out);
-        filesystem::remove(name);
-        GDALClose((GDALDatasetH)gdal_cog);
-        GDALTranslateOptionsFree(trans_options);
-
-        prg->increment((double)0.5 / (double)size_t());
     }
 
     prg->set(1.0);
@@ -409,19 +417,11 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
             ot = NC_SHORT;
         } else if (packing.type == packed_export::packing_type::PACK_INT32) {
             ot = NC_INT;
-        } else if (packing.type == packed_export::packing_type::PACK_DEFAULT) {
-            ot = NC_SHORT;  // default
-            packing.scale = {{(double)1 / (double)10000}};
-            packing.offset = {{0}};
-            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
-            packing.type = packed_export::packing_type::PACK_INT16;
-        } else if (packing.type == packed_export::packing_type::PACK_AUTO) {
-            ot = NC_SHORT;  // default
-            packing.scale = {{(double)1 / (double)10000}};
-            packing.offset = {{0}};
-            packing.nodata = {{(double)std::numeric_limits<int16_t>::lowest()}};
-            packing.type = packed_export::packing_type::PACK_INT16;
-            GCBS_WARN("Automatic packing is not yet implemented; using default offset 0, scale 1/10000.");
+        } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
+            ot = NC_FLOAT;
+            packing.offset = {{0.0}};
+            packing.scale = {{1.0}};
+            packing.nodata = {{std::numeric_limits<float>::quiet_NaN()}};
         }
 
         if (!(packing.scale.size() == 1 || packing.scale.size() == size_bands())) {
@@ -636,7 +636,6 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         //        nc_put_att_text(ncout, v, "spatial_ref", strlen(wkt), wkt);
         //        nc_put_att_double(ncout, v, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
-        // TODO: does the following call automatically converts double nodata value to ot?
         nc_put_att_double(ncout, v, "_FillValue", ot, 1, &pNAN);
 
         v_bands.push_back(v);
@@ -685,16 +684,22 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
                     cur_nodata = packing.nodata[0];
                 }
 
-                // if band of cube already has scale + offset, we must unpack before!
+                /*
+                 * If band of cube already has scale + offset, we do not apply this before.
+                 * As a consequence, provided scale and offset values refer to actual data values
+                 * but ignore band metadata. The following commented code would apply the
+                 * unpacking before
+                 */
+                /*
                 if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
                     for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
                         double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
                         v = v * bands().get(i).scale + bands().get(i).offset;
                     }
-                }
+                } */
 
                 uint8_t *packedbuf = nullptr;
-                ;
+
                 if (packing.type == packed_export::packing_type::PACK_UINT8) {
                     packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint8_t));
                     for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
@@ -765,8 +770,16 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
                     m.lock();
                     nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
                     m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(float));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        ((float *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
                 }
-                // No need to check PACK_AUTO and PACK_DEFAULT because the type has been replaced at the beginning of the function
                 if (packedbuf) std::free(packedbuf);
             } else {
                 m.lock();

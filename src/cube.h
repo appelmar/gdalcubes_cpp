@@ -49,9 +49,8 @@ typedef uint32_t chunkid_t;
  */
 struct packed_export {
     // Enum definitions for output types, PACK_NONE will not
-    // apply any packing whereas PACK_AUTO will ignore
-    // scale and offset and try to derive these values automatically
-    // TODO Packing has not yet been implemented in write methods
+    // apply any packing. PACK_FLOAT will convert 8 byte doubles
+    // to 4 byte floats but IGNORE provided scale and offset values
     enum class packing_type {
         PACK_NONE,
         PACK_UINT8,
@@ -59,8 +58,7 @@ struct packed_export {
         PACK_UINT32,
         PACK_INT16,
         PACK_INT32,
-        PACK_DEFAULT,
-        PACK_AUTO
+        PACK_FLOAT32
     };
     packing_type type;
 
@@ -91,9 +89,9 @@ struct packed_export {
         return out;
     }
 
-    static packed_export make_default() {
+    static packed_export make_float32() {
         packed_export out;
-        out.type = packing_type::PACK_DEFAULT;
+        out.type = packing_type::PACK_FLOAT32;
         out.scale = {{1}};
         out.offset = {{0}};
         out.nodata = {{std::numeric_limits<int16_t>::lowest()}};
@@ -733,28 +731,33 @@ class cube : public std::enable_shared_from_this<cube> {
                             std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
-     * @brief Writes a data cube as a collection of cloud-optimized GeoTIFF files
+     * @brief Writes a data cube as a collection of GeoTIFF files
      *
-     * Each time slice of the cube will be written to one cloud-optimized GeoTIFF files.
-     * In addition, a single cube.json file at the output directory stores the serialized JSON graph defining the creation process of the cube.
-     *
-     * @param dir output directory
+     * Each time slice of the cube will be written to one GeoTIFF file.
+
+     * @param dir output path
      * @param prefix name prefix for created files
+     * @param overviews generate GDAL overview images
+     * @param cog write cloud-optmized GeoTIFFs (forces overviews = true)
      * @param overview_resampling resampling algorithm used to generate overviews (see https://gdal.org/programs/gdaladdo.html)
      * @param additional creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
      * @param packing reduce size of output tile with packing (apply scale + offset and use smaller integer data types)
      * @param p chunk processor instance, defaults to the global configuration
      *
-     * @note COGs are created in three steps:
-     * 1. time slices of cubes of the cube are exported as tiled normal GeoTIFFs (no overviews)
-     * 2. Overviews are generated
-     * 3. A new copy of the TIF with overviews is created, moving the IFDs of overviews to the beginning of the file (using gdal_translate -co COPY_SRC_OVERVIEWS=YES)
-     * Improvements are welcome (maybe the COG driver of GDAL > 3.1 helps?)
+     * @note Overview levels will be chosen by halving the number of pixels until the larger dimension
+     * has less than 256 pixels.
      *
-     * TODO: rewrite as write_gtiff_collection with boolean arguments overviews, cog
+     * @note Depending on `overviews` and `cog` GeoTIFFs created and postprocessed stepwise:
+     * 1. time slices of cubes of the cube are exported as tiled normal GeoTIFFs
+     * 2. Overviews are generated (internal)
+     * 3. A new copy of the TIF with overviews is created, moving the IFDs of overviews to the beginning of the file (using gdal_translate -co COPY_SRC_OVERVIEWS=YES)
+     * It seems not possible to generate COGs fomr in memory data without temporal copy, However,
+     * improvements are very welcome (maybe the COG driver of GDAL > 3.1 helps?).
      */
-    void write_COG_collection(std::string dir, std::string prefix = "", std::string overview_resampling = "NEAREST",
+    void write_tif_collection(std::string dir, std::string prefix = "",
+                              bool overviews = false, bool cog = false,
                               std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(),
+                              std::string overview_resampling = "NEAREST",
                               packed_export packing = packed_export::make_none(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**

@@ -113,8 +113,8 @@ int main(int argc, char *argv[]) {
             auto c = image_collection_cube::create("test.db", v);
 
             auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            cb->write_COG_collection("/home/marius/Desktop/test_pack1",
-                                     "", "NEAREST", std::map<std::string, std::string>(), packed_export::make_default());
+            cb->write_tif_collection("/home/marius/Desktop/test_pack1",
+                                     "", true, true, std::map<std::string, std::string>(), "NEAREST", packed_export::make_uint8(1, 0));
         }
         /**************************************************************************/
 

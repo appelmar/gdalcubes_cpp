@@ -100,6 +100,10 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                                 std::string overview_resampling,
                                 packed_export packing,
                                 std::shared_ptr<chunk_processor> p) {
+    if (!overviews && cog) {
+        overviews = true;
+    }
+
     if (!filesystem::exists(dir)) {
         filesystem::mkdir_recursive(dir);
     }
@@ -294,7 +298,13 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
             GDALClose(gdal_out);
             mtx[cur_t_index].unlock();
         }
-        prg->increment((double)0.5 / (double)this->count_chunks());
+        if (overviews) {
+            prg->increment((double)0.5 / (double)this->count_chunks());
+        }
+        else {
+            prg->increment((double)1 / (double)this->count_chunks());
+        }
+
     };
 
     p->apply(shared_from_this(), f);
@@ -317,11 +327,13 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                 overview_list.push_back(std::pow(2, i));
             }
 
-            CPLErr res = GDALBuildOverviews(gdal_out, overview_resampling.c_str(), n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
-            if (res != CE_None) {
-                GCBS_WARN("GDALBuildOverviews failed for " + name);
-                GDALClose(gdal_out);
-                continue;
+            if (!overview_list.empty()) {
+                CPLErr res = GDALBuildOverviews(gdal_out, overview_resampling.c_str(), n_overviews, overview_list.data(), 0, NULL, NULL, nullptr);
+                if (res != CE_None) {
+                    GCBS_WARN("GDALBuildOverviews failed for " + name);
+                    GDALClose(gdal_out);
+                    continue;
+                }
             }
 
             if (cog) {
@@ -369,7 +381,6 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                     GCBS_ERROR("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                     throw std::string("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                 }
-
                 std::string cogname = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
                 GDALDatasetH gdal_cog = GDALTranslate(cogname.c_str(), (GDALDatasetH)gdal_out, trans_options, NULL);
 

@@ -221,9 +221,13 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                     gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[ib]);
                 }
             } else {
-                gdal_out->GetRasterBand(1)->SetNoDataValue(packing.nodata[0]);
-                gdal_out->GetRasterBand(1)->SetOffset(packing.offset[0]);
-                gdal_out->GetRasterBand(1)->SetScale(packing.scale[0]);
+                for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                    // TODO: GeoTIFF supports only one NoData value for all bands,
+                    //  does it work for offset and scale?
+                    gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[0]);
+                    gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[0]);
+                    gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[0]);
+                }
             }
         }
         GDALClose((GDALDatasetH)gdal_out);

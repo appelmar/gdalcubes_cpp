@@ -399,8 +399,6 @@ class cube : public std::enable_shared_from_this<cube> {
      */
     cube() : _st_ref(nullptr), _chunk_size(), _bands() {
         _chunk_size = {16, 256, 256};
-
-        // TODO: add bands
     }
 
     /**

@@ -88,7 +88,6 @@ class window_time_cube : public cube {
             b.name = b.name + "_" + reducerstr;
             _bands.add(b);
 
-            // TODO: test whether index returned here is really equal to the index in the chunk storage
             _band_idx_in.push_back(in->bands().get_index(bandstr));
         }
     }

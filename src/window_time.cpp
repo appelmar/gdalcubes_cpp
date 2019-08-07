@@ -51,7 +51,7 @@ std::function<double(double* buf, uint16_t n)> window_time_cube::get_default_red
         return std::function<double(double* buf, uint16_t n)>([](double* buf, uint16_t n) {
             double count = 0.0;
             for (uint16_t i = 0; i < n; ++i) {
-                if (!std::isnan(buf[i])) ++count;  // TODO: shall we count inf?
+                if (!std::isnan(buf[i])) ++count;
             }
             return count;
         });

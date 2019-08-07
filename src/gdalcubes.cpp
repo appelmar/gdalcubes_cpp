@@ -202,14 +202,14 @@ int main(int argc, char* argv[]) {
                 if (recursive) {
                     filesystem::iterate_directory_recursive(input, [&in](const std::string& p) {
                         if (filesystem::is_regular_file(p)) {
-                            in.push_back(filesystem::make_absolute(p));  // TODO make absolute
+                            in.push_back(filesystem::make_absolute(p));
                         }
                     });
 
                 } else {
                     filesystem::iterate_directory(input, [&in](const std::string& p) {
                         if (filesystem::is_regular_file(p)) {
-                            in.push_back(filesystem::make_absolute(p));  // TODO make absolute
+                            in.push_back(filesystem::make_absolute(p));
                         }
                     });
                 }

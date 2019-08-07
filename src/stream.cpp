@@ -59,8 +59,6 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
 
     // 1. new process with env "GDALCUBES_STREAMING=1"
     std::string errstr;
-    // TODO: must _cmd be splitted by arguments as vector?
-
     uint32_t databytes_read = 0;
 
 #ifdef _WIN32

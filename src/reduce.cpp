@@ -374,7 +374,7 @@ std::shared_ptr<chunk_data> reduce_cube::read_chunk(chunkid_t id) {
     }
 
     r->finalize(out);
-    if (r != nullptr) delete r;
+    if (r) delete r;
 
     return out;
 }

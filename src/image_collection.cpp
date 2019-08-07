@@ -75,7 +75,6 @@ image_collection::image_collection(collection_format format) : _format(format), 
 
     uint16_t band_id = 0;
     for (auto it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
-        // TODO: add scale and offset if given in collection format
         std::string sql_insert_band;
         sql_insert_band = "INSERT INTO bands(id, name";
         if (it.value().count("nodata")) sql_insert_band += ",nodata";

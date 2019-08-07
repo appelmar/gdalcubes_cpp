@@ -31,6 +31,15 @@ SOFTWARE.
 #include "build_info.h"
 #include "filesystem.h"
 
+
+#if defined(R_PACKAGE) && defined(__sun) && defined(__SVR4)
+#define USE_NCDF4 0
+#endif
+
+#ifndef USE_NCDF4
+#define USE_NCDF4 1
+#endif
+
 namespace gdalcubes {
 
 void cube::write_chunks_gtiff(std::string dir, std::shared_ptr<chunk_processor> p) {
@@ -125,9 +134,9 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
             ot = GDT_Int32;
         } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
             ot = GDT_Float32;
-            packing.offset = {{0.0}};
-            packing.scale = {{1.0}};
-            packing.nodata = {{std::numeric_limits<float>::quiet_NaN()}};
+            packing.offset = {0.0};
+            packing.scale = {1.0};
+            packing.nodata = {std::numeric_limits<float>::quiet_NaN()};
         }
 
         if (!(packing.scale.size() == 1 || packing.scale.size() == size_bands())) {
@@ -214,16 +223,12 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
         if (packing.type != packed_export::packing_type::PACK_NONE) {
             if (packing.scale.size() > 1) {
                 for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-                    // TODO: GeoTIFF supports only one NoData value for all bands,
-                    //  does it work for offset and scale?
                     gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[ib]);
                     gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[ib]);
                     gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[ib]);
                 }
             } else {
                 for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-                    // TODO: GeoTIFF supports only one NoData value for all bands,
-                    //  does it work for offset and scale?
                     gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[0]);
                     gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[0]);
                     gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[0]);
@@ -434,9 +439,9 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
             ot = NC_INT;
         } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
             ot = NC_FLOAT;
-            packing.offset = {{0.0}};
-            packing.scale = {{1.0}};
-            packing.nodata = {{std::numeric_limits<float>::quiet_NaN()}};
+            packing.offset = {0.0};
+            packing.scale = {1.0};
+            packing.nodata = {std::numeric_limits<float>::quiet_NaN()};
         }
 
         if (!(packing.scale.size() == 1 || packing.scale.size() == size_bands())) {
@@ -461,7 +466,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         }
     }
 
-    double *dim_x = (double *)std::calloc(size_x(), sizeof(double));  // TODO: check for std::free()
+    double *dim_x = (double *)std::calloc(size_x(), sizeof(double));
     double *dim_y = (double *)std::calloc(size_y(), sizeof(double));
     int *dim_t = (int *)std::calloc(size_t(), sizeof(int));
 
@@ -470,7 +475,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     int *dim_t_bnds = nullptr;
 
     if (write_bounds) {
-        dim_x_bnds = (double *)std::calloc(size_x() * 2, sizeof(double));  //TODO: check for std::free()
+        dim_x_bnds = (double *)std::calloc(size_x() * 2, sizeof(double));
         dim_y_bnds = (double *)std::calloc(size_y() * 2, sizeof(double));
         dim_t_bnds = (int *)std::calloc(size_t() * 2, sizeof(int));
     }
@@ -511,10 +516,10 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
     int ncout;
 
-#if defined R_PACKAGE && defined(__sun) && defined(__SVR4)
-    nc_create(op.c_str(), NC_CLASSIC_MODEL, &ncout);
-#else
+#if USE_NCDF4 == 1
     nc_create(op.c_str(), NC_NETCDF4, &ncout);
+#else
+    nc_create(op.c_str(), NC_CLASSIC_MODEL, &ncout);
 #endif
 
     int d_t, d_y, d_x;
@@ -522,7 +527,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     nc_def_dim(ncout, yname.c_str(), size_y(), &d_y);
     nc_def_dim(ncout, xname.c_str(), size_x(), &d_x);
 
-    int d_bnds;
+    int d_bnds = -1;
     if (write_bounds) {
         nc_def_dim(ncout, "nv", 2, &d_bnds);
     }
@@ -617,10 +622,15 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         int v;
         nc_def_var(ncout, bands().get(i).name.c_str(), ot, 3, d_all, &v);
         std::size_t csize[3] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
-        nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);  // TODO: ifdef USE_NCDF4
+#if USE_NCDF4 == 1
+        nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);
+#endif
         if (compression_level > 0) {
-            // TODO: ifdef USE_NCDF4
+#if USE_NCDF4 == 1
             nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
+#else
+            GCBS_WARN("gdalcubes has been built to write netCDF-3 classic model files, compression will be ignored.");
+#endif
         }
 
         if (!bands().get(i).unit.empty())

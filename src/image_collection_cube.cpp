@@ -80,7 +80,7 @@ struct aggregation_state_mean : public aggregation_state {
                 _img_count[ib] = std::unordered_map<uint32_t, uint16_t>();
             }
             if (_img_count[ib].find(t) == _img_count[ib].end()) {
-                memcpy(((double *)chunk_buf) + chunk_buf_offset, ((double *)img_buf) + img_buf_offset, sizeof(double) * _size_btyx[2] * _size_btyx[3]);  // TODO: make sure that b is zero-based!!!
+                memcpy(((double *)chunk_buf) + chunk_buf_offset, ((double *)img_buf) + img_buf_offset, sizeof(double) * _size_btyx[2] * _size_btyx[3]);
                 _img_count[ib][t] = 1;
             } else {
                 _img_count[ib][t]++;

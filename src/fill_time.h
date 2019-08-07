@@ -18,7 +18,6 @@ class fill_time_cube : public cube {
     * the constructors will not set connections between cubes properly.
     * @param in input data cube
     * @param method interpolation method, currently "near" or "bilinear"
-    * @todo add max gap argument
     * @return a shared pointer to the created data cube instance
     */
     static std::shared_ptr<fill_time_cube> create(std::shared_ptr<cube> in, std::string method = "near") {
@@ -39,7 +38,7 @@ class fill_time_cube : public cube {
             _bands.add(b);
         }
 
-        if (method != "near" && method != "linear" && method != "repeat_prec" && method != "repeat_succ") {
+        if (method != "near" && method != "linear" && method != "locf" && method != "nocb") {
             GCBS_WARN("Invalid time-series interpolation method, using default (nearest neighbor)");
             _method = "near";
         }

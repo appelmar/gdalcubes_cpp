@@ -10,7 +10,7 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
-    coords_nd<uint32_t, 4> size_btyx = {_nbands, size_tyx[0], size_tyx[1], size_tyx[2]};
+    coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
     // Fill buffers accordingly
@@ -50,18 +50,23 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
         f_in_stream.write((char *)(&str_size), sizeof(int));
         f_in_stream.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
+
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
-    for (int i = 0; i < size[1]; ++i) {
-        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
+    int i = 0;
+    for (int it = 0; it < size[1]; ++it) {
+        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * (it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0])).to_double();
+        ++i;
     }
-    for (int i = size[1];
-         i < size[1] + size[2]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
-        dims[i] = _in_cube->st_reference()->win().bottom + i * _in_cube->st_reference()->dy();
+    bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
+    for (int iy = 0; iy < size[2]; ++iy) {
+        dims[i] = cextent.s.bottom + chunk_size(id)[1] * st_reference()->dy() - (iy + 0.5) * st_reference()->dy();  // cell center
+        ++i;
     }
-    for (int i = size[1] + size[2];
-         i < size[1] + size[2] + size[3]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
-        dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
+    for (int ix = 0; ix < size[3]; ++ix) {
+        dims[i] = cextent.s.left + (ix + 0.5) * st_reference()->dx();
+        ++i;
     }
+
     f_in_stream.write((char *)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
     std::free(dims);
 
@@ -78,11 +83,13 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
 #ifdef _WIN32
     _putenv("GDALCUBES_STREAMING=1");
     //_putenv((std::string("GDALCUBES_STREAMING_DIR") + "=" + config::instance()->get_streaming_dir().c_str()).c_str());
+    _putenv((std::string("GDALCUBES_STREAMING_CHUNK_ID") + "=" + std::to_string(id)).c_str());
     _putenv((std::string("GDALCUBES_STREAMING_FILE_IN") + "=" + f_in.c_str()).c_str());
     _putenv((std::string("GDALCUBES_STREAMING_FILE_OUT") + "=" + f_out.c_str()).c_str());
 #else
     setenv("GDALCUBES_STREAMING", "1", 1);
     // setenv("GDALCUBES_STREAMING_DIR", config::instance()->get_streaming_dir().c_str(), 1);
+    setenv("GDALCUBES_STREAMING_CHUNK_ID", std::to_string(id).c_str(), 1);
     setenv("GDALCUBES_STREAMING_FILE_IN", f_in.c_str(), 1);
     setenv("GDALCUBES_STREAMING_FILE_OUT", f_out.c_str(), 1);
 #endif
@@ -124,7 +131,14 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
     f_out_stream.close();
 
     // Copy results to chunk buffer, at most the size of the output
-    std::memcpy(out->buf(), buffer + (4 * sizeof(int)), std::min(length - 4 * sizeof(int), size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3] * sizeof(double)));
+
+    uint32_t offset = _keep_bands ? (inbuf->size()[0] * inbuf->size()[1] * inbuf->size()[2] * inbuf->size()[3]) : 0;
+    if (_keep_bands) {
+        std::memcpy(out->buf(), inbuf->buf(),
+                    sizeof(double) * offset);
+    }
+
+    std::memcpy(((double *)(out->buf())) + offset, buffer + (4 * sizeof(int)), std::min(length - 4 * sizeof(int), _nbands * size_btyx[1] * size_btyx[2] * size_btyx[3] * sizeof(double)));
     std::free(buffer);
 
     if (filesystem::exists(f_out)) {

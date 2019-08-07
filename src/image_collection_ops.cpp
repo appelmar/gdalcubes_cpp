@@ -32,7 +32,7 @@ void image_collection_ops::translate_cog(std::shared_ptr<gdalcubes::image_collec
     if (!filesystem::is_directory(out_dir)) {
         throw std::string("ERROR in image_collection_ops::translate_cog(): output is not a directory.");
     }
-    std::mutex m;
+
 
     std::vector<std::thread> thrds;
 
@@ -40,7 +40,7 @@ void image_collection_ops::translate_cog(std::shared_ptr<gdalcubes::image_collec
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
     for (uint16_t it = 0; it < nthreads; ++it) {
-        thrds.push_back(std::thread([it, nthreads, &out_dir, &m, &gdalrefs, &prg]() {
+        thrds.push_back(std::thread([it, nthreads, &out_dir, &gdalrefs, &prg]() {
             for (uint32_t i = it; i < gdalrefs.size(); i += nthreads) {
                 prg->increment((double)1 / (double)gdalrefs.size());
                 std::string descr = gdalrefs[i].descriptor;

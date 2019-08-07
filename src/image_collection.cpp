@@ -75,7 +75,6 @@ image_collection::image_collection(collection_format format) : _format(format), 
 
     uint16_t band_id = 0;
     for (auto it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
-        // TODO: add scale and offset if given in collection format
         std::string sql_insert_band;
         sql_insert_band = "INSERT INTO bands(id, name";
         if (it.value().count("nodata")) sql_insert_band += ",nodata";
@@ -414,11 +413,17 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                 // TODO: if checks, compare band type, offset, scale, unit, etc. with current GDAL dataset
 
                 if (!band_complete[i]) {
-                    std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'," +
-                                                  "scale=" + std::to_string(bands[band_num[i] - 1].scale) + "," +
-                                                  "offset=" + std::to_string(bands[band_num[i] - 1].offset) + "," +
-                                                  "unit='" + bands[band_num[i] - 1].unit + "' WHERE name='" + band_name[i] + "';";
-                    // if has no data
+                    std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'";
+
+                    if (!_format.json()["bands"][band_name[i]].count("scale"))
+                        sql_band_update += ",scale=" + std::to_string(bands[band_num[i] - 1].scale);
+                    if (!_format.json()["bands"][band_name[i]].count("offset"))
+                        sql_band_update += ",offset=" + std::to_string(bands[band_num[i] - 1].offset);
+                    if (!_format.json()["bands"][band_name[i]].count("unit"))
+                        sql_band_update += ",unit='" + bands[band_num[i] - 1].unit + "'";
+
+                    // TODO: also add no data if not defined in image collection?
+                    sql_band_update += "WHERE name='" + band_name[i] + "';";
 
                     if (sqlite3_exec(_db, sql_band_update.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                         if (strict) throw std::string("ERROR in image_collection::add(): cannot update band table.");
@@ -572,9 +577,9 @@ std::string image_collection::to_string() {
     ss << std::to_string(count_bands()) << " bands from ";
     ss << std::to_string(count_gdalrefs()) << " GDAL dataset references";
 
-    auto band_info = get_bands();
+    auto band_info = get_available_bands();
     ss << std::endl
-    << "NAME | OFFSET | SCALE | UNIT | NODATA | IMAGE COUNT" << std::endl;
+       << "NAME | OFFSET | SCALE | UNIT | NODATA | IMAGE COUNT" << std::endl;
     for (uint16_t i = 0; i < band_info.size(); ++i) {
         ss << band_info[i].name << " | " << band_info[i].offset << " | " << band_info[i].scale << " | " << band_info[i].nodata << " | " << band_info[i].image_count << std::endl;
     }
@@ -741,7 +746,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     return out;
 }
 
-std::vector<image_collection::bands_row> image_collection::get_bands() {
+std::vector<image_collection::bands_row> image_collection::get_all_bands() {
     std::vector<image_collection::bands_row> out;
 
     //std::string sql = "SELECT id, name, type, offset,scale, unit, nodata FROM bands ORDER BY name;";  // changing the order my have consequences to data read implementations
@@ -751,7 +756,7 @@ std::vector<image_collection::bands_row> image_collection::get_bands() {
     sqlite3_stmt* stmt;
     sqlite3_prepare_v2(_db, sql.c_str(), -1, &stmt, NULL);
     if (!stmt) {
-        throw std::string("ERROR in image_collection::get_bands(): cannot prepare query statement");
+        throw std::string("ERROR in image_collection::get_all_bands(): cannot prepare query statement");
     }
 
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -767,6 +772,17 @@ std::vector<image_collection::bands_row> image_collection::get_bands() {
         out.push_back(row);
     }
     sqlite3_finalize(stmt);
+    return out;
+}
+
+std::vector<image_collection::bands_row> image_collection::get_available_bands() {
+    std::vector<image_collection::bands_row> out;
+    std::vector<image_collection::bands_row> all_bands = get_all_bands();
+    for (auto it = all_bands.begin(); it != all_bands.end(); ++it) {
+        if (it->image_count > 0)
+            out.push_back(*it);
+    }
+
     return out;
 }
 

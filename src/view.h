@@ -369,7 +369,7 @@ class cube_st_reference {
             _t1 = _t0 + _dt * (n - 1);
             GCBS_INFO(
                 "Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " +
-                _t1.to_string());
+                _t1.to_string() + ".");
         }
         //
         //        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
@@ -380,15 +380,15 @@ class cube_st_reference {
     }
 
     /**
-         * Get the spatial extent / window of a cube view
-         * @return spatial extent, coordinates are expressed in the view's projection / SRS
-         */
+     * Get the spatial extent / window of a cube view
+     * @return spatial extent, coordinates are expressed in the view's projection / SRS
+     */
     inline bounds_2d<double> &win() { return _win; }
 
     /**
-         * Get the temporal size / duration of one cube cell
-         * @return the view's dt field as a duration object
-         */
+     * Get the temporal size / duration of one cube cell
+     * @return the view's dt field as a duration object
+     */
     inline duration dt() { return _dt; }
 
     inline datetime_unit &dt_unit() { return _dt.dt_unit; }
@@ -396,9 +396,9 @@ class cube_st_reference {
     inline int32_t &dt_interval() { return _dt.dt_interval; }
 
     /**
-        * Set the temporal size / duration of one cube cell
-        * @param dt new datetime duration of a cube cell
-        */
+    * Set the temporal size / duration of one cube cell
+    * @param dt new datetime duration of a cube cell
+    */
     void dt(duration dt) {
         //if (dt.dt_unit != _dt.dt_unit) {
         _t0.unit() = dt.dt_unit;
@@ -419,17 +419,17 @@ class cube_st_reference {
     }
 
     /**
-         * Set the temporal size of cube cells as n days
-         * @param n duration / temporal size of one cell as number of days
-         */
+     * Set the temporal size of cube cells as n days
+     * @param n duration / temporal size of one cell as number of days
+     */
     void set_daily(uint16_t n = 1) {
         _dt = duration(n, datetime_unit::DAY);
     }
 
     /**
-        * Set the temporal size of cube cells as n months
-        * @param n duration / temporal size of one cell as number of months
-        */
+     * Set the temporal size of cube cells as n months
+     * @param n duration / temporal size of one cell as number of months
+     */
     void set_monthly(uint16_t n = 1) {
         _dt = duration(n, datetime_unit::MONTH);
     }

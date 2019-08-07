@@ -38,9 +38,9 @@ std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     }
 
     if (_file_streaming) {
-        out = stream_chunk_file(_in_cube->read_chunk(id));
+        out = stream_chunk_file(_in_cube->read_chunk(id), id);
     } else {
-        out = stream_chunk_stdin(_in_cube->read_chunk(id));
+        out = stream_chunk_stdin(_in_cube->read_chunk(id), id);
     }
 
     if (out->empty()) {
@@ -49,7 +49,7 @@ std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
-std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chunk_data> data) {
+std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chunk_data> data, chunkid_t id) {
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
 
     int size[] = {(int)data->size()[0], (int)data->size()[1], (int)data->size()[2], (int)data->size()[3]};
@@ -59,14 +59,14 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
 
     // 1. new process with env "GDALCUBES_STREAMING=1"
     std::string errstr;
-    // TODO: must _cmd be splitted by arguments as vector?
-
     uint32_t databytes_read = 0;
 
 #ifdef _WIN32
     _putenv("GDALCUBES_STREAMING=1");
+    _putenv((std::string("GDALCUBES_STREAMING_CHUNK_ID") + "=" + std::to_string(id)).c_str());
 #else
     setenv("GDALCUBES_STREAMING", "1", 1);
+    setenv("GDALCUBES_STREAMING_CHUNK_ID", std::to_string(id).c_str(), 1);
 #endif
 
     TinyProcessLib::Process process(_cmd, "", [out, &databytes_read](const char *bytes, std::size_t n) {
@@ -132,7 +132,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     return out;
 }
 
-std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk_data> data) {
+std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk_data> data, chunkid_t id) {
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
 
     int size[] = {(int)data->size()[0], (int)data->size()[1], (int)data->size()[2], (int)data->size()[3]};
@@ -160,16 +160,23 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
         f_in_stream.write((char *)(&str_size), sizeof(int));
         f_in_stream.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
+
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
-    for (int i = 0; i < size[1]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
-        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
+    int i = 0;
+    for (int it = 0; it < size[1]; ++it) {
+        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * (it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0])).to_double();
+        ++i;
     }
-    for (int i = size[1]; i < size[1] + size[2]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
-        dims[i] = _in_cube->st_reference()->win().bottom + i * _in_cube->st_reference()->dy();
+    bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
+    for (int iy = 0; iy < size[2]; ++iy) {
+        dims[i] = cextent.s.bottom + chunk_size(id)[1] * st_reference()->dy() - (iy + 0.5) * st_reference()->dy();  // cell center
+        ++i;
     }
-    for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {  // FIXME: coordinates are wrong, must start at chunk boundary
-        dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
+    for (int ix = 0; ix < size[3]; ++ix) {
+        dims[i] = cextent.s.left + (ix + 0.5) * st_reference()->dx();
+        ++i;
     }
+
     f_in_stream.write((char *)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
     std::free(dims);
 
@@ -185,11 +192,13 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
 #ifdef _WIN32
     _putenv("GDALCUBES_STREAMING=1");
     //_putenv((std::string("GDALCUBES_STREAMING_DIR") + "=" + config::instance()->get_streaming_dir().c_str()).c_str());
+    _putenv((std::string("GDALCUBES_STREAMING_CHUNK_ID") + "=" + std::to_string(id)).c_str());
     _putenv((std::string("GDALCUBES_STREAMING_FILE_IN") + "=" + f_in.c_str()).c_str());
     _putenv((std::string("GDALCUBES_STREAMING_FILE_OUT") + "=" + f_out.c_str()).c_str());
 #else
     setenv("GDALCUBES_STREAMING", "1", 1);
     // setenv("GDALCUBES_STREAMING_DIR", config::instance()->get_streaming_dir().c_str(), 1);
+    setenv("GDALCUBES_STREAMING_CHUNK_ID", std::to_string(id).c_str(), 1);
     setenv("GDALCUBES_STREAMING_FILE_IN", f_in.c_str(), 1);
     setenv("GDALCUBES_STREAMING_FILE_OUT", f_out.c_str(), 1);
 #endif

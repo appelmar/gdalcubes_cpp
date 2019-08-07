@@ -62,19 +62,19 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // Test create image collection
         {
-            collection_format f("Sentinel2_L2A");
-            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
-            ic->write("test.db");
-            std::cout << ic->to_string() << std::endl;
-            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
+            //            collection_format f("Sentinel2_L2A");
+            //            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
+            //            ic->write("test.db");
+            //            std::cout << ic->to_string() << std::endl;
+            //            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
         }
         /**************************************************************************/
 
         /**************************************************************************/
         // Test addo
         {
-            auto ic = std::make_shared<image_collection>("test.db");
-            image_collection_ops::create_overviews(ic);
+            //            auto ic = std::make_shared<image_collection>("test.db");
+            //            image_collection_ops::create_overviews(ic);
         }
         /**************************************************************************/
 
@@ -105,6 +105,17 @@ int main(int argc, char *argv[]) {
         //            cb = select_bands_cube::create(cr, std::vector<std::string>{"B04_max", "B08_max"});
         //            reduce_cube::create(cb, "max")->write_gdal_image("test_B.tif");
         //        }
+        /**************************************************************************/
+
+        /**************************************************************************/
+        // test packed export
+        {
+            auto c = image_collection_cube::create("test.db", v);
+
+            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+            cb->write_tif_collection("/home/marius/Desktop/test_pack1",
+                                     "", true, true, std::map<std::string, std::string>(), "NEAREST", packed_export::make_uint8(1, 0));
+        }
         /**************************************************************************/
 
         /**************************************************************************/
@@ -143,20 +154,6 @@ int main(int argc, char *argv[]) {
         //            auto cr = reduce_time_cube::create(cf, {{"max", "B04"}, {"count", "B04"}});
         //            cr->write_gdal_image("test_filter_predicate_2.tif");
         //        }
-        /**************************************************************************/
-
-        /**************************************************************************/
-        // test reduction over time
-        {
-            auto c = image_collection_cube::create("test.db", v);
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            // auto cr = reduce_time_cube::create(cb, {{"var", "B04"}});
-            auto cr = reduce_time_cube::create(cb, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
-            cr->write_gdal_image("test_reduce_new.tif");
-            auto cc = rechunk_merge_time_cube::create(cb);
-            auto cr2 = reduce_time_cube::create(cc, {{"min", "B04"}, {"max", "B04"}, {"median", "B04"}, {"count", "B04"}});
-            cr->write_gdal_image("test_reduce_new_rechunk_merge_time.tif");
-        }
         /**************************************************************************/
 
         //        /**************************************************************************/

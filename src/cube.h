@@ -43,6 +43,112 @@ typedef std::array<uint32_t, 3> chunk_size_tyx;
 
 typedef uint32_t chunkid_t;
 
+/**
+ * Data structure for defining packed data exports (dividing and adding data values by a scale and offset value
+ * respectively, before conversion to smaller integer types during the export.
+ */
+struct packed_export {
+    // Enum definitions for output types, PACK_NONE will not
+    // apply any packing. PACK_FLOAT will convert 8 byte doubles
+    // to 4 byte floats but IGNORE provided scale and offset values
+    enum class packing_type {
+        PACK_NONE,
+        PACK_UINT8,
+        PACK_UINT16,
+        PACK_UINT32,
+        PACK_INT16,
+        PACK_INT32,
+        PACK_FLOAT32
+    };
+    packing_type type;
+
+    /**
+     * A vector of per-band scale factors. Must have size() == 1 or size() == nbands
+     * If the vector contains only one element, the same scale factor is assumed
+     * for all bands.
+     */
+    std::vector<double> scale;
+
+    /**
+     * A vector of per-band offset values. Must have size() == 1 or size() == nbands
+     * If the vector contains only one element, the same offset value is assumed
+     * for all bands.
+     */
+    std::vector<double> offset;
+
+    /**
+     * A vector of new nodata values. Must have size() == 1 or size() == nbands
+     * If the vector contains only one element, the same nodata value is assumed
+     * for all bands.
+     */
+    std::vector<double> nodata;
+
+    static packed_export make_none() {
+        packed_export out;
+        out.type = packing_type::PACK_NONE;
+        return out;
+    }
+
+    static packed_export make_float32() {
+        packed_export out;
+        out.type = packing_type::PACK_FLOAT32;
+        out.scale = {{1}};
+        out.offset = {{0}};
+        out.nodata = {{std::numeric_limits<int16_t>::lowest()}};
+        return out;
+    }
+
+    static packed_export make_uint16(double scale, double offset, double nodata) {
+        packed_export out;
+        out.type = packing_type::PACK_UINT16;
+        out.scale = {{scale}};
+        out.offset = {{offset}};
+        out.nodata = {{nodata}};
+        return out;
+    }
+
+    static packed_export make_uint16(std::vector<double> scale, std::vector<double> offset, std::vector<double> nodata) {
+        packed_export out;
+        out.type = packing_type::PACK_UINT16;
+        out.scale = scale;
+        out.offset = offset;
+        out.nodata = nodata;
+        return out;
+    }
+
+    static packed_export make_int16(double scale, double offset) {
+        packed_export out;
+        out.type = packing_type::PACK_UINT16;
+        out.scale = {{scale}};
+        out.offset = {{offset}};
+        return out;
+    }
+
+    static packed_export make_int16(std::vector<double> scale, std::vector<double> offset) {
+        packed_export out;
+        out.type = packing_type::PACK_INT16;
+        out.scale = scale;
+        out.offset = offset;
+        return out;
+    }
+
+    static packed_export make_uint8(double scale, double offset) {
+        packed_export out;
+        out.type = packing_type::PACK_UINT16;
+        out.scale = {{scale}};
+        out.offset = {{offset}};
+        return out;
+    }
+
+    static packed_export make_uint8(std::vector<double> scale, std::vector<double> offset) {
+        packed_export out;
+        out.type = packing_type::PACK_UINT8;
+        out.scale = scale;
+        out.offset = offset;
+        return out;
+    }
+};
+
 class cube;
 
 class chunk_data;
@@ -293,8 +399,6 @@ class cube : public std::enable_shared_from_this<cube> {
      */
     cube() : _st_ref(nullptr), _chunk_size(), _bands() {
         _chunk_size = {16, 256, 256};
-
-        // TODO: add bands
     }
 
     /**
@@ -625,40 +729,48 @@ class cube : public std::enable_shared_from_this<cube> {
                             std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
-     * @brief Write a data cube as netCDF file collection, where each file contains data from one data cube chunk.
+     * @brief Writes a data cube as a collection of GeoTIFF files
      *
-     * Resulting netCDF files will be stored in the provided output directory where filenames correspond to chunk ids.
-     * In addition a single cube.json file stores the serialized JSON graph defining the creation process of the cube
-     *
-     * @param dir directory where to store the files
-     * @param compression_level deflate level, 0 = no compression, 1 = fast, 9 = small
+     * Each time slice of the cube will be written to one GeoTIFF file.
+
+     * @param dir output path
+     * @param prefix name prefix for created files
+     * @param overviews generate GDAL overview images
+     * @param cog write cloud-optmized GeoTIFFs (forces overviews = true)
+     * @param overview_resampling resampling algorithm used to generate overviews (see https://gdal.org/programs/gdaladdo.html)
+     * @param additional creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
+     * @param packing reduce size of output tile with packing (apply scale + offset and use smaller integer data types)
      * @param p chunk processor instance, defaults to the global configuration
+     *
+     * @note Overview levels will be chosen by halving the number of pixels until the larger dimension
+     * has less than 256 pixels.
+     *
+     * @note Depending on `overviews` and `cog` GeoTIFFs created and postprocessed stepwise:
+     * 1. time slices of cubes of the cube are exported as tiled normal GeoTIFFs
+     * 2. Overviews are generated (internal)
+     * 3. A new copy of the TIF with overviews is created, moving the IFDs of overviews to the beginning of the file (using gdal_translate -co COPY_SRC_OVERVIEWS=YES)
+     * It seems not possible to generate COGs fomr in memory data without temporal copy, However,
+     * improvements are very welcome (maybe the COG driver of GDAL > 3.1 helps?).
      */
-    void write_chunks_ncdf(std::string dir, uint8_t compression_level = 0, std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_tif_collection(std::string dir, std::string prefix = "",
+                              bool overviews = false, bool cog = false,
+                              std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(),
+                              std::string overview_resampling = "NEAREST",
+                              packed_export packing = packed_export::make_none(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
-     * @brief Writes a data cube as a collection of cloud-optimized GeoTIFF files
-     *
-     * @note NOT YET IMPLEMENTED
-     *
-     * For each time slice of the data cube, one subfolder under the given output directory will be created with name equal to the date/time.
-     * COGs are created for all spatial slices with spatial extents coming fom the data cube chunks.
-     * In addition, a single cube.json file at the output directory stores the serialized JSON graph defining the creation process of the cube.
-     *
-     *
-     * @param dir directory where to store the files
-     * @param creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
-     * @param p chunk processor instance, defaults to the global configuration
-     */
-    //void write_COG_collection(std::string dir, std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(), std::shared_ptr<chunk_processor> p=config::instance()->get_default_chunk_processor())
-
-    /**
-     * Write a data cube as a single NetCDF file
+     * Write a data cube as a single netCDF file
      * @param path path of the target file
      * @param compression_level deflate level, 0 = no compression, 1 = fast, 9 = small
+     * @param with_VRT additional write VRT files for time slices that are easier to display, e.g., in QGIS
+     * @param write_bounds boolean, if true, variables time_bnds, y_bnds, x_bnds per dimension values will be added
+     * @param packing reduce size of output tile with packing (apply scale + offset and use smaller integer data types)
      * @param p chunk processor instance, defaults to the global configuration
+     *
+     * @note packing is not yet implemented
      */
     void write_netcdf_file(std::string path, uint8_t compression_level = 0,
+                           bool with_VRT = false, bool write_bounds = true, packed_export packing = packed_export::make_none(),
                            std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**

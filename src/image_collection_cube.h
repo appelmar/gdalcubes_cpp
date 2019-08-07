@@ -30,6 +30,7 @@
 namespace gdalcubes {
 
 struct image_mask {
+    virtual ~image_mask() {}
     virtual void apply(double *mask_buf, double *pixel_buf, uint32_t nb, uint32_t ny, uint32_t nx) = 0;
     virtual nlohmann::json as_json() = 0;
 };
@@ -264,7 +265,7 @@ class image_collection_cube : public cube {
     void select_bands(std::vector<uint16_t> bands);
 
     void set_mask(std::string band, std::shared_ptr<image_mask> mask) {
-        std::vector<image_collection::bands_row> bands = _collection->get_bands();
+        std::vector<image_collection::bands_row> bands = _collection->get_available_bands();
         for (uint16_t ib = 0; ib < bands.size(); ++ib) {
             if (bands[ib].name == band) {
                 _mask = mask;

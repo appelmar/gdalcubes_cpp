@@ -5,7 +5,7 @@ namespace gdalcubes {
 std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("fill_time_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
-    if (id < 0 || id >= count_chunks())
+    if (id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
@@ -142,9 +142,9 @@ std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {
                         } else {
                             *res = v0 * ((double)next_dist / ((double)prev_dist + (double)next_dist)) + v1 * ((double)prev_dist / ((double)prev_dist + (double)next_dist));
                         }
-                    } else if (_method == "repeat_prec") {
+                    } else if (_method == "locf") {
                         *res = v0;
-                    } else if (_method == "repeat_succ") {
+                    } else if (_method == "nocb") {
                         *res = v1;
                     } else {  // nearest
                         if (std::isnan(v0) && std::isnan(v1)) {

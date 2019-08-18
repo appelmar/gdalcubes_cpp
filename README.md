@@ -65,7 +65,7 @@ The [gdalcubes R package](https://github.com/appelmar/gdalcubes_R) is hosted on 
 It includes a Dockerfile that runs [RStudio Server](https://www.rstudio.com/products/rstudio-server/) with the gdalcubes R package.
 
 # Documentation
-More detailed information can be found at the documentation page under https://appelmar.github.io/gdalcubes. 
+More detailed information can be found at the documentation page under https://gdalcubes.github.io/docs. 
 
 # Warning
 The library is still in an early development version. Major changes are possible to make gdalcubes more user-friendly, more stable, faster, and more robust.

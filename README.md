@@ -65,14 +65,14 @@ The [gdalcubes R package](https://github.com/appelmar/gdalcubes_R) is hosted on 
 It includes a Dockerfile that runs [RStudio Server](https://www.rstudio.com/products/rstudio-server/) with the gdalcubes R package.
 
 # Documentation
-More detailed information can be found at the documentation page under https://appelmar.github.io/gdalcubes. 
+More detailed information can be found at the documentation page under https://gdalcubes.github.io/docs. 
 
 # Warning
 The library is still in an early development version. Major changes are possible to make gdalcubes more user-friendly, more stable, faster, and more robust.
 The documentation is also preliminary and not yet complete.
 
 # Credits
-gdalcubes uses the following open source libraries. Detailed licensing and copyright information can be found at https://appelmar.github.io/gdalcubes/credits.html and in LICENSE_THIRDPARTY.
+gdalcubes uses the following open source libraries. Detailed licensing and copyright information can be found at https://gdalcubes.github.io/docs/credits.html and in LICENSE_THIRDPARTY.
 
 
 **[GDAL](https://www.gdal.org/):  A translator library for raster and vector geospatial data formats**

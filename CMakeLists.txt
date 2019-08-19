@@ -36,17 +36,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # for clang-tidy
 
-if (DEFINED USE_EXPRTK)
-    add_definitions(-DUSE_EXPRTK)
-endif()
-
 
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DCURL_STATICLIB")
-endif ()
-if (MINGW AND USE_EXPRTK)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wa,-mbig-obj") # for apply_pixel object due to exprtk library
 endif ()
 
 

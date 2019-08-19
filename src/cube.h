@@ -92,18 +92,18 @@ struct packed_export {
     static packed_export make_float32() {
         packed_export out;
         out.type = packing_type::PACK_FLOAT32;
-        out.scale = {{1}};
-        out.offset = {{0}};
-        out.nodata = {{std::numeric_limits<int16_t>::lowest()}};
+        out.scale = {1};
+        out.offset = {0};
+        out.nodata = {std::numeric_limits<int16_t>::lowest()};
         return out;
     }
 
     static packed_export make_uint16(double scale, double offset, double nodata) {
         packed_export out;
         out.type = packing_type::PACK_UINT16;
-        out.scale = {{scale}};
-        out.offset = {{offset}};
-        out.nodata = {{nodata}};
+        out.scale = {scale};
+        out.offset = {offset};
+        out.nodata = {nodata};
         return out;
     }
 
@@ -119,8 +119,8 @@ struct packed_export {
     static packed_export make_int16(double scale, double offset) {
         packed_export out;
         out.type = packing_type::PACK_UINT16;
-        out.scale = {{scale}};
-        out.offset = {{offset}};
+        out.scale = {scale};
+        out.offset = {offset};
         return out;
     }
 

@@ -586,7 +586,13 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
 
     if (srs.IsProjected()) {
+
+        // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
+#if GDAL_VERSION_MAJOR >= 2 && GDAL_VERSION_MINOR >= 3 && GDAL_VERSION_REV >= 0
+        const char *unit = nullptr;
+#else
         char *unit = nullptr;
+#endif
         srs.GetLinearUnits(&unit);
 
         nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);

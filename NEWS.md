@@ -1,6 +1,11 @@
 
 
-# 0.1.9999 (dev)
+# 0.2.1
+* fixed compiler warnings
+
+
+
+# 0.2.0
 
 * reimplementation of `image_collection_cube::read_chunk()`, supporting image masks and custom gdalwarp arguments
 * renamed `filter_predicate` -> `filter_pixel`

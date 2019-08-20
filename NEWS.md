@@ -1,8 +1,9 @@
 
 
 # 0.2.1
-* fixed compiler warnings
 
+* fixed compiler warnings
+* fix mean aggregation
 
 
 # 0.2.0

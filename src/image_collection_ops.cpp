@@ -33,7 +33,6 @@ void image_collection_ops::translate_cog(std::shared_ptr<gdalcubes::image_collec
         throw std::string("ERROR in image_collection_ops::translate_cog(): output is not a directory.");
     }
 
-
     std::vector<std::thread> thrds;
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();

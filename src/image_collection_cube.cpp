@@ -65,64 +65,44 @@ struct aggregation_state {
 };
 
 struct aggregation_state_mean : public aggregation_state {
-    aggregation_state_mean(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx), _img_count(), _val_count() {}
+    aggregation_state_mean(coords_nd<uint32_t, 4> size_btyx) : aggregation_state(size_btyx), _m_count() {}
 
     ~aggregation_state_mean() {}
 
-    void init() override {}
+    void init() override {
+        _m_count.resize(_size_btyx[0] * _size_btyx[1] * _size_btyx[2] * _size_btyx[3]);
+    }
 
     void update(void *chunk_buf, void *img_buf, uint32_t t) override {
         for (uint32_t ib = 0; ib < _size_btyx[0]; ++ib) {
-            uint32_t chunk_buf_offset =
-                ib * _size_btyx[1] * _size_btyx[2] * _size_btyx[3] + t * _size_btyx[2] * _size_btyx[3];
+            uint32_t chunk_buf_offset = ib * _size_btyx[1] * _size_btyx[2] * _size_btyx[3] + t * _size_btyx[2] * _size_btyx[3];
             uint32_t img_buf_offset = ib * _size_btyx[2] * _size_btyx[3];
-            if (_img_count.find(ib) == _img_count.end()) {
-                _img_count[ib] = std::unordered_map<uint32_t, uint16_t>();
-            }
-            if (_img_count[ib].find(t) == _img_count[ib].end()) {
-                memcpy(((double *)chunk_buf) + chunk_buf_offset, ((double *)img_buf) + img_buf_offset, sizeof(double) * _size_btyx[2] * _size_btyx[3]);
-                _img_count[ib][t] = 1;
-            } else {
-                _img_count[ib][t]++;
-                if (_val_count.find(ib) == _val_count.end()) {
-                    _val_count[ib] = std::unordered_map<uint32_t, uint16_t *>();
-                }
-                if (_val_count[ib].find(t) == _val_count[ib].end()) {
-                    _val_count[ib][t] = (uint16_t *)(std::calloc(_size_btyx[2] * _size_btyx[3], sizeof(uint16_t)));
-                    // TODO: fill with _img_count[b][t]?????
-                    for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-                        _val_count[ib][t][i] = _img_count[ib][t];
-                    }
-                }
 
-                // iterate over all pixels
-                for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
-                    if (std::isnan(((double *)img_buf)[img_buf_offset + i])) continue;
-                    if (std::isnan(((double *)chunk_buf)[chunk_buf_offset + i])) {
-                        ((double *)chunk_buf)[chunk_buf_offset + i] = ((double *)img_buf)[img_buf_offset + i];
-                    } else {
-                        double sum = ((double *)chunk_buf)[chunk_buf_offset + i] * _val_count[ib][t][i] + ((double *)chunk_buf)[chunk_buf_offset + i];
-                        _val_count[ib][t][i]++;
-                        ((double *)chunk_buf)[chunk_buf_offset + i] = sum / _val_count[ib][t][i];
-                    }
+            // iterate over all pixels
+            for (uint32_t i = 0; i < _size_btyx[2] * _size_btyx[3]; ++i) {
+                if (std::isnan(((double *)img_buf)[img_buf_offset + i])) continue;
+                if (std::isnan(((double *)chunk_buf)[chunk_buf_offset + i])) {
+                    ((double *)chunk_buf)[chunk_buf_offset + i] = ((double *)img_buf)[img_buf_offset + i];
+                    _m_count[chunk_buf_offset + i] = 1;
+                } else {
+                    ((double *)chunk_buf)[chunk_buf_offset + i] += ((double *)img_buf)[img_buf_offset + i];
+                    _m_count[chunk_buf_offset + i] += 1;
                 }
             }
         }
     }
 
     void finalize(void *buf) override {
-        for (auto it = _val_count.begin(); it != _val_count.end(); ++it) {
-            for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
-                if (it2->second) std::free(it2->second);
+        for (uint32_t i = 0; i < _size_btyx[0] * _size_btyx[1] * _size_btyx[2] * _size_btyx[3]; ++i) {
+            if (!std::isnan(((double *)buf)[i])) {
+                ((double *)buf)[i] /= (double)(_m_count[i]);
             }
         }
-        _val_count.clear();
-        _img_count.clear();
+        _m_count.clear();
     }
 
    private:
-    std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t>> _img_count;
-    std::unordered_map<uint16_t, std::unordered_map<uint32_t, uint16_t *>> _val_count;
+    std::vector<uint32_t> _m_count;
 };
 
 struct aggregation_state_median : public aggregation_state {

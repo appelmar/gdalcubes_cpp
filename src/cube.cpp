@@ -31,7 +31,6 @@ SOFTWARE.
 #include "build_info.h"
 #include "filesystem.h"
 
-
 #if defined(R_PACKAGE) && defined(__sun) && defined(__SVR4)
 #define USE_NCDF4 0
 #endif
@@ -309,11 +308,9 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
         }
         if (overviews) {
             prg->increment((double)0.5 / (double)this->count_chunks());
-        }
-        else {
+        } else {
             prg->increment((double)1 / (double)this->count_chunks());
         }
-
     };
 
     p->apply(shared_from_this(), f);
@@ -586,7 +583,6 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
 
     if (srs.IsProjected()) {
-
         // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
 #if GDAL_VERSION_MAJOR >= 2 && GDAL_VERSION_MINOR >= 3 && GDAL_VERSION_REV >= 0
         const char *unit = nullptr;

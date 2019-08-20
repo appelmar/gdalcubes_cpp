@@ -35,7 +35,6 @@ namespace gdalcubes {
  * @brief Virtual base class for progress updates of long running processes
 */
 struct progress {
-
     virtual ~progress() = default;
 
     /**

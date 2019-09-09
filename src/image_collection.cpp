@@ -1,26 +1,26 @@
 /*
-    MIT License
+ MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+ Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
-*/
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
 
 #include "image_collection.h"
 
@@ -169,8 +169,8 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::vector<std::regex> regex_band_pattern;
 
     /* TODO: The following will fail if other applications create image collections and assign ids to bands differently.
-     * A better solution would be to load band ids, names, and nums from the database bands table directly
-     */
+         * A better solution would be to load band ids, names, and nums from the database bands table directly
+         */
 
     std::vector<std::string> band_name;
     std::vector<uint16_t> band_num;
@@ -204,9 +204,50 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     if (!_format.json().count("datetime") || !_format.json()["datetime"].count("pattern")) {
         throw std::string("ERROR in image_collection::add(): image collection format does not contain a rule to derive date/time.");
     }
+
     std::regex regex_datetime(_format.json()["datetime"]["pattern"].get<std::string>());
     if (_format.json()["datetime"].count("format")) {
         datetime_format = _format.json()["datetime"]["format"].get<std::string>();
+    }
+
+    bool use_subdatasets = false;
+    if (_format.json().count("subdatasets")) {
+        use_subdatasets = _format.json()["subdatasets"].get<bool>();
+    }
+
+    if (use_subdatasets) {
+        std::vector<std::string> subdatasets;
+        for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
+            GDALDataset* dataset = (GDALDataset*)GDALOpen((*it).c_str(), GA_ReadOnly);
+            if (!dataset) {
+                if (strict) throw std::string("ERROR in image_collection::add(): GDAL cannot open '" + *it + "'.");
+                GCBS_WARN("GDAL failed to open " + *it);
+                continue;
+            }
+
+            // Is there a SUBDATASETS metadata domain?
+            char** md_domains = dataset->GetMetadataDomainList();
+            if (md_domains != NULL) {
+                if (CSLFindString(md_domains, "SUBDATASETS") != -1) {
+                    // if yes, list all metadata keys ending with _NAME
+                    char** md_sd = dataset->GetMetadata("SUBDATASETS");
+                    if (md_sd != NULL) {
+                        for (uint16_t imd = 0; imd < CSLCount(md_sd); ++imd) {
+                            std::string s(md_sd[imd]);
+                            size_t ii = s.find("_NAME=");
+                            if (ii != std::string::npos) {
+                                // found
+                                subdatasets.push_back(s.substr(ii + 6));
+                            }
+                        }
+                        // Don't call CSLDestroy(md_sd);
+                    }
+                }
+                CSLDestroy(md_domains);
+            }
+            GDALClose((GDALDatasetH)dataset);
+        }
+        descriptors = subdatasets;  // TODO: how to handle input datasets if they do not have any subdatasets?
     }
 
     uint32_t counter = -1;

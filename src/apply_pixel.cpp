@@ -1,29 +1,28 @@
 /*
-    MIT License
+ MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+ Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
-*/
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
 
 #include "apply_pixel.h"
-
 #include "external/tinyexpr/tinyexpr.h"
 
 namespace gdalcubes {
@@ -38,10 +37,22 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
 
     // Parse expressions and create symbol table
     std::vector<double> values;
-    values.resize(_in_cube->bands().count(), NAN);
+    values.resize(_in_cube->bands().count() + 9, NAN);
     // CAUTION: never change size of values from now
 
     // TODO: add further variables like x, y, t to symbol table
+    // _x = integer cell index
+    // _y = integer cell index
+    // _t = integer cell index
+    // _left = left boundary of a cell in SRS coordinates
+    // _right = ...
+    // _top = ....
+    // _bottom = ...
+    // _t0 = start time (timestamp)
+    // _t1 = end_time (timestamp)
+    // year(_t1) -> year of t1
+    // doy(_t0) -> doy of t0
+
     std::vector<te_variable> vars;
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
@@ -50,12 +61,15 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
         std::strncpy(varname, temp_name.c_str(), temp_name.length() + 1);
         vars.push_back({varname, &values[i]});
     }
-    //
-    //    symbol_table.add_constants();
-    //    symbol_table.add_constant("NAN", nan(""));
-    //    isnan_func<double> f_isnan;
-    //    isfinite_func<double> f_isfinite;
-    //    symbol_table.add_function("isfinite", f_isfinite);
+    vars.push_back({"t0", &values[_in_cube->bands().count() + 0]});
+    vars.push_back({"t1", &values[_in_cube->bands().count() + 1]});
+    vars.push_back({"left", &values[_in_cube->bands().count() + 2]});
+    vars.push_back({"right", &values[_in_cube->bands().count() + 3]});
+    vars.push_back({"top", &values[_in_cube->bands().count() + 4]});
+    vars.push_back({"bottom", &values[_in_cube->bands().count() + 5]});
+    vars.push_back({"ix", &values[_in_cube->bands().count() + 6]});
+    vars.push_back({"iy", &values[_in_cube->bands().count() + 7]});
+    vars.push_back({"it", &values[_in_cube->bands().count() + 8]});
 
     std::vector<te_expr*> expr;
     for (uint16_t i = 0; i < _expr.size(); ++i) {
@@ -101,6 +115,39 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
             for (uint16_t inb = 0; inb < bidx.size(); ++inb) {
                 values[bidx[inb]] = ((double*)in->buf())[bidx[inb] * in->size()[1] * in->size()[2] * in->size()[3] + i];
             }
+
+            // additional variables
+            if (_var_usage[expr_idx].count("it") || _var_usage[expr_idx].count("t0") || _var_usage[expr_idx].count("t1")) {
+                values[_in_cube->bands().count() + 8] = (double)(_in_cube->chunk_limits(id).low[0] + (i / (in->size()[2] * in->size()[3])));  // _t
+            }
+            if (_var_usage[expr_idx].count("t0")) {
+                values[_in_cube->bands().count() + 0] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * (int)(values[_in_cube->bands().count() + 8])).epoch_time();
+            }
+            if (_var_usage[expr_idx].count("t1")) {
+                values[_in_cube->bands().count() + 1] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * (int)(values[_in_cube->bands().count() + 8] + 1)).epoch_time();
+            }
+
+            if (_var_usage[expr_idx].count("ix") || _var_usage[expr_idx].count("left") || _var_usage[expr_idx].count("right")) {
+                values[_in_cube->bands().count() + 6] = (double)(_in_cube->chunk_limits(id).low[2] + (i % in->size()[3]));
+            }
+            if (_var_usage[expr_idx].count("left")) {
+                values[_in_cube->bands().count() + 2] = _in_cube->st_reference()->left() + _in_cube->st_reference()->dx() * values[_in_cube->bands().count() + 6];
+            }
+            if (_var_usage[expr_idx].count("right")) {
+                values[_in_cube->bands().count() + 3] = _in_cube->st_reference()->left() + _in_cube->st_reference()->dx() * (values[_in_cube->bands().count() + 6] + 1);
+            }
+
+            if (_var_usage[expr_idx].count("iy") || _var_usage[expr_idx].count("top") || _var_usage[expr_idx].count("bottom")) {
+                values[_in_cube->bands().count() + 7] = (double)(_in_cube->size_y() - 1 - (_in_cube->chunk_limits(id).high[1] - ((i / in->size()[3]) % in->size()[2])));
+            }
+
+            if (_var_usage[expr_idx].count("top")) {
+                values[_in_cube->bands().count() + 4] = _in_cube->st_reference()->top() - _in_cube->st_reference()->dy() * values[_in_cube->bands().count() + 7];
+            }
+            if (_var_usage[expr_idx].count("bottom")) {
+                values[_in_cube->bands().count() + 5] = _in_cube->st_reference()->top() - _in_cube->st_reference()->dy() * (values[_in_cube->bands().count() + 7] + 1);
+            }
+
             ((double*)out->buf())[outb * in->size()[1] * in->size()[2] * in->size()[3] + i] = te_eval(expr[expr_idx]);
         }
         ++outb;
@@ -112,8 +159,8 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
         te_free(expr[j]);
     }
     // free varnames
-    for (uint16_t i = 0; i < vars.size(); ++i) {
-        delete[] vars[i].name;
+    for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
+        delete[] vars[i].name;  // delete only names of band variables
     }
 
     return out;
@@ -122,15 +169,25 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
 bool apply_pixel_cube::parse_expressions() {
     bool res = true;
     std::vector<double> dummy_values;
+    dummy_values.resize(_in_cube->bands().count() + 9, 1.0);
     std::vector<te_variable> vars;
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
-        dummy_values.push_back(1.0);
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];
         std::string temp_name = _in_cube->bands().get(i).name;
         std::transform(temp_name.begin(), temp_name.end(), temp_name.begin(), ::tolower);
         std::strncpy(varname, temp_name.c_str(), temp_name.length() + 1);
         vars.push_back({varname, &dummy_values[i]});
     }
+
+    vars.push_back({"t0", &dummy_values[_in_cube->bands().count() + 0]});
+    vars.push_back({"t1", &dummy_values[_in_cube->bands().count() + 1]});
+    vars.push_back({"left", &dummy_values[_in_cube->bands().count() + 2]});
+    vars.push_back({"right", &dummy_values[_in_cube->bands().count() + 3]});
+    vars.push_back({"top", &dummy_values[_in_cube->bands().count() + 4]});
+    vars.push_back({"bottom", &dummy_values[_in_cube->bands().count() + 5]});
+    vars.push_back({"ix", &dummy_values[_in_cube->bands().count() + 6]});
+    vars.push_back({"iy", &dummy_values[_in_cube->bands().count() + 7]});
+    vars.push_back({"it", &dummy_values[_in_cube->bands().count() + 8]});
 
     int err = 0;
     for (uint16_t i = 0; i < _expr.size(); ++i) {
@@ -144,8 +201,8 @@ bool apply_pixel_cube::parse_expressions() {
             // Continue anyway to process all expressions
         }
     }
-    for (uint16_t i = 0; i < vars.size(); ++i) {
-        delete[] vars[i].name;
+    for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
+        delete[] vars[i].name;  // delete only names of band variables
     }
     return res;
 }

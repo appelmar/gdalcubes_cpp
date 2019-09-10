@@ -301,6 +301,59 @@ class datetime {
         return out;
     }
 
+    long seconds() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto tod = date::make_time(_p - daypoint);
+        return tod.seconds().count();
+    }
+
+    long minutes() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto tod = date::make_time(_p - daypoint);
+        return tod.minutes().count();
+    }
+
+    long hours() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto tod = date::make_time(_p - daypoint);
+        return tod.hours().count();
+    }
+
+    int year() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto ymd = date::year_month_day(daypoint);
+        return int(ymd.year());
+    }
+
+    unsigned int month() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto ymd = date::year_month_day(daypoint);
+        return unsigned(ymd.month());
+    }
+
+    unsigned int dayofmonth() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto ymd = date::year_month_day(daypoint);
+        return unsigned(ymd.day());
+    }
+
+    int dayofyear() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto ymd = date::year_month_day(daypoint);
+        auto ymd1 = date::year_month_day(ymd.year(), date::month(1), date::day(1));
+        return (date::sys_days(ymd) - date::sys_days(ymd1)).count() + 1;
+    }
+
+    int dayofweek() {
+        auto daypoint = date::floor<date::days>(_p);
+        auto ymd = date::year_month_day(daypoint);
+        return (date::weekday(date::sys_days(ymd)) - date::Sunday).count();  // days since sunday
+    }
+
+    double epoch_time() {
+        return (double)(_p.time_since_epoch().count());
+    }
+
     /**
      * @brief Convert to a simple datetime string
      * @return

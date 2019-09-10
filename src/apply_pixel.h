@@ -27,6 +27,7 @@
 
 #include <algorithm>
 #include <string>
+#include <unordered_set>
 #include "cube.h"
 
 namespace gdalcubes {
@@ -111,7 +112,7 @@ class apply_pixel_cube : public cube {
 
         // Find out, which bands are actually used per expression
         for (uint16_t i = 0; i < _expr.size(); ++i) {
-            _band_usage.push_back(std::set<std::string>());
+            _band_usage.push_back(std::unordered_set<std::string>());
             for (uint16_t ib = 0; ib < _in_cube->bands().count(); ++ib) {
                 std::string name = _in_cube->bands().get(ib).name;
                 std::string temp_name = name;
@@ -124,6 +125,16 @@ class apply_pixel_cube : public cube {
                     _band_usage_all.insert(name);
                 }
             }
+            _var_usage.push_back(std::unordered_set<std::string>());
+            if (_expr[i].find("ix") != std::string::npos) _var_usage[i].insert("ix");
+            if (_expr[i].find("iy") != std::string::npos) _var_usage[i].insert("iy");
+            if (_expr[i].find("it") != std::string::npos) _var_usage[i].insert("it");
+            if (_expr[i].find("left") != std::string::npos) _var_usage[i].insert("left");
+            if (_expr[i].find("right") != std::string::npos) _var_usage[i].insert("right");
+            if (_expr[i].find("top") != std::string::npos) _var_usage[i].insert("top");
+            if (_expr[i].find("bottom") != std::string::npos) _var_usage[i].insert("bottom");
+            if (_expr[i].find("t0") != std::string::npos) _var_usage[i].insert("t0");
+            if (_expr[i].find("t1") != std::string::npos) _var_usage[i].insert("t1");
         }
     }
 
@@ -147,8 +158,11 @@ class apply_pixel_cube : public cube {
     std::shared_ptr<cube> _in_cube;
     std::vector<std::string> _expr;
     std::vector<std::string> _band_names;
-    std::vector<std::set<std::string>> _band_usage;  // store which bands are really used per expression
-    std::set<std::string> _band_usage_all;
+    std::vector<std::unordered_set<std::string>> _band_usage;  // store which bands are really used per expression
+    std::unordered_set<std::string> _band_usage_all;
+
+    std::vector<std::unordered_set<std::string>> _var_usage;
+
     bool _keep_bands;
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {

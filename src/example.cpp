@@ -110,11 +110,11 @@ int main(int argc, char *argv[]) {
         /**************************************************************************/
         // test packed export
         {
-            auto c = image_collection_cube::create("test.db", v);
+            //            auto c = image_collection_cube::create("test.db", v);
 
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
-            cb->write_tif_collection("/home/marius/Desktop/test_pack1",
-                                     "", true, true, std::map<std::string, std::string>(), "NEAREST", packed_export::make_uint8(1, 0));
+            //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04", "B08"});
+            //            cb->write_tif_collection("/home/marius/Desktop/test_pack1",
+            //                                     "", true, true, std::map<std::string, std::string>(), "NEAREST", packed_export::make_uint8(1, 0));
         }
         /**************************************************************************/
 
@@ -183,18 +183,26 @@ int main(int argc, char *argv[]) {
 
         /**************************************************************************/
         // Test apply_pixel
+        //        {
+        //                        auto c = image_collection_cube::create("test.db", v);
+        //                        //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
+        //                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
+        //                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
+        //                        // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
+        //
+        //                        auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
+        //
+        //                        auto cr = reduce_cube::create(capply, "median");
+        //                        // cr->write_gdal_image("test_apply_reduce.tif");
+        //                        cr->write_netcdf_file("test_apply_reduce.nc");
+        //        }
+
+        // Test apply_pixel
         {
-            //            auto c = image_collection_cube::create("test.db", v);
-            //            //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
-            //            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
-            //            //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
-            //            // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
-            //
-            //            auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
-            //
-            //            auto cr = reduce_cube::create(capply, "median");
-            //            // cr->write_gdal_image("test_apply_reduce.tif");
-            //            cr->write_netcdf_file("test_apply_reduce.nc");
+            auto c = dummy_cube::create(v, 1, 1.0);
+            auto capply = apply_pixel_cube::create(c, {"day(t0)"});
+            auto cr = reduce_cube::create(capply, "median");
+            cr->write_netcdf_file("test_apply_reduce.nc");
         }
 
         /**************************************************************************/

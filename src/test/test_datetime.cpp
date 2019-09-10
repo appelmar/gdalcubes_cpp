@@ -64,3 +64,32 @@ TEST_CASE("Datetime arithmetics", "[datetime]") {
     REQUIRE((x + d).to_string() == "2002-06");
     REQUIRE((x + d).to_double() == 200206);
 }
+
+TEST_CASE("Datetime Access Functions", "[datetime]") {
+    datetime x = datetime::from_string("2002-03-04T13:40:21");
+
+    REQUIRE(x.seconds() == 21);
+    REQUIRE(x.minutes() == 40);
+    REQUIRE(x.hours() == 13);
+    REQUIRE(x.dayofmonth() == 04);
+    REQUIRE(x.dayofyear() == 63);
+    REQUIRE(x.dayofweek() == 1);  // MON
+    REQUIRE(x.month() == 03);
+    REQUIRE(x.year() == 2002);
+
+    // REQUIRE(x.epoch_time() == 1015249221); // might depend on OS
+
+    datetime y = datetime::from_string("2005-06");
+
+    REQUIRE(y.seconds() == 0);
+    REQUIRE(y.minutes() == 0);
+    REQUIRE(y.hours() == 0);
+    REQUIRE(y.dayofmonth() == 1);
+    REQUIRE(y.dayofyear() == 152);
+    REQUIRE(y.dayofweek() == 3);  // WED
+    REQUIRE(y.month() == 6);
+    REQUIRE(y.year() == 2005);
+
+    REQUIRE(datetime::from_string("2001-03-01").dayofyear() == 60);  // no leap year
+    REQUIRE(datetime::from_string("2000-03-01").dayofyear() == 61);  // leap year
+}

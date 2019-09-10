@@ -51,6 +51,7 @@ For log = natural log uncomment the next line. */
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
+#include <time.h> // added by Marius Appel on 2019-09-10
 
 #ifndef NAN
 #define NAN (0.0/0.0)
@@ -149,6 +150,58 @@ static double is_finite(double a) { return isfinite(a); }
 static double iif(double a, double b, double c) { return (int)(a)? b : c;}
 // end of new functions
 
+// added by Marius Appel on 2019-09-10
+static double year(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)(ptm->tm_year + 1900);
+}
+
+static double month(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)ptm->tm_mon;
+}
+
+static double dom(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)ptm->tm_mday;
+}
+static double doy(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)ptm->tm_yday;
+}
+static double dow(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)ptm->tm_wday;
+}
+static double hours(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)ptm->tm_hour;
+}
+static double minutes(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)ptm->tm_min;
+}
+static double seconds(double t) {
+    time_t tt = (long)t;
+    struct tm * ptm;
+    ptm = gmtime(&tt);
+    return (double)ptm->tm_sec;
+}
+// end of new functions
 
 static double pi(void) {return 3.14159265358979323846;}
 static double e(void) {return 2.71828182845904523536;}
@@ -192,14 +245,17 @@ static const te_function functions[] = {
     {"ceil", (funcptr)ceil,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"cos", (funcptr)cos,      TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"cosh", (funcptr)cosh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
+    {"day", (funcptr)dom,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
+    {"dayofyear", (funcptr)doy,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
     {"e", (funcptr)e,          TE_FUNCTION0 | TE_FLAG_PURE, 0},
     {"exp", (funcptr)exp,      TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"fac", (funcptr)fac,      TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"floor", (funcptr)floor,  TE_FUNCTION1 | TE_FLAG_PURE, 0},
-    {"iif", (funcptr)iif,    TE_FUNCTION3 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Jan 23, 2019)
+    {"hours", (funcptr)hours,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
+    {"ifelse", (funcptr)iif,    TE_FUNCTION3 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Jan 23, 2019)
     {"isfinite", (funcptr)is_finite,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Jan 23, 2019)
     {"isnan", (funcptr)is_nan,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Jan 23, 2019)
-  
+    {"year", (funcptr)year,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
     {"ln", (funcptr)log,       TE_FUNCTION1 | TE_FLAG_PURE, 0},
 #ifdef TE_NAT_LOG
     {"log", (funcptr)log,      TE_FUNCTION1 | TE_FLAG_PURE, 0},
@@ -207,15 +263,21 @@ static const te_function functions[] = {
     {"log", (funcptr)log10,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
 #endif
     {"log10", (funcptr)log10,  TE_FUNCTION1 | TE_FLAG_PURE, 0},
+    {"minutes", (funcptr)minutes,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
+    {"month", (funcptr)month,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
     {"ncr", (funcptr)ncr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},
     {"npr", (funcptr)npr,      TE_FUNCTION2 | TE_FLAG_PURE, 0},
     {"pi", (funcptr)pi,        TE_FUNCTION0 | TE_FLAG_PURE, 0},
     {"pow", (funcptr)pow,      TE_FUNCTION2 | TE_FLAG_PURE, 0},
+    {"seconds", (funcptr)seconds,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
     {"sin", (funcptr)sin,      TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"sinh", (funcptr)sinh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"sqrt", (funcptr)sqrt,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"tan", (funcptr)tan,      TE_FUNCTION1 | TE_FLAG_PURE, 0},
     {"tanh", (funcptr)tanh,    TE_FUNCTION1 | TE_FLAG_PURE, 0},
+    {"weekday", (funcptr)dow,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
+    {"year", (funcptr)year,    TE_FUNCTION1 | TE_FLAG_PURE, 0}, // new function (added by Marius Appel on Sept 10, 2019)
+
     {0, 0, 0, 0}
 };
 

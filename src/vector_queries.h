@@ -21,32 +21,31 @@
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
 */
+#ifndef VECTOR_H
+#define VECTOR_H
 
-// gdalcubes.h shall be used by external programs as library entry point
-
-#ifndef GDALCUBES_H
-#define GDALCUBES_H
-
-#include "apply_pixel.h"
-#include "build_info.h"
-#include "config.h"
 #include "cube.h"
-#include "dummy.h"
-#include "fill_time.h"
-#include "filter_pixel.h"
-#include "image_collection_cube.h"
-#include "join_bands.h"
-#include "progress.h"
-#include "reduce.h"
-#include "reduce_space.h"
-#include "reduce_time.h"
-#include "select_bands.h"
-#include "stream.h"
-#include "stream_apply_pixel.h"
-#include "stream_reduce_time.h"
-#include "swarm.h"
-#include "utils.h"
-#include "vector_queries.h"
-#include "window_time.h"
 
-#endif  //GDALCUBES_H
+namespace gdalcubes {
+
+class vector_queries {
+   public:
+    /**
+         * Query values of a data cube at irregular spatiotmeporal points.
+         *
+         * @brief This function extracts values of data cube cells at provided spatiotemporal points.
+         * The result will contain data from all bands of the data cube, but will not contain the input point coordinates.
+         *
+         * @param cube data cube
+         * @param x x coordinates of query points
+         * @param y y coordinates of query points
+         * @param t date/time of query points
+         * @param srs spatial reference system of spatial point coordinates
+         * @return data frame (vector of double vectors) where first vector represents columns (bands)
+         */
+    static std::vector<std::vector<double>> query_points(std::shared_ptr<cube> cube, std::vector<double> x, std::vector<double> y, std::vector<std::string> t, std::string srs);
+};
+
+}  // namespace gdalcubes
+
+#endif  //VECTOR_H

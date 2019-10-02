@@ -107,6 +107,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                                 std::map<std::string, std::string> creation_options,
                                 std::string overview_resampling,
                                 packed_export packing,
+                                bool drop_empty_slices,
                                 std::shared_ptr<chunk_processor> p) {
     if (!overviews && cog) {
         overviews = true;
@@ -405,7 +406,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 }
 
 void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool with_VRT, bool write_bounds,
-                             packed_export packing, std::shared_ptr<chunk_processor> p) {
+                             packed_export packing, bool drop_empty_slices, std::shared_ptr<chunk_processor> p) {
     std::string op = filesystem::make_absolute(path);
 
     if (filesystem::is_directory(op)) {

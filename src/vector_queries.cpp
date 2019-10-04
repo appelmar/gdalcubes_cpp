@@ -1,6 +1,7 @@
 
 
 #include "vector_queries.h"
+#include <thread>
 
 namespace gdalcubes {
 
@@ -23,7 +24,11 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
         throw std::string("Invalid data cube pointer");
     }
 
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
     // transformation
+    // TODO: parallelize
     if (cube->st_reference()->srs() != srs) {
         OGRSpatialReference srs_in;
         OGRSpatialReference srs_out;
@@ -48,6 +53,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
 
     std::map<chunkid_t, std::vector<uint32_t>> chunk_index;
 
+    // TODO: parallelize
     for (uint32_t i = 0; i < x.size(); ++i) {
         // array coordinates
         ix.push_back((x[i] - cube->st_reference()->left()) / cube->st_reference()->dx());
@@ -64,11 +70,18 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
         duration delta = cube->st_reference()->dt();
         it.push_back((dt - cube->st_reference()->t0()) / delta);
 
+        if (it[i] < 0 || it[i] >= cube->size_t() ||
+            ix[i] < 0 || ix[i] >= cube->size_x() ||
+            iy[i] < 0 || iy[i] >= cube->size_y()) {  // if point is outside of the cube
+            continue;
+        }
+
         // find out in which chunk
         coords_st st;
         st.t = dt;
         st.s.x = x[i];
         st.s.y = y[i];
+
         chunk_index[cube->find_chunk_that_contains(st)].push_back(i);
     }
 
@@ -78,38 +91,87 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
         out[ib].resize(x.size(), NAN);
     }
 
-    // read chunks
-    // TODO: parallelize with std::thread
-
+    uint32_t nthreads = config::instance()->get_default_chunk_processor()->max_threads();
+    std::vector<chunkid_t> chunks;  // vector of keys in chunk_index
     for (auto iter = chunk_index.begin(); iter != chunk_index.end(); ++iter) {
-        if (iter->first >= cube->count_chunks()) {
-            continue;
-        }
-
-        std::shared_ptr<chunk_data> dat = cube->read_chunk(iter->first);
-        if (dat->empty()) {
-            continue;
-        }
-
-        for (uint32_t i = 0; i < iter->second.size(); ++i) {
-            double ixc = ix[iter->second[i]];
-            double iyc = iy[iter->second[i]];
-            double itc = it[iter->second[i]];
-
-            int iix = ((int)std::floor(ixc)) % cube->chunk_size()[2];
-            int iiy = dat->size()[2] - 1 - (((int)std::floor(iyc)) % cube->chunk_size()[1]);  // TODO: check!
-            int iit = ((int)std::floor(itc)) % cube->chunk_size()[0];
-
-            // check to prevent out of bounds faults
-            if (iix < 0 || uint32_t(iix) >= dat->size()[3]) continue;
-            if (iiy < 0 || uint32_t(iiy) >= dat->size()[2]) continue;
-            if (iit < 0 || uint32_t(iit) >= dat->size()[1]) continue;
-
-            for (uint16_t ib = 0; ib < out.size(); ++ib) {
-                out[ib][iter->second[i]] = ((double*)dat->buf())[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + iit * dat->size()[2] * dat->size()[3] + iiy * dat->size()[3] + iix];
-            }
-        }
+        chunks.push_back(iter->first);
     }
+
+    std::vector<std::thread> workers;
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers.push_back(std::thread([&prg, &cube, &out, &chunk_index, &chunks, &ix, &it, &iy, ithread, nthreads](void) {
+            for (uint32_t ic = ithread; ic < chunks.size(); ic += nthreads) {
+                try {
+                    if (chunks[ic] < cube->count_chunks()) {  // if chunk exists
+                        std::shared_ptr<chunk_data> dat = cube->read_chunk(chunks[ic]);
+                        if (!dat->empty()) {  // if chunk is not empty
+                            // iterate over all query points within the current chunk
+                            for (uint32_t i = 0; i < chunk_index[chunks[ic]].size(); ++i) {
+                                double ixc = ix[chunk_index[chunks[ic]][i]];
+                                double iyc = iy[chunk_index[chunks[ic]][i]];
+                                double itc = it[chunk_index[chunks[ic]][i]];
+
+                                int iix = ((int)std::floor(ixc)) % cube->chunk_size()[2];
+                                int iiy = dat->size()[2] - 1 - (((int)std::floor(iyc)) % cube->chunk_size()[1]);
+                                int iit = ((int)std::floor(itc)) % cube->chunk_size()[0];
+
+                                // check to prevent out of bounds faults
+                                if (iix < 0 || uint32_t(iix) >= dat->size()[3]) continue;
+                                if (iiy < 0 || uint32_t(iiy) >= dat->size()[2]) continue;
+                                if (iit < 0 || uint32_t(iit) >= dat->size()[1]) continue;
+
+                                for (uint16_t ib = 0; ib < out.size(); ++ib) {
+                                    out[ib][chunk_index[chunks[ic]][i]] = ((double*)dat->buf())[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + iit * dat->size()[2] * dat->size()[3] + iiy * dat->size()[3] + iix];
+                                }
+                            }
+                        }
+                    }
+                    prg->increment((double)1 / (double)chunks.size());
+                } catch (std::string s) {
+                    GCBS_ERROR(s);
+                    continue;
+                } catch (...) {
+                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(chunks[ic]));
+                    continue;
+                }
+            }
+        }));
+    }
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers[ithread].join();
+    }
+    prg->finalize();
+
+    //
+    //    for (auto iter = chunk_index.begin(); iter != chunk_index.end(); ++iter) {
+    //        if (iter->first >= cube->count_chunks()) {
+    //            continue;
+    //        }
+    //
+    //        std::shared_ptr<chunk_data> dat = cube->read_chunk(iter->first);
+    //        if (dat->empty()) {
+    //            continue;
+    //        }
+    //
+    //        for (uint32_t i = 0; i < iter->second.size(); ++i) {
+    //            double ixc = ix[iter->second[i]];
+    //            double iyc = iy[iter->second[i]];
+    //            double itc = it[iter->second[i]];
+    //
+    //            int iix = ((int)std::floor(ixc)) % cube->chunk_size()[2];
+    //            int iiy = dat->size()[2] - 1 - (((int)std::floor(iyc)) % cube->chunk_size()[1]);
+    //            int iit = ((int)std::floor(itc)) % cube->chunk_size()[0];
+    //
+    //            // check to prevent out of bounds faults
+    //            if (iix < 0 || uint32_t(iix) >= dat->size()[3]) continue;
+    //            if (iiy < 0 || uint32_t(iiy) >= dat->size()[2]) continue;
+    //            if (iit < 0 || uint32_t(iit) >= dat->size()[1]) continue;
+    //
+    //            for (uint16_t ib = 0; ib < out.size(); ++ib) {
+    //                out[ib][iter->second[i]] = ((double*)dat->buf())[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + iit * dat->size()[2] * dat->size()[3] + iiy * dat->size()[3] + iix];
+    //            }
+    //        }
+    //    }
     return out;
 }
 

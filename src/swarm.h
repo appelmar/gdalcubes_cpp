@@ -63,7 +63,12 @@ class gdalcubes_swarm : public chunk_processor {
     // Mimic cube::apply with distributed calls to cube::read_chunk()
     void apply(std::shared_ptr<cube> c, std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) override;
 
-    inline uint16_t get_threads() { return _nthreads; }
+    /**
+    * @copydoc chunk_processor::max_threads
+    */
+    uint32_t max_threads() {
+        return _nthreads;
+    }
     inline void set_threads(uint16_t threads) { _nthreads = threads; }
 
    private:

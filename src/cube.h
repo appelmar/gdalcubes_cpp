@@ -161,6 +161,12 @@ class chunk_processor {
     virtual ~chunk_processor() {}
 
     /**
+     * @brief Return the maximum number of threads used to process chunks in parallel.
+     * @return Maximum number of parallel threads
+     */
+    virtual uint32_t max_threads() = 0;
+
+    /**
      * Apply a function f over all chunks of a given data cube c
      * @param c data cube
      * @param f function to be applied over all chunks of c, the function gets the chunk_id, the actual chunk data, and a mutex object as input. The latter is only needed
@@ -176,6 +182,13 @@ class chunk_processor {
 class chunk_processor_singlethread : public chunk_processor {
    public:
     /**
+    * @copydoc chunk_processor::max_threads
+    */
+    uint32_t max_threads() {
+        return 1;
+    }
+
+    /**
      * @copydoc chunk_processor::apply
      */
     void apply(std::shared_ptr<cube> c,
@@ -187,6 +200,13 @@ class chunk_processor_singlethread : public chunk_processor {
  */
 class chunk_processor_multithread : public chunk_processor {
    public:
+    /**
+    * @copydoc chunk_processor::max_threads
+    */
+    uint32_t max_threads() {
+        return _nthreads;
+    }
+
     /**
      * @brief Construct a multithreaded chunk processor
      * @param nthreads number of threads

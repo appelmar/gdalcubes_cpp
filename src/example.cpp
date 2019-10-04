@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
     config::instance()->gdalcubes_init();
     config::instance()->set_error_handler(error_handler::error_handler_debug);
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
+    config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(8));
 
     datetime ttt = datetime::from_string("2018-11-08T09:32:09");
     std::cout << ttt.to_double() << std::endl;
@@ -208,13 +209,13 @@ int main(int argc, char *argv[]) {
         // Test query_points
         {
             auto c = image_collection_cube::create("test.db", v);
-            c->set_chunk_size(1000, 1000, 1000);  // single chunk
+            //c->set_chunk_size(1000, 1000, 1000);  // single chunk
             auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04"});
 
             auto ca = apply_pixel_cube::create(cb, {"left", "top"}, {"x", "y"}, true);
             //cb->write_netcdf_file("cube.nc");
             auto cr = reduce_time_cube::create(ca, {{"median", "B04"}, {"median", "x"}, {"median", "y"}});
-            //cr->write_netcdf_file("cube_red_xy.nc");
+            cr->write_netcdf_file("cube_red_xy_1.nc");
 
             std::vector<double> ux = {653469.0, 693953.1, 734437.2, 774921.3, 815405.4, 855889.6, 896373.7, 936857.8, 977341.9, 1017826.0};
             std::vector<double> uy = {6670781, 6692220, 6713658, 6735097, 6756536, 6777974, 6799413, 6820852, 6842290, 6863729};
@@ -246,8 +247,8 @@ int main(int argc, char *argv[]) {
                 for (uint32_t ib = 0; ib < res.size(); ++ib) {
                     std::cout << res[ib][ip] << "\t";
                 }
-                //                std::cout << x[ip] - res[1][ip] << "\t";
-                //                std::cout << y[ip] - res[2][ip] << "\t";
+                std::cout << x[ip] - res[1][ip] << "\t";
+                std::cout << y[ip] - res[2][ip] << "\t";
                 std::cout << std::endl;
             }
         }

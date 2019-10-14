@@ -1,5 +1,11 @@
 
 
+# 0.2.2
+
+* support for GDAL subdatasets in collection formats
+* add `query_points` operation to query data cube values at irregular spatiotemporal points
+
+
 # 0.2.1
 
 * fixed compiler warnings

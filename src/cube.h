@@ -135,8 +135,8 @@ struct packed_export {
     static packed_export make_uint8(double scale, double offset) {
         packed_export out;
         out.type = packing_type::PACK_UINT16;
-        out.scale = {{scale}};
-        out.offset = {{offset}};
+        out.scale = {scale};
+        out.offset = {offset};
         return out;
     }
 
@@ -184,7 +184,7 @@ class chunk_processor_singlethread : public chunk_processor {
     /**
     * @copydoc chunk_processor::max_threads
     */
-    uint32_t max_threads() {
+    uint32_t max_threads() override {
         return 1;
     }
 
@@ -203,7 +203,7 @@ class chunk_processor_multithread : public chunk_processor {
     /**
     * @copydoc chunk_processor::max_threads
     */
-    uint32_t max_threads() {
+    uint32_t max_threads() override {
         return _nthreads;
     }
 

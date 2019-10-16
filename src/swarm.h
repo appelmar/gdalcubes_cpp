@@ -66,7 +66,7 @@ class gdalcubes_swarm : public chunk_processor {
     /**
     * @copydoc chunk_processor::max_threads
     */
-    uint32_t max_threads() {
+    uint32_t max_threads() override {
         return _nthreads;
     }
     inline void set_threads(uint16_t threads) { _nthreads = threads; }

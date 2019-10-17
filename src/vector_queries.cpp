@@ -41,7 +41,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
             uint32_t n = (uint32_t)std::ceil(double(x.size()) / double(nthreads));  // points per thread
 
             for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
-                workers_transform.push_back(std::thread([&prg, &cube, &srs, &srs_in, &srs_out, &x, &y, &t, ithread, nthreads, n](void) {
+                workers_transform.push_back(std::thread([&cube, &srs, &srs_in, &srs_out, &x, &y, ithread, n](void) {
                     OGRCoordinateTransformation* coord_transform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
 
                     int begin = ithread * n;
@@ -50,7 +50,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
 
                     // change coordinates in place, should be safe because vectors don't change their sizes
                     if (count > 0) {
-                        if (coord_transform == NULL || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
+                        if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
                             throw std::string("ERROR: coordinate transformation failed (from " + cube->st_reference()->srs() + " to " + srs + ").");
                         }
                     }
@@ -74,7 +74,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
     std::vector<std::thread> workers_preprocess;
     std::mutex mtx;
     for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
-        workers_preprocess.push_back(std::thread([&mtx, &prg, &cube, &x, &y, &t, &it, &chunk_index, ithread, nthreads](void) {
+        workers_preprocess.push_back(std::thread([&mtx, &cube, &x, &y, &t, &it, &chunk_index, ithread, nthreads](void) {
             for (uint32_t i = ithread; i < x.size(); i += nthreads) {
                 coords_st st;
 

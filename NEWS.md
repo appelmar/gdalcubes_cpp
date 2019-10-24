@@ -1,4 +1,10 @@
 
+# 0.2.3
+
+* fixed clang compiler warnings
+* fixed MODIS collection formats
+* new collection formats MxD14A2 and MxD13A2
+
 
 # 0.2.2
 

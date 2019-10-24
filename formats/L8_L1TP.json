@@ -6,7 +6,7 @@
     "pattern" : "(?:.*[/\\\\])?([^/\\\\]+)[/\\\\].+\\.TIF"
   },
   "datetime" : {
-    "pattern" : ".*L[OTC]08_.{4}_.{6}_(.+)_.*\\.TIF",
+    "pattern" : ".*LC08_L1TP_.{6}_(.+)_.*\\.TIF",
     "format" : "%Y%m%d"
   },
   "bands": {

@@ -12,11 +12,11 @@
   },
   "bands" : {
     "FireMask" : {
-      "pattern" : ".+FireMask$",
+      "pattern" : ".+FireMask.*",
       "nodata" : 0
     },
     "QA" : {
-      "pattern" : ".+QA$"
+      "pattern" : ".+QA.*"
     }
   }
 }

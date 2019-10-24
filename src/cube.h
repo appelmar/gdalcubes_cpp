@@ -135,8 +135,8 @@ struct packed_export {
     static packed_export make_uint8(double scale, double offset) {
         packed_export out;
         out.type = packing_type::PACK_UINT16;
-        out.scale = {{scale}};
-        out.offset = {{offset}};
+        out.scale = {scale};
+        out.offset = {offset};
         return out;
     }
 
@@ -161,6 +161,12 @@ class chunk_processor {
     virtual ~chunk_processor() {}
 
     /**
+     * @brief Return the maximum number of threads used to process chunks in parallel.
+     * @return Maximum number of parallel threads
+     */
+    virtual uint32_t max_threads() = 0;
+
+    /**
      * Apply a function f over all chunks of a given data cube c
      * @param c data cube
      * @param f function to be applied over all chunks of c, the function gets the chunk_id, the actual chunk data, and a mutex object as input. The latter is only needed
@@ -176,6 +182,13 @@ class chunk_processor {
 class chunk_processor_singlethread : public chunk_processor {
    public:
     /**
+    * @copydoc chunk_processor::max_threads
+    */
+    uint32_t max_threads() override {
+        return 1;
+    }
+
+    /**
      * @copydoc chunk_processor::apply
      */
     void apply(std::shared_ptr<cube> c,
@@ -187,6 +200,13 @@ class chunk_processor_singlethread : public chunk_processor {
  */
 class chunk_processor_multithread : public chunk_processor {
    public:
+    /**
+    * @copydoc chunk_processor::max_threads
+    */
+    uint32_t max_threads() override {
+        return _nthreads;
+    }
+
     /**
      * @brief Construct a multithreaded chunk processor
      * @param nthreads number of threads
@@ -740,10 +760,13 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param overview_resampling resampling algorithm used to generate overviews (see https://gdal.org/programs/gdaladdo.html)
      * @param additional creation_options key value pairs passed to GDAL as GTiff creation options (see https://gdal.org/drivers/raster/gtiff.html)
      * @param packing reduce size of output tile with packing (apply scale + offset and use smaller integer data types)
+     * @param drop_empty_slices if true, empty time slices will be skipped; not yet implemented
      * @param p chunk processor instance, defaults to the global configuration
      *
      * @note Overview levels will be chosen by halving the number of pixels until the larger dimension
      * has less than 256 pixels.
+     *
+     * @note argument `drop_empty_slices` is not yet implemented.
      *
      * @note Depending on `overviews` and `cog` GeoTIFFs created and postprocessed stepwise:
      * 1. time slices of cubes of the cube are exported as tiled normal GeoTIFFs
@@ -756,7 +779,9 @@ class cube : public std::enable_shared_from_this<cube> {
                               bool overviews = false, bool cog = false,
                               std::map<std::string, std::string> creation_options = std::map<std::string, std::string>(),
                               std::string overview_resampling = "NEAREST",
-                              packed_export packing = packed_export::make_none(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+                              packed_export packing = packed_export::make_none(),
+                              bool drop_empty_slices = false,
+                              std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Write a data cube as a single netCDF file
@@ -765,12 +790,14 @@ class cube : public std::enable_shared_from_this<cube> {
      * @param with_VRT additional write VRT files for time slices that are easier to display, e.g., in QGIS
      * @param write_bounds boolean, if true, variables time_bnds, y_bnds, x_bnds per dimension values will be added
      * @param packing reduce size of output tile with packing (apply scale + offset and use smaller integer data types)
+     * @param drop_empty_slices if true, empty time slices will be skipped
      * @param p chunk processor instance, defaults to the global configuration
      *
-     * @note packing is not yet implemented
+     * @note argument `drop_empty_slices` is not yet implemented.
      */
     void write_netcdf_file(std::string path, uint8_t compression_level = 0,
                            bool with_VRT = false, bool write_bounds = true, packed_export packing = packed_export::make_none(),
+                           bool drop_empty_slices = false,
                            std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**

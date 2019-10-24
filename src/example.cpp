@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
     config::instance()->gdalcubes_init();
     config::instance()->set_error_handler(error_handler::error_handler_debug);
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
+    config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(8));
 
     datetime ttt = datetime::from_string("2018-11-08T09:32:09");
     std::cout << ttt.to_double() << std::endl;
@@ -183,26 +184,73 @@ int main(int argc, char *argv[]) {
 
         /**************************************************************************/
         // Test apply_pixel
-        //        {
-        //                        auto c = image_collection_cube::create("test.db", v);
-        //                        //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
-        //                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
-        //                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
-        //                        // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
+        //                {
+        //                                auto c = image_collection_cube::create("test.db", v);
+        //                                //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
+        //                                //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
+        //                                //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
+        //                                // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
         //
-        //                        auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
+        //                                auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
         //
-        //                        auto cr = reduce_cube::create(capply, "median");
-        //                        // cr->write_gdal_image("test_apply_reduce.tif");
-        //                        cr->write_netcdf_file("test_apply_reduce.nc");
-        //        }
+        //                                auto cr = reduce_cube::create(capply, "median");
+        //                                // cr->write_gdal_image("test_apply_reduce.tif");
+        //                                cr->write_netcdf_file("test_apply_reduce.nc");
+        //                }
 
         // Test apply_pixel
+        //        {
+        //            auto c = dummy_cube::create(v, 1, 1.0);
+        //            auto capply = apply_pixel_cube::create(c, {"day(t0)"});
+        //            auto cr = reduce_cube::create(capply, "median");
+        //            cr->write_netcdf_file("test_apply_reduce.nc");
+        //        }
+
+        // Test query_points
         {
-            auto c = dummy_cube::create(v, 1, 1.0);
-            auto capply = apply_pixel_cube::create(c, {"day(t0)"});
-            auto cr = reduce_cube::create(capply, "median");
-            cr->write_netcdf_file("test_apply_reduce.nc");
+            auto c = image_collection_cube::create("test.db", v);
+            //c->set_chunk_size(1000, 1000, 1000);  // single chunk
+            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04"});
+
+            auto ca = apply_pixel_cube::create(cb, {"left", "top"}, {"x", "y"}, true);
+            //cb->write_netcdf_file("cube.nc");
+            auto cr = reduce_time_cube::create(ca, {{"median", "B04"}, {"median", "x"}, {"median", "y"}});
+            cr->write_netcdf_file("cube_red_xy_1.nc");
+
+            std::vector<double> ux = {653469.0, 693953.1, 734437.2, 774921.3, 815405.4, 855889.6, 896373.7, 936857.8, 977341.9, 1017826.0};
+            std::vector<double> uy = {6670781, 6692220, 6713658, 6735097, 6756536, 6777974, 6799413, 6820852, 6842290, 6863729};
+            std::vector<std::string> ut = {"2018-06-04", "2018-06-12", "2018-06-20", "2018-06-30", "2018-07-10"};
+
+            std::vector<double> x;
+            std::vector<double> y;
+            std::vector<std::string> t;
+
+            for (uint16_t ix = 0; ix < ux.size(); ++ix) {
+                for (uint16_t iy = 0; iy < uy.size(); ++iy) {
+                    for (uint16_t it = 0; it < ut.size(); ++it) {
+                        x.push_back(ux[ix]);
+                        y.push_back(uy[iy]);
+                        t.push_back(ut[it]);
+                    }
+                }
+            }
+            std::string srs = "EPSG:3857";
+
+            auto res = vector_queries::query_points(cr, x, y, t, srs);
+
+            //std::cout << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1);
+            for (uint32_t ip = 0; ip < x.size(); ++ip) {
+                std::cout << ip + 1 << "\t";
+                std::cout << x[ip] << "\t";
+                std::cout << y[ip] << "\t";
+                std::cout << t[ip] << "\t";
+                for (uint32_t ib = 0; ib < res.size(); ++ib) {
+                    std::cout << res[ib][ip] << "\t";
+                }
+                std::cout << x[ip] - res[1][ip] << "\t";
+                std::cout << y[ip] - res[2][ip] << "\t";
+                std::cout << std::endl;
+            }
         }
 
         /**************************************************************************/

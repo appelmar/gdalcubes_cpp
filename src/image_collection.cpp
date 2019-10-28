@@ -383,7 +383,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             if (global_srs_str.empty()) {  // if no global SRS is given
                 srs_in.SetFromUserInput(dataset->GetProjectionRef());
             } else {
-                if (dataset->GetProjectionRef() != NULL) {
+                if (dataset->GetProjectionRef() != NULL && !std::string(dataset->GetProjectionRef()).empty()) {
                     srs_in.SetFromUserInput(dataset->GetProjectionRef());
                     if (!srs_in.IsSame(&global_srs)) {
                         GCBS_WARN("SRS of dataset '" + (*it) + "' is different from global SRS and will be overwritten.");

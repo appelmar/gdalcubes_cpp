@@ -250,6 +250,16 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
         descriptors = subdatasets;  // TODO: how to handle input datasets if they do not have any subdatasets?
     }
 
+    std::string global_srs_str = "";
+    OGRSpatialReference global_srs;
+    if (_format.json().count("srs")) {
+        global_srs_str = _format.json().get<std::string>();
+        if (global_srs.SetFromUserInput(global_srs_str.c_str()) != OGRERR_NONE) {
+            GCBS_WARN("Cannot read global SRS definition in collection format, trying to extract from individual datasets.");
+            global_srs_str = "";
+        }
+    }
+
     uint32_t counter = -1;
     std::shared_ptr<progress> p = config::instance()->get_default_progress_bar()->get();
     p->set(0);  // explicitly set to zero to show progress bar immediately
@@ -369,7 +379,19 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             bbox.top = affine_in[3];
             bbox.bottom = affine_in[3] + affine_in[4] * dataset->GetRasterXSize() + affine_in[5] * dataset->GetRasterYSize();
             OGRSpatialReference srs_in;
-            srs_in.SetFromUserInput(dataset->GetProjectionRef());
+
+            if (global_srs_str.empty()) {  // if no global SRS is given
+                srs_in.SetFromUserInput(dataset->GetProjectionRef());
+            } else {
+                if (dataset->GetProjectionRef() != NULL) {
+                    srs_in.SetFromUserInput(dataset->GetProjectionRef());
+                    if (!srs_in.IsSame(&global_srs)) {
+                        GCBS_WARN("SRS of dataset '" + (*it) + "' is different from global SRS and will be overwritten.");
+                    }
+                }
+                srs_in = global_srs;
+            }
+
             srs_in.exportToProj4(&proj4);
             bbox.transform(proj4, "EPSG:4326");
         }
@@ -722,7 +744,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
                                                                                  std::vector<std::string> bands, std::vector<std::string> order_by) {
     bounds_2d<double> range_trans = (srs == "EPSG:4326") ? range.s : range.s.transform(srs, "EPSG:4326");
     std::string sql =  // TODO: do we really need image_name ?
-        "SELECT gdalrefs.image_id, images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num "
+        "SELECT gdalrefs.image_id, images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num, images.proj "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
         "images.datetime >= '" +
         range.t0.to_string(datetime_unit::SECOND) + "' AND images.datetime <= '" + range.t1.to_string(datetime_unit::SECOND) +
@@ -746,6 +768,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
                 order_by[io] == "gdalrefs.descriptor" ||
                 order_by[io] == "images.datetime" ||
                 order_by[io] == "bands.name" ||
+                order_by[io] == "images.proj" ||
                 order_by[io] == "gdalrefs.band_num") {
                 sql += order_by[io] + ",";
             } else {
@@ -758,6 +781,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
             order_by[io] == "gdalrefs.descriptor" ||
             order_by[io] == "images.datetime" ||
             order_by[io] == "bands.name" ||
+            order_by[io] == "images.proj" ||
             order_by[io] == "gdalrefs.band_num") {
             sql += order_by[io];
         } else {
@@ -780,6 +804,7 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
         r.datetime = sqlite_as_string(stmt, 3);
         r.band_name = sqlite_as_string(stmt, 4);
         r.band_num = sqlite3_column_int(stmt, 5);
+        r.srs = sqlite_as_string(stmt, 6);
 
         out.push_back(r);
     }

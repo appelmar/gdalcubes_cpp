@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(gdalcubes LANGUAGES CXX C VERSION 0.2.3)
+project(gdalcubes LANGUAGES CXX C VERSION 0.2.9999)
 
 
 #set(COLLECTION_FORMAT_VERSION_MAJOR 0)

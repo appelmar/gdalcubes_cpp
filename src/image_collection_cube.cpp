@@ -380,6 +380,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         uint32_t image_id = datasets[i].image_id;
         std::string image_name = datasets[i].image_name;
+        std::string src_srs = datasets[i].srs;
         datetime dt = datetime::from_string(datasets[i].datetime);
         dt.unit() = _st_ref->dt_unit();  // explicit datetime unit cast
         duration temp_dt = _st_ref->dt();
@@ -421,6 +422,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             CPLStringList warp_args;
             warp_args.AddString("-of");
             warp_args.AddString("MEM");  // TODO: Check whether /vsimem/GTiff is faster?
+
+            warp_args.AddString("-s_srs");
+            warp_args.AddString(src_srs.c_str());
 
             warp_args.AddString("-t_srs");
             warp_args.AddString(_st_ref->srs().c_str());
@@ -531,13 +535,16 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                     throw std::string("ERROR in image_collection_cube::read_chunk(): GDAL cannot open'" + mask_dataset_band.first + "'");
                 }
 
-                OGRSpatialReference srs_in(g->GetProjectionRef());
-                double affine_in[6];
-                g->GetGeoTransform(affine_in);
+                //                OGRSpatialReference srs_in(g->GetProjectionRef());
+                //                double affine_in[6];
+                //                g->GetGeoTransform(affine_in);
 
                 CPLStringList warp_args;
                 warp_args.AddString("-of");
                 warp_args.AddString("MEM");
+
+                warp_args.AddString("-s_srs");
+                warp_args.AddString(src_srs.c_str());
 
                 warp_args.AddString("-t_srs");
                 warp_args.AddString(_st_ref->srs().c_str());

@@ -253,7 +253,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::string global_srs_str = "";
     OGRSpatialReference global_srs;
     if (_format.json().count("srs")) {
-        global_srs_str = _format.json().get<std::string>();
+        global_srs_str = _format.json()["srs"].get<std::string>();
         if (global_srs.SetFromUserInput(global_srs_str.c_str()) != OGRERR_NONE) {
             GCBS_WARN("Cannot read global SRS definition in collection format, trying to extract from individual datasets.");
             global_srs_str = "";

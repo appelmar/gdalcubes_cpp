@@ -51,7 +51,7 @@ class vector_queries {
      * As a result, the function creates a geopackage file with layers for all time steps. Each layer contains the geometries and selected combinations of aggregation functions and bands
      * as attributes. Available aggregation functions currently include "min", "max", "mean", "median", "sum", "prod", and "count". "var" and "sd" are currently NOT implemented.
      *
-     * @note THIS FUNCTION IS NOT YET IMPLEMENTED
+     * @note THIS FUNCTION CURRENTLY RUNS IN A SINGLE THREAD ONLY
      *
      *
      * @param cube input data cube
@@ -60,8 +60,9 @@ class vector_queries {
      * @param out_dir output directory
      * @param out_prefix prefix for output filenames
      * @param ogr_layer defines from which layer geometries are taken, if the ogr_dataset has multiple layers
+     * @return vector of paths to created result datasets (one per time slice of the cube)
      */
-    static void zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset, std::vector<std::pair<std::string, std::string>> agg_band_functions, std::string out_dir, std::string out_prefix = "", std::string ogr_layer = "");
+    static std::vector<std::string> zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset, std::vector<std::pair<std::string, std::string>> agg_band_functions, std::string out_dir, std::string out_prefix = "", std::string ogr_layer = "");
 };
 
 }  // namespace gdalcubes

@@ -358,8 +358,7 @@ struct zonal_statistics_median : public zonal_statistics_func {
 };
 
 // TODO: implement var and sd aggregation functions
-
-void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset,
+    std::vector<std::string> vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset,
                                       std::vector<std::pair<std::string, std::string>> agg_band_functions,
                                       std::string out_dir, std::string out_prefix, std::string ogr_layer) {
     if (!OGRGeometryFactory::haveGEOS()) {
@@ -523,6 +522,8 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
     layer->ResetReading();
 
+    std::vector<std::string> out_datasets;
+
     for (uint32_t ct = 0; ct < cube->count_chunks_t(); ++ct) {
         // TODO: define body of the loop as lambda function and evaluate multithreaded
 
@@ -593,7 +594,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                                                                     it * chunk->size()[2] * chunk->size()[3] +
                                                                                     iy * chunk->size()[3] +
                                                                                     ix];
-                                                pixel_aggregators[ifield]->update(v, index_of_FID[fid], it);  // FIXME: ifeature is wrong, we need integer index of fid
+                                                pixel_aggregators[ifield]->update(v, index_of_FID[fid], it);
                                             }
                                         }
                                     }
@@ -663,15 +664,17 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 OGRFeature::DestroyFeature(in_feature);
             }
             GDALClose(poDS);
+            out_datasets.push_back(output_file);
             prg->increment(double(1) / cube->size_t());
+
 
         }
     }
 
-    // TODO: destroy srs_cube and srs_features???
-
     GDALClose(in_ogr_dataset);
     prg->finalize();
+
+    return out_datasets;
 }
 
 }  // namespace gdalcubes

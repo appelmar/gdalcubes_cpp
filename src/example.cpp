@@ -298,7 +298,7 @@ int main(int argc, char* argv[]) {
 
            // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
 
-            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"min", "precipitation"}, {"max", "precipitation"}, {"mean", "precipitation"}}, "/tmp", "zonal_stats_chirps_");
+            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/test_features_grid.gpkg", {{"min", "precipitation"}, {"max", "precipitation"}, {"mean", "precipitation"}}, "/tmp", "zonal_stats_chirps_");
         }
 
         /**************************************************************************/

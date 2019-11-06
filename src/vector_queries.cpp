@@ -1,6 +1,7 @@
 
 
 #include "vector_queries.h"
+#include <ogrsf_frmts.h>
 #include <thread>
 
 namespace gdalcubes {
@@ -42,7 +43,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
 
             for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
                 workers_transform.push_back(std::thread([&cube, &srs, &srs_in, &srs_out, &x, &y, ithread, n](void) {
-                    OGRCoordinateTransformation* coord_transform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
+                    OGRCoordinateTransformation *coord_transform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
 
                     int begin = ithread * n;
                     int end = std::min(uint32_t(ithread * n + n), uint32_t(x.size()));
@@ -149,7 +150,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
                                 if (iit < 0 || uint32_t(iit) >= dat->size()[1]) continue;
 
                                 for (uint16_t ib = 0; ib < out.size(); ++ib) {
-                                    out[ib][chunk_index[chunks[ic]][i]] = ((double*)dat->buf())[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + iit * dat->size()[2] * dat->size()[3] + iiy * dat->size()[3] + iix];
+                                    out[ib][chunk_index[chunks[ic]][i]] = ((double *)dat->buf())[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + iit * dat->size()[2] * dat->size()[3] + iiy * dat->size()[3] + iix];
                                 }
                             }
                         }
@@ -171,6 +172,508 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
     prg->finalize();
 
     return out;
+}
+
+struct zonal_statistics_func {
+    zonal_statistics_func() : _nfeatures(0), _nt(0){};
+    virtual ~zonal_statistics_func(){};
+
+    virtual void init(uint32_t nfeatures, uint32_t nt) {
+        _nfeatures = nfeatures;
+        _nt = nt;
+    };
+    virtual void update(double x, uint32_t ifeature, uint32_t it) = 0;
+    virtual std::shared_ptr<std::vector<double>> finalize() = 0;
+
+   protected:
+    uint32_t _nfeatures;
+    uint32_t _nt;
+};
+
+struct zonal_statistics_count : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _x = std::make_shared<std::vector<double>>();
+        _x->resize(_nt * _nfeatures, 0);
+    }
+
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) (*_x)[ifeature * _nt + it] += 1;
+    }
+
+    std::shared_ptr<std::vector<double>> finalize() override {
+        return _x;
+    }
+
+    std::shared_ptr<std::vector<double>> _x;
+};
+
+struct zonal_statistics_sum : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _x = std::make_shared<std::vector<double>>();
+        _x->resize(_nt * _nfeatures, NAN);
+    }
+
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) {
+            if (std::isnan((*_x)[ifeature * _nt + it])) {
+                (*_x)[ifeature * _nt + it] = x;
+            } else {
+                (*_x)[ifeature * _nt + it] += x;
+            }
+        }
+    }
+
+    std::shared_ptr<std::vector<double>> finalize() override {
+        return _x;
+    }
+
+    std::shared_ptr<std::vector<double>> _x;
+};
+
+struct zonal_statistics_prod : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _x = std::make_shared<std::vector<double>>();
+        _x->resize(_nt * _nfeatures, NAN);
+    }
+
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) {
+            if (std::isnan((*_x)[ifeature * _nt + it])) {
+                (*_x)[ifeature * _nt + it] = x;
+            } else {
+                (*_x)[ifeature * _nt + it] *= x;
+            }
+        }
+    }
+
+    std::shared_ptr<std::vector<double>> finalize() override {
+        return _x;
+    }
+
+    std::shared_ptr<std::vector<double>> _x;
+};
+
+struct zonal_statistics_mean : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _x = std::make_shared<std::vector<double>>();
+        _x->resize(_nt * _nfeatures, 0);
+        _n.resize(_nt * _nfeatures, 0);
+    }
+
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) {
+            (*_x)[ifeature * _nt + it] += x;
+            _n[ifeature * _nt + it]++;
+        }
+    }
+
+    std::shared_ptr<std::vector<double>> finalize() override {
+        for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+            (*_x)[i] = (*_x)[i] / double(_n[i]);
+        }
+        return _x;
+    }
+
+    std::shared_ptr<std::vector<double>> _x;
+    std::vector<uint32_t> _n;
+};
+
+struct zonal_statistics_min : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _x = std::make_shared<std::vector<double>>();
+        _x->resize(_nt * _nfeatures, std::numeric_limits<double>::max());
+    }
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) {
+            (*_x)[ifeature * _nt + it] = std::min(x, (*_x)[ifeature * _nt + it]);
+        }
+    }
+    std::shared_ptr<std::vector<double>> finalize() override {
+        for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+            if ((*_x)[i] == std::numeric_limits<double>::max()) {
+                (*_x)[i] = NAN;
+            }
+        }
+        return _x;
+    }
+    std::shared_ptr<std::vector<double>> _x;
+};
+
+struct zonal_statistics_max : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _x = std::make_shared<std::vector<double>>();
+        _x->resize(_nt * _nfeatures, std::numeric_limits<double>::lowest());
+    }
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) {
+            (*_x)[ifeature * _nt + it] = std::max(x, (*_x)[ifeature * _nt + it]);
+        }
+    }
+    std::shared_ptr<std::vector<double>> finalize() override {
+        for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+            if ((*_x)[i] == std::numeric_limits<double>::lowest()) {
+                (*_x)[i] = NAN;
+            }
+        }
+        return _x;
+    }
+    std::shared_ptr<std::vector<double>> _x;
+};
+
+struct zonal_statistics_median : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _values.resize(_nt * _nfeatures);
+    }
+
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) {
+            _values[ifeature * _nt + it].push_back(x);
+        }
+    }
+
+    std::shared_ptr<std::vector<double>> finalize() override {
+        std::shared_ptr<std::vector<double>> out = std::make_shared<std::vector<double>>();
+        out->resize(_nt * _nfeatures);
+        for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+            std::sort(_values[i].begin(), _values[i].end());
+            if (_values[i].size() == 0) {
+                (*out)[i] = NAN;
+            } else if (_values[i].size() % 2 == 1) {
+                (*out)[i] = _values[i][_values[i].size() / 2];
+            } else {
+                (*out)[i] = (_values[i][_values[i].size() / 2] + _values[i][_values[i].size() / 2 - 1]) / ((double)2);
+            }
+        }
+        return out;
+    }
+
+    std::vector<std::vector<double>> _values;
+};
+
+// TODO: implement var and sd aggregation functions
+
+void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset,
+                                      std::vector<std::pair<std::string, std::string>> agg_band_functions,
+                                      std::string out_dir, std::string out_prefix, std::string ogr_layer) {
+    if (!OGRGeometryFactory::haveGEOS()) {
+        GCBS_ERROR("Missing GEOS support in GDAL installation");
+        throw std::string("Missing GEOS support in GDAL installation");
+    }
+
+    std::vector<uint16_t> band_index;
+    std::vector<std::string> agg_func_names;
+    std::vector<std::function<zonal_statistics_func *()>> agg_func_creators;
+    for (uint16_t i = 0; i < agg_band_functions.size(); ++i) {
+        if (!cube->bands().has(agg_band_functions[i].second)) {
+            GCBS_WARN("Data cube has no band '" + agg_band_functions[i].second + "', statistics on this band will be ignored");
+        } else {
+            if (agg_band_functions[i].first == "min") {
+                agg_func_creators.push_back([]() { return new zonal_statistics_min(); });
+            } else if (agg_band_functions[i].first == "max") {
+                agg_func_creators.push_back([]() { return new zonal_statistics_max(); });
+            } else if (agg_band_functions[i].first == "count") {
+                agg_func_creators.push_back([]() { return new zonal_statistics_count(); });
+            } else if (agg_band_functions[i].first == "sum") {
+                agg_func_creators.push_back([]() { return new zonal_statistics_sum(); });
+            } else if (agg_band_functions[i].first == "prod") {
+                agg_func_creators.push_back([]() { return new zonal_statistics_prod(); });
+            } else if (agg_band_functions[i].first == "mean") {
+                agg_func_creators.push_back([]() { return new zonal_statistics_mean(); });
+            } else if (agg_band_functions[i].first == "median") {
+                agg_func_creators.push_back([]() { return new zonal_statistics_median(); });
+            }  // TODO: Add sd and var
+            else {
+                GCBS_WARN("There is no aggregation function '" + agg_band_functions[i].first + "', related summary statistics will be ignored.");
+                continue;
+            }
+            band_index.push_back(cube->bands().get_index(agg_band_functions[i].second));
+            agg_func_names.push_back(agg_band_functions[i].first);
+        }
+    }
+
+    // open input OGR dataset
+    GDALDataset *in_ogr_dataset;
+
+    in_ogr_dataset = (GDALDataset *)GDALOpenEx(ogr_dataset.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL,
+                                               NULL);
+    if (in_ogr_dataset == NULL) {
+        GCBS_ERROR("failed to open '" + ogr_dataset + "'");
+        throw std::string("failed to open '" + ogr_dataset + "'");
+    }
+
+    OGRLayer *layer;
+    if (in_ogr_dataset->GetLayerCount() > 1) {
+        if (ogr_layer.empty()) {
+            GCBS_WARN("input OGR dataset has multiple layers, using the first.");
+            layer = in_ogr_dataset->GetLayer(0);
+        } else {
+            layer = in_ogr_dataset->GetLayerByName(ogr_layer.c_str());
+        }
+    } else {
+        if (ogr_layer.empty()) {
+            layer = in_ogr_dataset->GetLayer(0);
+        } else {
+            layer = in_ogr_dataset->GetLayerByName(ogr_layer.c_str());
+        }
+    }
+    if (layer == NULL) {
+        GCBS_ERROR("invalid OGR layer");
+        throw std::string("invalid OGR layer");
+    }
+
+    // If layer has more than one geometry column, only the first will be used.
+    // Warn if there are more geometry columns
+    if (layer->GetLayerDefn()->GetGeomFieldCount() > 1) {
+        std::string geom_field_name = layer->GetLayerDefn()->GetGeomFieldDefn(0)->GetNameRef();
+        GCBS_WARN("Found more than one geometry field for input features, using only the first ('" + geom_field_name + "'");
+    }
+
+    // Make sure that geometry column has type Polygon / MultiPolygon
+    OGRwkbGeometryType geom_type = layer->GetGeomType();
+    if (geom_type != wkbPolygon && geom_type != wkbPolygonM && geom_type != wkbPolygon25D &&
+        geom_type != wkbPolygonZM && geom_type != wkbMultiPolygon) {
+        GCBS_ERROR("Zonal statistics requires Polygon or MultiPolygon input geometries");
+        GDALClose(in_ogr_dataset);
+        // TODO: do we have to clean up more things here?
+        throw std::string("Zonal statistics requires Polygon or MultiPolygon input geometries");
+    }
+
+    // check that cube and ogr dataset have same spatial reference system.
+    OGRSpatialReference srs_cube = cube->st_reference()->srs_ogr();
+    OGRSpatialReference *srs_features = layer->GetSpatialRef();
+
+    if (!srs_cube.IsSame(srs_features)) {
+        GCBS_ERROR("Data cube and input features have different SRSes");
+        GDALClose(in_ogr_dataset);
+        // TODO: do we have to clean up more things here?
+        throw std::string("Data cube and input features have different SRSes");
+    }
+
+    // Helper data structure: map: chunk index -> vector of FIDs of all features intersecting the chunk
+    std::map<chunkid_t, std::vector<int32_t>> features_in_chunk;
+
+    // Check assumption: Input dataset has FIDs
+    if (std::string(layer->GetFIDColumn()).empty()) {
+        GCBS_ERROR("Input feature dataset must have FIDs");
+        throw std::string("Input feature dataset must have FIDs");
+    }
+
+    if (!layer->TestCapability(OLCRandomRead)) {
+        GCBS_WARN("Input feature layer does not support efficient random reads; computations may take a considerable amount of time.");
+    }
+
+    // start progress bar
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
+    // TODO: use SetSpatialFilterRect() ???
+
+    for (uint32_t cx = 0; cx < cube->count_chunks_x(); ++cx) {
+        for (uint32_t cy = 0; cy < cube->count_chunks_y(); ++cy) {
+            chunkid_t id = cube->chunk_id_from_coords({0, cy, cx});
+            bounds_2d<double> sextent = cube->bounds_from_chunk(id).s;
+            OGRPolygon pp;
+            OGRLinearRing a;
+
+            a.addPoint(sextent.left, sextent.bottom);
+            a.addPoint(sextent.right, sextent.bottom);
+            a.addPoint(sextent.right, sextent.top);
+            a.addPoint(sextent.left, sextent.top);
+            a.addPoint(sextent.left, sextent.bottom);
+            pp.addRing(&a);
+            pp.assignSpatialReference(&srs_cube);
+
+            // iterate over all features
+            layer->ResetReading();
+            OGRFeature *cur_feature;
+            while ((cur_feature = layer->GetNextFeature()) != NULL) {
+                OGRGeometry *cur_geometry = cur_feature->GetGeometryRef();
+                if (cur_geometry != NULL) {
+                    if (cur_geometry->Intersects(&pp)) {
+                        features_in_chunk[id].push_back(cur_feature->GetFID());
+                    }
+                }
+            }
+            OGRFeature::DestroyFeature(cur_feature);
+        }
+    }
+
+    // Helper data structure: map: FID -> internal integer index
+    std::unordered_map<int32_t, int32_t> FID_of_index;
+    std::unordered_map<int32_t, int32_t> index_of_FID;
+
+    uint32_t nfeatures = layer->GetFeatureCount();
+
+    layer->ResetReading();
+    OGRFeature *cur_feature;
+    int32_t cur_index = 0;
+    while ((cur_feature = layer->GetNextFeature()) != NULL) {
+        FID_of_index[cur_index] = cur_feature->GetFID();
+        index_of_FID[cur_feature->GetFID()] = cur_index;
+        cur_index++;
+    }
+    OGRFeature::DestroyFeature(cur_feature);
+    layer->ResetReading();
+
+    for (uint32_t ct = 0; ct < cube->count_chunks_t(); ++ct) {
+        // TODO: define body of the loop as lambda function and evaluate multithreaded
+
+        // initialize per geometry + time aggregators
+        uint32_t nt = cube->chunk_size(cube->chunk_id_from_coords({ct, 0, 0}))[0];
+        std::vector<zonal_statistics_func *> pixel_aggregators;
+        for (uint16_t i = 0; i < agg_func_names.size(); ++i) {
+            pixel_aggregators.push_back(agg_func_creators[i]());  // TODO: delete / use shared_ptr
+            pixel_aggregators[i]->init(nfeatures, nt);
+        }
+
+        for (uint32_t cx = 0; cx < cube->count_chunks_x(); ++cx) {
+            for (uint32_t cy = 0; cy < cube->count_chunks_y(); ++cy) {
+                chunkid_t id = cube->chunk_id_from_coords({ct, cy, cx});
+                chunkid_t id_spatial = cube->chunk_id_from_coords({0, cy, cx});
+
+                bounds_st chunk_bounds = cube->bounds_from_chunk(id);
+
+                // if chunk intersects with at least one geometry
+                if (features_in_chunk.count(id_spatial) > 0) {
+                    // read chunk
+                    std::shared_ptr<chunk_data> chunk = cube->read_chunk(id);
+
+                    if (chunk->empty()) {
+                        continue;
+                    }
+
+                    // iterate over all features that intersect spatially with current chunk
+                    for (uint32_t ifeature = 0; ifeature < features_in_chunk[id_spatial].size(); ++ifeature) {
+                        int32_t fid = features_in_chunk[id_spatial][ifeature];
+
+                        // filter chunk pixels by bounding box of current feature
+                        OGRFeature *feature = layer->GetFeature(fid);
+                        OGREnvelope feature_bbox;
+                        feature->GetGeometryRef()->getEnvelope(&feature_bbox);
+
+                        int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) / cube->st_reference()->dx()), 0);
+                        int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) / cube->st_reference()->dx()), (int32_t)chunk->size()[3] - 1);
+
+                        bool outside = false;
+                        if (x_end < 0 || x_start > int32_t(chunk->size()[3] - 1)) {
+                            outside = true;
+                        }
+
+                        int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) / cube->st_reference()->dy()), 0);
+                        int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) / cube->st_reference()->dy()), (int32_t)chunk->size()[2] - 1);
+
+                        if (y_end < 0 || y_start > int32_t(chunk->size()[2] - 1)) {
+                            outside = true;
+                        }
+
+                        if (!outside) {
+                            // iterate over pixels and time slices
+                            OGRPoint p(0, 0);
+                            p.assignSpatialReference(&srs_cube);
+                            for (int32_t iy = y_start; iy <= y_end; ++iy) {
+                                for (int32_t ix = x_start; ix <= x_end; ++ix) {
+                                    //p.setX(cube->st_reference()->left() + (cx * cube->chunk_size()[2] + ix + 0.5) * cube->st_reference()->dx());
+                                    //p.setY(cube->st_reference()->bottom() + (cy * cube->chunk_size()[1] * cube->st_reference()->dy()) + (chunk->size()[2] - iy + 0.5) * cube->st_reference()->dy());
+                                    p.setX(chunk_bounds.s.left + (ix + 0.5) * cube->st_reference()->dx());
+                                    p.setY(chunk_bounds.s.top - (iy + 0.5) * cube->st_reference()->dy());
+
+                                    if (p.Within(feature->GetGeometryRef())) {
+                                        for (uint32_t it = 0; it < chunk->size()[1]; ++it) {
+                                            for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
+                                                uint16_t b_index = band_index[ifield];
+                                                double v = ((double *)chunk->buf())[b_index * chunk->size()[1] * chunk->size()[2] * chunk->size()[3] +
+                                                                                    it * chunk->size()[2] * chunk->size()[3] +
+                                                                                    iy * chunk->size()[3] +
+                                                                                    ix];
+                                                pixel_aggregators[ifield]->update(v, index_of_FID[fid], it);  // FIXME: ifeature is wrong, we need integer index of fid
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        OGRFeature::DestroyFeature(feature);
+                    }
+                }
+            }
+        }
+
+        std::vector<std::shared_ptr<std::vector<double>>> res;
+        for (uint16_t iband = 0; iband < agg_func_names.size(); ++iband) {
+            res.push_back(pixel_aggregators[iband]->finalize());
+        }
+
+        // TODO: write output OGR datasets
+        for (uint32_t it = 0; it < nt; ++it) {
+            GDALDriver *poDriver = GetGDALDriverManager()->GetDriverByName("GPKG");
+            if (poDriver == NULL) {
+                GCBS_ERROR("OGR GeoPackage driver not found");
+                throw std::string("OGR GeoPackage driver not found");
+            }
+
+            std::string output_file = filesystem::join(out_dir, out_prefix + (cube->st_reference()->t0() + cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string() + ".gpkg");
+            // TODO: check creation options etc.
+            GDALDataset *poDS = poDriver->Create(output_file.c_str(), 0, 0, 0, GDT_Unknown, NULL);
+            if (poDS == NULL) {
+                GCBS_ERROR("Creation of GPKG file '" + output_file + "' failed");
+                throw std::string("Creation of GPKG file '" + output_file + "' failed");
+            }
+
+            // TODO: change output layer name
+
+            // TODO: what if layer argument is set
+            OGRLayer *poLayer = poDS->CreateLayer(out_prefix.c_str(), srs_features, geom_type, NULL);
+            if (poLayer == NULL) {
+                GCBS_ERROR("Failed to create output layer in  '" + output_file + "'");
+                throw std::string("Failed to create output layer in  '" + output_file + "'");
+            }
+
+            for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
+                std::string field_name = cube->bands().get(band_index[ifield]).name + "_" + agg_func_names[ifield];
+                OGRFieldDefn oField(field_name.c_str(), OFTReal);
+                // TODO: set precision? set_nullable?
+
+                if (poLayer->CreateField(&oField) != OGRERR_NONE) {
+                    GCBS_ERROR("Failed to create output field '" + field_name + "' in  '" + output_file + "'");
+                    throw std::string("Failed to create output field '" + field_name + "' in  '" + output_file + "'");
+                }
+            }
+
+            for (uint32_t ifeature = 0; ifeature < nfeatures; ++ifeature) {
+                OGRFeature *poFeature = OGRFeature::CreateFeature(poLayer->GetLayerDefn());
+                for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
+                    poFeature->SetField(ifield, (*(res[ifield]))[ifeature * nt + it]);
+                }
+                poFeature->SetGeometry(layer->GetFeature(FID_of_index[ifeature])->GetGeometryRef());
+                if (poLayer->CreateFeature(poFeature) != OGRERR_NONE) {
+                    GCBS_ERROR("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
+                    throw std::string("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
+                }
+                OGRFeature::DestroyFeature(poFeature);
+            }
+            GDALClose(poDS);
+            prg->increment(double(1) / cube->size_t());
+
+            // TODO: free memory of aggreators
+            //            for (uint16_t ifield=0; ifield < agg_func_names.size(); ++ifield) {
+            //                if (pixel_aggregators[ifield] != nullptr) {
+            //                    delete pixel_aggregators[ifield];
+            //                }
+            //            }
+        }
+    }
+
+    // TODO: destroy srs_cube and srs_features???
+
+    GDALClose(in_ogr_dataset);
+    prg->finalize();
 }
 
 }  // namespace gdalcubes

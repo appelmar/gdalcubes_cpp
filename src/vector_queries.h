@@ -44,6 +44,24 @@ class vector_queries {
          * @return data frame (vector of double vectors) where first vector represents columns (bands)
          */
     static std::vector<std::vector<double>> query_points(std::shared_ptr<cube> cube, std::vector<double> x, std::vector<double> y, std::vector<std::string> t, std::string srs);
+
+    /**
+     * Query summary statistics of a data cube over spatial polygons
+     *
+     * As a result, the function creates a geopackage file with layers for all time steps. Each layer contains the geometries and selected combinations of aggregation functions and bands
+     * as attributes. Available aggregation functions currently include "min", "max", "mean", "median", "sum", "prod", and "count". "var" and "sd" are currently NOT implemented.
+     *
+     * @note THIS FUNCTION IS NOT YET IMPLEMENTED
+     *
+     *
+     * @param cube input data cube
+     * @param ogr_dataset input OGR dataset identifier with polygon geometries
+     * @param agg_band_functions vector of aggregation functions, band pairs representing combinations of available summary statistics functions (first element) and data cube bands (second element), e.g. {"min", "band1"}.
+     * @param out_dir output directory
+     * @param out_prefix prefix for output filenames
+     * @param ogr_layer defines from which layer geometries are taken, if the ogr_dataset has multiple layers
+     */
+    static void zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset, std::vector<std::pair<std::string, std::string>> agg_band_functions, std::string out_dir, std::string out_prefix = "", std::string ogr_layer = "");
 };
 
 }  // namespace gdalcubes

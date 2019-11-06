@@ -43,7 +43,7 @@ std::vector<std::string> string_list_from_text_file(std::string filename) {
     return out;
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     config::instance()->gdalcubes_init();
     config::instance()->set_error_handler(error_handler::error_handler_debug);
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
@@ -207,50 +207,100 @@ int main(int argc, char *argv[]) {
         //        }
 
         // Test query_points
+        //        {
+        //            auto c = image_collection_cube::create("test.db", v);
+        //            //c->set_chunk_size(1000, 1000, 1000);  // single chunk
+        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04"});
+        //
+        //            auto ca = apply_pixel_cube::create(cb, {"left", "top"}, {"x", "y"}, true);
+        //            //cb->write_netcdf_file("cube.nc");
+        //            auto cr = reduce_time_cube::create(ca, {{"median", "B04"}, {"median", "x"}, {"median", "y"}});
+        //            cr->write_netcdf_file("cube_red_xy_1.nc");
+        //
+        //            std::vector<double> ux = {653469.0, 693953.1, 734437.2, 774921.3, 815405.4, 855889.6, 896373.7, 936857.8, 977341.9, 1017826.0};
+        //            std::vector<double> uy = {6670781, 6692220, 6713658, 6735097, 6756536, 6777974, 6799413, 6820852, 6842290, 6863729};
+        //            std::vector<std::string> ut = {"2018-06-04", "2018-06-12", "2018-06-20", "2018-06-30", "2018-07-10"};
+        //
+        //            std::vector<double> x;
+        //            std::vector<double> y;
+        //            std::vector<std::string> t;
+        //
+        //            for (uint16_t ix = 0; ix < ux.size(); ++ix) {
+        //                for (uint16_t iy = 0; iy < uy.size(); ++iy) {
+        //                    for (uint16_t it = 0; it < ut.size(); ++it) {
+        //                        x.push_back(ux[ix]);
+        //                        y.push_back(uy[iy]);
+        //                        t.push_back(ut[it]);
+        //                    }
+        //                }
+        //            }
+        //            std::string srs = "EPSG:3857";
+        //
+        //            auto res = vector_queries::query_points(cr, x, y, t, srs);
+        //
+        //            //std::cout << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1);
+        //            for (uint32_t ip = 0; ip < x.size(); ++ip) {
+        //                std::cout << ip + 1 << "\t";
+        //                std::cout << x[ip] << "\t";
+        //                std::cout << y[ip] << "\t";
+        //                std::cout << t[ip] << "\t";
+        //                for (uint32_t ib = 0; ib < res.size(); ++ib) {
+        //                    std::cout << res[ib][ip] << "\t";
+        //                }
+        //                std::cout << x[ip] - res[1][ip] << "\t";
+        //                std::cout << y[ip] - res[2][ip] << "\t";
+        //                std::cout << std::endl;
+        //            }
+        //        }
+
+        // test zonal statistics
         {
-            auto c = image_collection_cube::create("test.db", v);
-            //c->set_chunk_size(1000, 1000, 1000);  // single chunk
-            auto cb = select_bands_cube::create(c, std::vector<std::string>{"B04"});
+            cube_view w;
+            w.left() = -180;
+            w.top() = 90;
+            w.bottom() = -90;
+            w.right() = 180;
+            w.srs() = "EPSG:4326";
+            w.nx() = 360;
+            w.ny() = 180;
+            w.t0() = datetime::from_string("2019-01-01");
+            w.t1() = datetime::from_string("2019-01-02");
+            w.dt(duration::from_string("P1D"));
+            w.resampling_method() = resampling::resampling_type::RSMPL_AVERAGE;
 
-            auto ca = apply_pixel_cube::create(cb, {"left", "top"}, {"x", "y"}, true);
-            //cb->write_netcdf_file("cube.nc");
-            auto cr = reduce_time_cube::create(ca, {{"median", "B04"}, {"median", "x"}, {"median", "y"}});
-            cr->write_netcdf_file("cube_red_xy_1.nc");
+            //            auto ch = _helper_cube::create(w);
+            //            ch->set_chunk_size(1,100,100);
+            //            ch->write_netcdf_file("/home/marius/Desktop/gdalcubes_model.nc");
 
-            std::vector<double> ux = {653469.0, 693953.1, 734437.2, 774921.3, 815405.4, 855889.6, 896373.7, 936857.8, 977341.9, 1017826.0};
-            std::vector<double> uy = {6670781, 6692220, 6713658, 6735097, 6756536, 6777974, 6799413, 6820852, 6842290, 6863729};
-            std::vector<std::string> ut = {"2018-06-04", "2018-06-12", "2018-06-20", "2018-06-30", "2018-07-10"};
+            auto c = dummy_cube::create(w, 1, 1.0);
 
-            std::vector<double> x;
-            std::vector<double> y;
-            std::vector<std::string> t;
+            //vector_queries::zonal_statistics(c,"/home/marius/sciebo/global_grid_5deg.gpkg",{{"count","band1"}}, "/tmp", "zonal_stats_");
 
-            for (uint16_t ix = 0; ix < ux.size(); ++ix) {
-                for (uint16_t iy = 0; iy < uy.size(); ++iy) {
-                    for (uint16_t it = 0; it < ut.size(); ++it) {
-                        x.push_back(ux[ix]);
-                        y.push_back(uy[iy]);
-                        t.push_back(ut[it]);
-                    }
+            auto c1 = dummy_cube::create(w, 1, 1.0);
+            auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);
+
+            //vector_queries::zonal_statistics(c2,"/home/marius/sciebo/test_features.gpkg",{{"min","left"},{"max","left"},{"mean","left"},{"min","top"},{"max","top"},{"mean","top"}}, "/tmp", "zonal_stats_coords_");
+
+            // Real world data (CHIRPS)
+            collection_format f("/home/marius/github/collection_formats/formats/CHIRPS_v2_0_daily_p05_tif.json");
+            std::vector<std::string> files;
+            filesystem::iterate_directory("/home/marius/eodata/CHIRPS/", [&files](const std::string& s) {
+                if (s.find(".tif") != s.npos) {
+                    files.push_back(s);
                 }
-            }
-            std::string srs = "EPSG:3857";
+            });
+            auto ic = image_collection::create(f, files, false);
+            ic->write("CHIRPS.db");
 
-            auto res = vector_queries::query_points(cr, x, y, t, srs);
+            w.t0() = datetime::from_string("2018-01-01");
+            w.t1() = datetime::from_string("2018-01-14");
 
-            //std::cout << std::fixed << std::setprecision(std::numeric_limits<double>::digits10 + 1);
-            for (uint32_t ip = 0; ip < x.size(); ++ip) {
-                std::cout << ip + 1 << "\t";
-                std::cout << x[ip] << "\t";
-                std::cout << y[ip] << "\t";
-                std::cout << t[ip] << "\t";
-                for (uint32_t ib = 0; ib < res.size(); ++ib) {
-                    std::cout << res[ib][ip] << "\t";
-                }
-                std::cout << x[ip] - res[1][ip] << "\t";
-                std::cout << y[ip] - res[2][ip] << "\t";
-                std::cout << std::endl;
-            }
+            auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
+            chirps_cube->set_chunk_size(16, 100, 100);
+
+            chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
+
+            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/test_features_grid.gpkg", {{"min", "precipitation"}, {"max", "precipitation"}, {"mean", "precipitation"}}, "/tmp", "zonal_stats_chirps_");
         }
 
         /**************************************************************************/

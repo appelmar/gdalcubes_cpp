@@ -49,13 +49,11 @@ int main(int argc, char* argv[]) {
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
     config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(8));
 
-    datetime ttt = datetime::from_string("2018-11-08T09:32:09");
-    std::cout << ttt.to_double() << std::endl;
 
-    auto prsts = collection_format::list_presets();
-    for (auto it = prsts.begin(); it != prsts.end(); ++it) {
-        std::cout << it->first << "    " << it->second << std::endl;
-    }
+//    auto prsts = collection_format::list_presets();
+//    for (auto it = prsts.begin(); it != prsts.end(); ++it) {
+//        std::cout << it->first << "    " << it->second << std::endl;
+//    }
 
     try {
         timer t0;
@@ -296,11 +294,11 @@ int main(int argc, char* argv[]) {
             w.t1() = datetime::from_string("2018-01-14");
 
             auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
-            chirps_cube->set_chunk_size(16, 100, 100);
+            chirps_cube->set_chunk_size(16, 1000, 1000);
 
-            chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
+           // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
 
-            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/test_features_grid.gpkg", {{"min", "precipitation"}, {"max", "precipitation"}, {"mean", "precipitation"}}, "/tmp", "zonal_stats_chirps_");
+            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"min", "precipitation"}, {"max", "precipitation"}, {"mean", "precipitation"}}, "/tmp", "zonal_stats_chirps_");
         }
 
         /**************************************************************************/

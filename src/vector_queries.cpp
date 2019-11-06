@@ -369,25 +369,25 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
     std::vector<uint16_t> band_index;
     std::vector<std::string> agg_func_names;
-    std::vector<std::function<zonal_statistics_func *()>> agg_func_creators;
+    std::vector<std::function<std::unique_ptr<zonal_statistics_func>()>> agg_func_creators;
     for (uint16_t i = 0; i < agg_band_functions.size(); ++i) {
         if (!cube->bands().has(agg_band_functions[i].second)) {
             GCBS_WARN("Data cube has no band '" + agg_band_functions[i].second + "', statistics on this band will be ignored");
         } else {
             if (agg_band_functions[i].first == "min") {
-                agg_func_creators.push_back([]() { return new zonal_statistics_min(); });
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_min()); });
             } else if (agg_band_functions[i].first == "max") {
-                agg_func_creators.push_back([]() { return new zonal_statistics_max(); });
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_max()); });
             } else if (agg_band_functions[i].first == "count") {
-                agg_func_creators.push_back([]() { return new zonal_statistics_count(); });
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_count()); });
             } else if (agg_band_functions[i].first == "sum") {
-                agg_func_creators.push_back([]() { return new zonal_statistics_sum(); });
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_sum()); });
             } else if (agg_band_functions[i].first == "prod") {
-                agg_func_creators.push_back([]() { return new zonal_statistics_prod(); });
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_prod()); });
             } else if (agg_band_functions[i].first == "mean") {
-                agg_func_creators.push_back([]() { return new zonal_statistics_mean(); });
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_mean()); });
             } else if (agg_band_functions[i].first == "median") {
-                agg_func_creators.push_back([]() { return new zonal_statistics_median(); });
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_median()); });
             }  // TODO: Add sd and var
             else {
                 GCBS_WARN("There is no aggregation function '" + agg_band_functions[i].first + "', related summary statistics will be ignored.");
@@ -500,8 +500,9 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                         features_in_chunk[id].push_back(cur_feature->GetFID());
                     }
                 }
+                OGRFeature::DestroyFeature(cur_feature);
             }
-            OGRFeature::DestroyFeature(cur_feature);
+
         }
     }
 
@@ -518,8 +519,8 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         FID_of_index[cur_index] = cur_feature->GetFID();
         index_of_FID[cur_feature->GetFID()] = cur_index;
         cur_index++;
+        OGRFeature::DestroyFeature(cur_feature);
     }
-    OGRFeature::DestroyFeature(cur_feature);
     layer->ResetReading();
 
     for (uint32_t ct = 0; ct < cube->count_chunks_t(); ++ct) {
@@ -527,9 +528,9 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
         // initialize per geometry + time aggregators
         uint32_t nt = cube->chunk_size(cube->chunk_id_from_coords({ct, 0, 0}))[0];
-        std::vector<zonal_statistics_func *> pixel_aggregators;
+        std::vector<std::unique_ptr<zonal_statistics_func>> pixel_aggregators;
         for (uint16_t i = 0; i < agg_func_names.size(); ++i) {
-            pixel_aggregators.push_back(agg_func_creators[i]());  // TODO: delete / use shared_ptr
+            pixel_aggregators.push_back(agg_func_creators[i]());
             pixel_aggregators[i]->init(nfeatures, nt);
         }
 
@@ -651,22 +652,19 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
                     poFeature->SetField(ifield, (*(res[ifield]))[ifeature * nt + it]);
                 }
-                poFeature->SetGeometry(layer->GetFeature(FID_of_index[ifeature])->GetGeometryRef());
+                OGRFeature *in_feature = layer->GetFeature(FID_of_index[ifeature]);
+                // TODO: if in_feature != NULL?
+                poFeature->SetGeometry(in_feature->GetGeometryRef());
                 if (poLayer->CreateFeature(poFeature) != OGRERR_NONE) {
                     GCBS_ERROR("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
                     throw std::string("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
                 }
                 OGRFeature::DestroyFeature(poFeature);
+                OGRFeature::DestroyFeature(in_feature);
             }
             GDALClose(poDS);
             prg->increment(double(1) / cube->size_t());
 
-            // TODO: free memory of aggreators
-            //            for (uint16_t ifield=0; ifield < agg_func_names.size(); ++ifield) {
-            //                if (pixel_aggregators[ifield] != nullptr) {
-            //                    delete pixel_aggregators[ifield];
-            //                }
-            //            }
         }
     }
 

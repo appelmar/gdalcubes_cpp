@@ -3,6 +3,7 @@
 #include "vector_queries.h"
 #include <ogrsf_frmts.h>
 #include <thread>
+#include <gdal_utils.h>
 
 namespace gdalcubes {
 
@@ -459,7 +460,8 @@ struct zonal_statistics_median : public zonal_statistics_func {
     std::map<chunkid_t, std::vector<int32_t>> features_in_chunk;
 
     // Check assumption: Input dataset has FIDs
-    if (std::string(layer->GetFIDColumn()).empty()) {
+    std::string fid_column = layer->GetFIDColumn();
+    if (fid_column.empty()) {
         GCBS_ERROR("Input feature dataset must have FIDs");
         throw std::string("Input feature dataset must have FIDs");
     }
@@ -527,6 +529,7 @@ struct zonal_statistics_median : public zonal_statistics_func {
     for (uint32_t ct = 0; ct < cube->count_chunks_t(); ++ct) {
         // TODO: define body of the loop as lambda function and evaluate multithreaded
 
+
         // initialize per geometry + time aggregators
         uint32_t nt = cube->chunk_size(cube->chunk_id_from_coords({ct, 0, 0}))[0];
         std::vector<std::unique_ptr<zonal_statistics_func>> pixel_aggregators;
@@ -576,17 +579,66 @@ struct zonal_statistics_median : public zonal_statistics_func {
                         }
 
                         if (!outside) {
-                            // iterate over pixels and time slices
-                            OGRPoint p(0, 0);
-                            p.assignSpatialReference(&srs_cube);
+
+                            // rasterize
+                            int err = 0;
+                            CPLStringList rasterize_args;
+                            rasterize_args.AddString("-burn");
+                            rasterize_args.AddString("1");
+                            rasterize_args.AddString("-ot");
+                            rasterize_args.AddString("Byte");
+                            rasterize_args.AddString("-of");
+                            rasterize_args.AddString("MEM");
+                            rasterize_args.AddString("-init");
+                            rasterize_args.AddString("0");
+                            rasterize_args.AddString("-tr");
+                            rasterize_args.AddString(std::to_string(cube->st_reference()->dx()).c_str());
+                            rasterize_args.AddString(std::to_string(cube->st_reference()->dy()).c_str());
+                            rasterize_args.AddString("-te");
+                            rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start * cube->st_reference()->dx()).c_str()); // xmin
+                            rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end+1) * cube->st_reference()->dy()).c_str()); // ymin
+                            rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) * cube->st_reference()->dx()).c_str()); // xmax
+                            rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start * cube->st_reference()->dy()).c_str()); // ymax
+                            rasterize_args.AddString("-where");
+                            std::string where =  fid_column + "=" + std::to_string(fid);
+                            rasterize_args.AddString(where.c_str());
+                            rasterize_args.AddString("-l");
+                            rasterize_args.AddString(layer->GetName());
+
+                            // log gdal_rasterize call
+//                            std::stringstream ss;
+//                            ss << "Running gdal_rasterize ";
+//                            for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
+//                                ss << rasterize_args[iws] << " ";
+//                            }
+//                            ss << ogr_dataset;
+//                            GCBS_TRACE(ss.str());
+
+                            GDALRasterizeOptions* rasterize_opts =  GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
+                            if (rasterize_opts == NULL) {
+                                GDALRasterizeOptionsFree(rasterize_opts);
+                                throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create gdal_rasterize options.");
+                            }
+
+                            GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err );
+                            if (gdal_rasterized == NULL) {
+                                GCBS_ERROR("gdal_rasterize failed for feature with FID " + std::to_string(fid));
+                            }
+                            GDALRasterizeOptionsFree(rasterize_opts);
+
+
+                            uint8_t* geom_mask = (uint8_t*)std::malloc(sizeof(uint8_t) * (x_end - x_start + 1) * (y_end - y_start + 1));
+                            if (gdal_rasterized->GetRasterBand(1)->RasterIO(GF_Read,0, 0, x_end - x_start + 1, y_end - y_start + 1, geom_mask, x_end - x_start + 1, y_end - y_start + 1, GDT_Byte, 0, 0, NULL) != CE_None) {
+                                GCBS_ERROR("RasterIO failed for feature with FID " + std::to_string(fid));
+                            }
+
+
                             for (int32_t iy = y_start; iy <= y_end; ++iy) {
                                 for (int32_t ix = x_start; ix <= x_end; ++ix) {
-                                    //p.setX(cube->st_reference()->left() + (cx * cube->chunk_size()[2] + ix + 0.5) * cube->st_reference()->dx());
-                                    //p.setY(cube->st_reference()->bottom() + (cy * cube->chunk_size()[1] * cube->st_reference()->dy()) + (chunk->size()[2] - iy + 0.5) * cube->st_reference()->dy());
-                                    p.setX(chunk_bounds.s.left + (ix + 0.5) * cube->st_reference()->dx());
-                                    p.setY(chunk_bounds.s.top - (iy + 0.5) * cube->st_reference()->dy());
 
-                                    if (p.Within(feature->GetGeometryRef())) {
+                                    // if mask is 1
+                                    if (geom_mask[(iy-y_start) * (x_end - x_start + 1) + ix - x_start] == 1)
+                                    {
                                         for (uint32_t it = 0; it < chunk->size()[1]; ++it) {
                                             for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
                                                 uint16_t b_index = band_index[ifield];
@@ -600,6 +652,8 @@ struct zonal_statistics_median : public zonal_statistics_func {
                                     }
                                 }
                             }
+                            std::free(geom_mask);
+                            GDALClose(gdal_rasterized);
                         }
                         OGRFeature::DestroyFeature(feature);
                     }
@@ -612,7 +666,7 @@ struct zonal_statistics_median : public zonal_statistics_func {
             res.push_back(pixel_aggregators[iband]->finalize());
         }
 
-        // TODO: write output OGR datasets
+        // write output OGR datasets
         for (uint32_t it = 0; it < nt; ++it) {
             GDALDriver *poDriver = GetGDALDriverManager()->GetDriverByName("GPKG");
             if (poDriver == NULL) {

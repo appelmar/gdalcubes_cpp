@@ -48,8 +48,11 @@ class vector_queries {
     /**
      * Query summary statistics of a data cube over spatial polygons
      *
-     * As a result, the function creates a geopackage file with layers for all time steps. Each layer contains the geometries and selected combinations of aggregation functions and bands
-     * as attributes. Available aggregation functions currently include "min", "max", "mean", "median", "sum", "prod", and "count". "var" and "sd" are currently NOT implemented.
+     * The function produces a single geopackage file with one layer "geom" containing the geometries and feature IDs, and other layers containing resulting summary statistics
+     * per time slice of the data cube. These layers are named "attr_%DATETIME%" and contain only attribute values and feature IDs. Additional layers with names "map_%DATETIME%"
+     * are spatial views of these time slices by joining attribute layers with the geometry layer in a SQLite database view.
+     *
+     * Available aggregation functions currently include "min", "max", "mean", "median", "sum", "prod", and "count". "var" and "sd" are currently NOT implemented.
      *
      * @note THIS FUNCTION CURRENTLY RUNS IN A SINGLE THREAD ONLY
      *
@@ -57,12 +60,11 @@ class vector_queries {
      * @param cube input data cube
      * @param ogr_dataset input OGR dataset identifier with polygon geometries
      * @param agg_band_functions vector of aggregation functions, band pairs representing combinations of available summary statistics functions (first element) and data cube bands (second element), e.g. {"min", "band1"}.
-     * @param out_dir output directory
-     * @param out_prefix prefix for output filenames
+     * @param out_path path where the resulting GeoPackage file will be written to
+     * @param overwrite_if_exists overwrite output file if already existing
      * @param ogr_layer defines from which layer geometries are taken, if the ogr_dataset has multiple layers
-     * @return vector of paths to created result datasets (one per time slice of the cube)
      */
-    static std::vector<std::string> zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset, std::vector<std::pair<std::string, std::string>> agg_band_functions, std::string out_dir, std::string out_prefix = "", std::string ogr_layer = "");
+    static void zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset, std::vector<std::pair<std::string, std::string>> agg_band_functions, std::string out_path, bool overwrite_if_exists = false, std::string ogr_layer = "");
 };
 
 }  // namespace gdalcubes

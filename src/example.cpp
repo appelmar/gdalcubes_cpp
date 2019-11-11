@@ -49,11 +49,10 @@ int main(int argc, char* argv[]) {
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
     config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(8));
 
-
-//    auto prsts = collection_format::list_presets();
-//    for (auto it = prsts.begin(); it != prsts.end(); ++it) {
-//        std::cout << it->first << "    " << it->second << std::endl;
-//    }
+    //    auto prsts = collection_format::list_presets();
+    //    for (auto it = prsts.begin(); it != prsts.end(); ++it) {
+    //        std::cout << it->first << "    " << it->second << std::endl;
+    //    }
 
     try {
         timer t0;
@@ -272,12 +271,12 @@ int main(int argc, char* argv[]) {
 
             auto c = dummy_cube::create(w, 1, 1.0);
 
-            vector_queries::zonal_statistics(c,"/home/marius/sciebo/global_grid_5deg.gpkg",{{"count","band1"}}, "/tmp", "zonal_stats_");
+            vector_queries::zonal_statistics(c, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"count", "band1"}}, "/tmp/zonal_stats", true);
 
             auto c1 = dummy_cube::create(w, 1, 1.0);
             auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);
 
-            //vector_queries::zonal_statistics(c2,"/home/marius/sciebo/test_features.gpkg",{{"min","left"},{"max","left"},{"mean","left"},{"min","top"},{"max","top"},{"mean","top"}}, "/tmp", "zonal_stats_coords_");
+            //vector_queries::zonal_statistics(c2,"/home/marius/sciebo/test_features.gpkg",{{"min","left"},{"max","left"},{"mean","left"},{"min","top"},{"max","top"},{"mean","top"}}, "/tmp/zonal_stats_coords_");
 
             // Real world data (CHIRPS)
             collection_format f("/home/marius/github/collection_formats/formats/CHIRPS_v2_0_daily_p05_tif.json");
@@ -291,14 +290,14 @@ int main(int argc, char* argv[]) {
             //ic->write("CHIRPS.db");
 
             w.t0() = datetime::from_string("2018-01-01");
-            w.t1() = datetime::from_string("2018-01-01");
+            w.t1() = datetime::from_string("2018-01-04");
 
             auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
             //chirps_cube->set_chunk_size(16, 1000, 1000);
 
-           // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
+            // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
 
-            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", { {"mean", "precipitation"}}, "/tmp", "zonal_stats_chirps_");
+            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", {{"mean", "precipitation"}}, "/tmp/zonal_stats_chirps2.gpkg", true);
         }
 
         /**************************************************************************/

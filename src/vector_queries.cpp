@@ -787,12 +787,16 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
             query = "INSERT INTO gpkg_contents (table_name, identifier, data_type, srs_id) VALUES ( '" + view_name +
                     "', '" + view_name + "', 'features'," + srs_features->GetAuthorityCode(NULL) +
                     ")";
+
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
             query = "INSERT INTO gpkg_geometry_columns (table_name, column_name, geometry_type_name, srs_id, z, m) values ('" +
                     view_name + "', 'geom', 'GEOMETRY', " + srs_features->GetAuthorityCode(NULL) +
                     ", 0, 0)";
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
         }
+        // fix geometry type column in gpkg_geometry_columns table
+        std::string query =  "UPDATE gpkg_geometry_columns SET geometry_type_name = (SELECT geometry_type_name FROM gpkg_geometry_columns WHERE table_name = \"geom\")";
+        gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
     }
 
     GDALClose(gpkg_out);

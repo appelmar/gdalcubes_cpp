@@ -271,7 +271,7 @@ int main(int argc, char* argv[]) {
 
             auto c = dummy_cube::create(w, 1, 1.0);
 
-            vector_queries::zonal_statistics(c, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"count", "band1"}}, "/tmp/zonal_stats", true);
+            //vector_queries::zonal_statistics(c, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"count", "band1"}}, "/tmp/zonal_stats", true);
 
             auto c1 = dummy_cube::create(w, 1, 1.0);
             auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);

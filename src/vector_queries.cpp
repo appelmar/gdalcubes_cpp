@@ -534,8 +534,6 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
     layer->ResetReading();
 
-    std::vector<std::string> out_datasets;
-
     GDALDriver *gpkg_driver = GetGDALDriverManager()->GetDriverByName("GPKG");
     if (gpkg_driver == NULL) {
         GCBS_ERROR("OGR GeoPackage driver not found");
@@ -569,10 +567,23 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         OGRFeature::DestroyFeature(geom_feature_out);
         OGRFeature::DestroyFeature(in_feature);
     }
-    //GDALClose(poDS);
+    GDALClose(gpkg_out);
+
+
+//    gpkg_out =  (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL,NULL);
+//    if (gpkg_out == NULL) {
+//        GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
+//        throw std::string("Opening output  GPKG file '" + output_file + "' failed");
+//    }
 
     for (uint32_t ct = 0; ct < cube->count_chunks_t(); ++ct) {
         // TODO: define body of the loop as lambda function and evaluate multithreaded
+
+        gpkg_out =  (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL,NULL);
+        if (gpkg_out == NULL) {
+            GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
+            throw std::string("Opening output  GPKG file '" + output_file + "' failed");
+        }
 
         // initialize per geometry + time aggregators
         uint32_t nt = cube->chunk_size(cube->chunk_id_from_coords({ct, 0, 0}))[0];
@@ -706,13 +717,9 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         }
 
         // write output layers
+        //CPLStringList xx;
+        //xx.AddString("GPKG");
         for (uint32_t it = 0; it < nt; ++it) {
-            //poDS = (GDALDataset *)GDALOpen(output_file.c_str(), GA_Update);
-            //            if (poDS == NULL) {
-            //                GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
-            //                throw std::string("Opening output  GPKG file '" + output_file + "' failed");
-            //            }
-
             std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
 
             OGRLayer *cur_attr_layer_out = gpkg_out->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
@@ -732,6 +739,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 }
             }
 
+            cur_attr_layer_out->StartTransaction();
             for (uint32_t ifeature = 0; ifeature < nfeatures; ++ifeature) {
                 OGRFeature *cur_feature_out = OGRFeature::CreateFeature(cur_attr_layer_out->GetLayerDefn());
                 for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
@@ -745,24 +753,16 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 }
                 OGRFeature::DestroyFeature(cur_feature_out);
             }
-            //GDALClose(poDS);
-            out_datasets.push_back(output_file);
+            cur_attr_layer_out->CommitTransaction();
+
             prg->increment(double(1) / cube->size_t());
         }
+       GDALClose(gpkg_out);
     }
 
-    //    poDS = (GDALDataset *)GDALOpen(output_file.c_str(), GA_Update);
-    //    if (poDS == NULL) {
-    //        GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
-    //        throw std::string("Opening output  GPKG file '" + output_file + "' failed");
-    //    }
-    //
-    //
-    //
-    //
-    //
-    // create spatial views see https://gdal.org/drivers/vector/gpkg.html#spatial-views
 
+
+    // create spatial views see https://gdal.org/drivers/vector/gpkg.html#spatial-views
     const char *gpkg_has_column_md = gpkg_driver->GetMetadataItem("SQLITE_HAS_COLUMN_METADATA", NULL);
     int32_t srs_auth_code = std::atoi(srs_features->GetAuthorityCode(NULL));
     if (gpkg_has_column_md == NULL || std::strcmp(gpkg_has_column_md, "YES") != 0) {
@@ -775,6 +775,13 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
             field_names_str += (cube->bands().get(band_index[ifield]).name + "_" + agg_func_names[ifield]) + ",";
         }
         field_names_str += (cube->bands().get(band_index[agg_func_names.size() - 1]).name + "_" + agg_func_names[agg_func_names.size() - 1]);
+
+
+        gpkg_out =  (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL,NULL);
+        if (gpkg_out == NULL) {
+            GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
+            throw std::string("Opening output  GPKG file '" + output_file + "' failed");
+        }
 
         for (uint32_t it = 0; it < cube->size_t(); ++it) {
             std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * it).to_string();
@@ -797,9 +804,10 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         // fix geometry type column in gpkg_geometry_columns table
         std::string query =  "UPDATE gpkg_geometry_columns SET geometry_type_name = (SELECT geometry_type_name FROM gpkg_geometry_columns WHERE table_name = \"geom\")";
         gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
+        GDALClose(gpkg_out);
     }
 
-    GDALClose(gpkg_out);
+        //GDALClose(gpkg_out);
     GDALClose(in_ogr_dataset);
     prg->finalize();
 }

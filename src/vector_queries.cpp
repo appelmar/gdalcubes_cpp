@@ -569,198 +569,235 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
     GDALClose(gpkg_out);
 
+    uint16_t nthreads = config::instance()->get_default_chunk_processor()->max_threads();
 
-//    gpkg_out =  (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL,NULL);
-//    if (gpkg_out == NULL) {
-//        GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
-//        throw std::string("Opening output  GPKG file '" + output_file + "' failed");
-//    }
+    std::mutex mutex;
+    std::vector<std::thread> workers;
+    std::vector<std::string> out_temp_files;
+    for (uint16_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers.push_back(std::thread([&](void) {
+            for (uint32_t ct = ithread; ct < cube->count_chunks_t(); ct += nthreads) {
+                std::string output_file_cur = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename(8, "zs_" + std::to_string(ithread) + "_", ".gpkg"));
+                GDALDataset *gpkg_out_cur = gpkg_driver->Create(output_file_cur.c_str(), 0, 0, 0, GDT_Unknown, NULL);
+                if (gpkg_out == NULL) {
+                    GCBS_ERROR("Creation of GPKG file '" + output_file_cur + "' failed");
+                    throw std::string("Creation of GPKG file '" + output_file_cur + "' failed");
+                }
 
-    for (uint32_t ct = 0; ct < cube->count_chunks_t(); ++ct) {
-        // TODO: define body of the loop as lambda function and evaluate multithreaded
+                // initialize per geometry + time aggregators
+                uint32_t nt = cube->chunk_size(cube->chunk_id_from_coords({ct, 0, 0}))[0];
+                std::vector<std::unique_ptr<zonal_statistics_func>> pixel_aggregators;
+                for (uint16_t i = 0; i < agg_func_names.size(); ++i) {
+                    pixel_aggregators.push_back(agg_func_creators[i]());
+                    pixel_aggregators[i]->init(nfeatures, nt);
+                }
 
-        gpkg_out =  (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL,NULL);
-        if (gpkg_out == NULL) {
-            GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
-            throw std::string("Opening output  GPKG file '" + output_file + "' failed");
-        }
+                for (uint32_t cx = 0; cx < cube->count_chunks_x(); ++cx) {
+                    for (uint32_t cy = 0; cy < cube->count_chunks_y(); ++cy) {
+                        chunkid_t id = cube->chunk_id_from_coords({ct, cy, cx});
+                        chunkid_t id_spatial = cube->chunk_id_from_coords({0, cy, cx});
 
-        // initialize per geometry + time aggregators
-        uint32_t nt = cube->chunk_size(cube->chunk_id_from_coords({ct, 0, 0}))[0];
-        std::vector<std::unique_ptr<zonal_statistics_func>> pixel_aggregators;
-        for (uint16_t i = 0; i < agg_func_names.size(); ++i) {
-            pixel_aggregators.push_back(agg_func_creators[i]());
-            pixel_aggregators[i]->init(nfeatures, nt);
-        }
+                        bounds_st chunk_bounds = cube->bounds_from_chunk(id);
 
-        for (uint32_t cx = 0; cx < cube->count_chunks_x(); ++cx) {
-            for (uint32_t cy = 0; cy < cube->count_chunks_y(); ++cy) {
-                chunkid_t id = cube->chunk_id_from_coords({ct, cy, cx});
-                chunkid_t id_spatial = cube->chunk_id_from_coords({0, cy, cx});
+                        // if chunk intersects with at least one geometry
+                        if (features_in_chunk.count(id_spatial) > 0) {
+                            // read chunk
+                            std::shared_ptr<chunk_data> chunk = cube->read_chunk(id);
 
-                bounds_st chunk_bounds = cube->bounds_from_chunk(id);
-
-                // if chunk intersects with at least one geometry
-                if (features_in_chunk.count(id_spatial) > 0) {
-                    // read chunk
-                    std::shared_ptr<chunk_data> chunk = cube->read_chunk(id);
-
-                    if (chunk->empty()) {
-                        continue;
-                    }
-
-                    // iterate over all features that intersect spatially with current chunk
-                    for (uint32_t ifeature = 0; ifeature < features_in_chunk[id_spatial].size(); ++ifeature) {
-                        int32_t fid = features_in_chunk[id_spatial][ifeature];
-
-                        // filter chunk pixels by bounding box of current feature
-                        OGRFeature *feature = layer->GetFeature(fid);
-                        OGREnvelope feature_bbox;
-                        feature->GetGeometryRef()->getEnvelope(&feature_bbox);
-
-                        int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) / cube->st_reference()->dx()), 0);
-                        int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) / cube->st_reference()->dx()), (int32_t)chunk->size()[3] - 1);
-
-                        bool outside = false;
-                        if (x_end < 0 || x_start > int32_t(chunk->size()[3] - 1)) {
-                            outside = true;
-                        }
-
-                        int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) / cube->st_reference()->dy()), 0);
-                        int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) / cube->st_reference()->dy()), (int32_t)chunk->size()[2] - 1);
-
-                        if (y_end < 0 || y_start > int32_t(chunk->size()[2] - 1)) {
-                            outside = true;
-                        }
-
-                        if (!outside) {
-                            // rasterize
-                            int err = 0;
-                            CPLStringList rasterize_args;
-                            rasterize_args.AddString("-burn");
-                            rasterize_args.AddString("1");
-                            rasterize_args.AddString("-ot");
-                            rasterize_args.AddString("Byte");
-                            rasterize_args.AddString("-of");
-                            rasterize_args.AddString("MEM");
-                            rasterize_args.AddString("-init");
-                            rasterize_args.AddString("0");
-                            rasterize_args.AddString("-tr");
-                            rasterize_args.AddString(std::to_string(cube->st_reference()->dx()).c_str());
-                            rasterize_args.AddString(std::to_string(cube->st_reference()->dy()).c_str());
-                            rasterize_args.AddString("-te");
-                            rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start * cube->st_reference()->dx()).c_str());      // xmin
-                            rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end + 1) * cube->st_reference()->dy()).c_str());   // ymin
-                            rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) * cube->st_reference()->dx()).c_str());  // xmax
-                            rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start * cube->st_reference()->dy()).c_str());       // ymax
-                            rasterize_args.AddString("-where");
-                            std::string where = fid_column + "=" + std::to_string(fid);
-                            rasterize_args.AddString(where.c_str());
-                            rasterize_args.AddString("-l");
-                            rasterize_args.AddString(layer->GetName());
-
-                            // log gdal_rasterize call
-                            //                            std::stringstream ss;
-                            //                            ss << "Running gdal_rasterize ";
-                            //                            for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
-                            //                                ss << rasterize_args[iws] << " ";
-                            //                            }
-                            //                            ss << ogr_dataset;
-                            //                            GCBS_TRACE(ss.str());
-
-                            GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
-                            if (rasterize_opts == NULL) {
-                                GDALRasterizeOptionsFree(rasterize_opts);
-                                throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create gdal_rasterize options.");
+                            if (chunk->empty()) {
+                                continue;
                             }
 
-                            GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);
-                            if (gdal_rasterized == NULL) {
-                                GCBS_ERROR("gdal_rasterize failed for feature with FID " + std::to_string(fid));
-                            }
-                            GDALRasterizeOptionsFree(rasterize_opts);
+                            // iterate over all features that intersect spatially with current chunk
+                            for (uint32_t ifeature = 0; ifeature < features_in_chunk[id_spatial].size(); ++ifeature) {
+                                int32_t fid = features_in_chunk[id_spatial][ifeature];
 
-                            uint8_t *geom_mask = (uint8_t *)std::malloc(sizeof(uint8_t) * (x_end - x_start + 1) * (y_end - y_start + 1));
-                            if (gdal_rasterized->GetRasterBand(1)->RasterIO(GF_Read, 0, 0, x_end - x_start + 1, y_end - y_start + 1, geom_mask, x_end - x_start + 1, y_end - y_start + 1, GDT_Byte, 0, 0, NULL) != CE_None) {
-                                GCBS_ERROR("RasterIO failed for feature with FID " + std::to_string(fid));
-                            }
+                                // filter chunk pixels by bounding box of current feature
+                                OGRFeature *feature = layer->GetFeature(fid);
+                                OGREnvelope feature_bbox;
+                                feature->GetGeometryRef()->getEnvelope(&feature_bbox);
 
-                            for (int32_t iy = y_start; iy <= y_end; ++iy) {
-                                for (int32_t ix = x_start; ix <= x_end; ++ix) {
-                                    // if mask is 1
-                                    if (geom_mask[(iy - y_start) * (x_end - x_start + 1) + ix - x_start] == 1) {
-                                        for (uint32_t it = 0; it < chunk->size()[1]; ++it) {
-                                            for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
-                                                uint16_t b_index = band_index[ifield];
-                                                double v = ((double *)chunk->buf())[b_index * chunk->size()[1] * chunk->size()[2] * chunk->size()[3] +
-                                                                                    it * chunk->size()[2] * chunk->size()[3] +
-                                                                                    iy * chunk->size()[3] +
-                                                                                    ix];
-                                                pixel_aggregators[ifield]->update(v, index_of_FID[fid], it);
+                                int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) / cube->st_reference()->dx()), 0);
+                                int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) / cube->st_reference()->dx()), (int32_t)chunk->size()[3] - 1);
+
+                                bool outside = false;
+                                if (x_end < 0 || x_start > int32_t(chunk->size()[3] - 1)) {
+                                    outside = true;
+                                }
+
+                                int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) / cube->st_reference()->dy()), 0);
+                                int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) / cube->st_reference()->dy()), (int32_t)chunk->size()[2] - 1);
+
+                                if (y_end < 0 || y_start > int32_t(chunk->size()[2] - 1)) {
+                                    outside = true;
+                                }
+
+                                if (!outside) {
+                                    // rasterize
+                                    int err = 0;
+                                    CPLStringList rasterize_args;
+                                    rasterize_args.AddString("-burn");
+                                    rasterize_args.AddString("1");
+                                    rasterize_args.AddString("-ot");
+                                    rasterize_args.AddString("Byte");
+                                    rasterize_args.AddString("-of");
+                                    rasterize_args.AddString("MEM");
+                                    rasterize_args.AddString("-init");
+                                    rasterize_args.AddString("0");
+                                    rasterize_args.AddString("-tr");
+                                    rasterize_args.AddString(std::to_string(cube->st_reference()->dx()).c_str());
+                                    rasterize_args.AddString(std::to_string(cube->st_reference()->dy()).c_str());
+                                    rasterize_args.AddString("-te");
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start * cube->st_reference()->dx()).c_str());      // xmin
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end + 1) * cube->st_reference()->dy()).c_str());   // ymin
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) * cube->st_reference()->dx()).c_str());  // xmax
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start * cube->st_reference()->dy()).c_str());       // ymax
+                                    rasterize_args.AddString("-where");
+                                    std::string where = fid_column + "=" + std::to_string(fid);
+                                    rasterize_args.AddString(where.c_str());
+                                    rasterize_args.AddString("-l");
+                                    rasterize_args.AddString(layer->GetName());
+
+                                    // log gdal_rasterize call
+                                    //                            std::stringstream ss;
+                                    //                            ss << "Running gdal_rasterize ";
+                                    //                            for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
+                                    //                                ss << rasterize_args[iws] << " ";
+                                    //                            }
+                                    //                            ss << ogr_dataset;
+                                    //                            GCBS_TRACE(ss.str());
+
+                                    GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
+                                    if (rasterize_opts == NULL) {
+                                        GDALRasterizeOptionsFree(rasterize_opts);
+                                        throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create gdal_rasterize options.");
+                                    }
+
+                                    GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);
+                                    if (gdal_rasterized == NULL) {
+                                        GCBS_ERROR("gdal_rasterize failed for feature with FID " + std::to_string(fid));
+                                    }
+                                    GDALRasterizeOptionsFree(rasterize_opts);
+
+                                    uint8_t *geom_mask = (uint8_t *)std::malloc(sizeof(uint8_t) * (x_end - x_start + 1) * (y_end - y_start + 1));
+                                    if (gdal_rasterized->GetRasterBand(1)->RasterIO(GF_Read, 0, 0, x_end - x_start + 1, y_end - y_start + 1, geom_mask, x_end - x_start + 1, y_end - y_start + 1, GDT_Byte, 0, 0, NULL) != CE_None) {
+                                        GCBS_ERROR("RasterIO failed for feature with FID " + std::to_string(fid));
+                                    }
+
+                                    for (int32_t iy = y_start; iy <= y_end; ++iy) {
+                                        for (int32_t ix = x_start; ix <= x_end; ++ix) {
+                                            // if mask is 1
+                                            if (geom_mask[(iy - y_start) * (x_end - x_start + 1) + ix - x_start] == 1) {
+                                                for (uint32_t it = 0; it < chunk->size()[1]; ++it) {
+                                                    for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
+                                                        uint16_t b_index = band_index[ifield];
+                                                        double v = ((double *)chunk->buf())[b_index * chunk->size()[1] * chunk->size()[2] * chunk->size()[3] +
+                                                                                            it * chunk->size()[2] * chunk->size()[3] +
+                                                                                            iy * chunk->size()[3] +
+                                                                                            ix];
+                                                        pixel_aggregators[ifield]->update(v, index_of_FID[fid], it);
+                                                    }
+                                                }
                                             }
                                         }
                                     }
+                                    std::free(geom_mask);
+                                    GDALClose(gdal_rasterized);
                                 }
+                                OGRFeature::DestroyFeature(feature);
                             }
-                            std::free(geom_mask);
-                            GDALClose(gdal_rasterized);
                         }
-                        OGRFeature::DestroyFeature(feature);
                     }
                 }
-            }
-        }
 
-        std::vector<std::shared_ptr<std::vector<double>>> res;
-        for (uint16_t iband = 0; iband < agg_func_names.size(); ++iband) {
-            res.push_back(pixel_aggregators[iband]->finalize());
-        }
-
-        // write output layers
-        //CPLStringList xx;
-        //xx.AddString("GPKG");
-        for (uint32_t it = 0; it < nt; ++it) {
-            std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
-
-            OGRLayer *cur_attr_layer_out = gpkg_out->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
-            if (cur_attr_layer_out == NULL) {
-                GCBS_ERROR("Failed to create output layer in '" + output_file + "'");
-                throw std::string("Failed to create output layer in  '" + output_file + "'");
-            }
-
-            for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
-                std::string field_name = cube->bands().get(band_index[ifield]).name + "_" + agg_func_names[ifield];
-                OGRFieldDefn oField(field_name.c_str(), OFTReal);
-                // TODO: set precision? set_nullable?
-
-                if (cur_attr_layer_out->CreateField(&oField) != OGRERR_NONE) {
-                    GCBS_ERROR("Failed to create output field '" + field_name + "' in  '" + output_file + "'");
-                    throw std::string("Failed to create output field '" + field_name + "' in  '" + output_file + "'");
+                std::vector<std::shared_ptr<std::vector<double>>> res;
+                for (uint16_t iband = 0; iband < agg_func_names.size(); ++iband) {
+                    res.push_back(pixel_aggregators[iband]->finalize());
                 }
-            }
 
-            cur_attr_layer_out->StartTransaction();
-            for (uint32_t ifeature = 0; ifeature < nfeatures; ++ifeature) {
-                OGRFeature *cur_feature_out = OGRFeature::CreateFeature(cur_attr_layer_out->GetLayerDefn());
-                for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
-                    double v = (*(res[ifield]))[ifeature * nt + it];
-                    cur_feature_out->SetField(ifield, v);
-                }
-                cur_feature_out->SetFID(FID_of_index[ifeature]);
-                if (cur_attr_layer_out->CreateFeature(cur_feature_out) != OGRERR_NONE) {
-                    GCBS_ERROR("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
-                    throw std::string("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
-                }
-                OGRFeature::DestroyFeature(cur_feature_out);
-            }
-            cur_attr_layer_out->CommitTransaction();
+                // write output layers
+                for (uint32_t it = 0; it < nt; ++it) {
+                    std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
 
-            prg->increment(double(1) / cube->size_t());
-        }
-       GDALClose(gpkg_out);
+                    OGRLayer *cur_attr_layer_out = gpkg_out_cur->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
+                    if (cur_attr_layer_out == NULL) {
+                        GCBS_ERROR("Failed to create output layer in '" + output_file + "'");
+                        throw std::string("Failed to create output layer in  '" + output_file + "'");
+                    }
+
+                    for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
+                        std::string field_name = cube->bands().get(band_index[ifield]).name + "_" + agg_func_names[ifield];
+                        OGRFieldDefn oField(field_name.c_str(), OFTReal);
+                        // TODO: set precision? set_nullable?
+
+                        if (cur_attr_layer_out->CreateField(&oField) != OGRERR_NONE) {
+                            GCBS_ERROR("Failed to create output field '" + field_name + "' in  '" + output_file + "'");
+                            throw std::string("Failed to create output field '" + field_name + "' in  '" + output_file + "'");
+                        }
+                    }
+
+                    if (cur_attr_layer_out->StartTransaction() != OGRERR_NONE) {
+                        GCBS_WARN("Failed to start transaction on attribute table '" + layer_name + "'");
+                    }
+                    for (uint32_t ifeature = 0; ifeature < nfeatures; ++ifeature) {
+                        OGRFeature *cur_feature_out = OGRFeature::CreateFeature(cur_attr_layer_out->GetLayerDefn());
+                        for (uint16_t ifield = 0; ifield < agg_func_names.size(); ++ifield) {
+                            double v = (*(res[ifield]))[ifeature * nt + it];
+                            cur_feature_out->SetField(ifield, v);
+                        }
+                        cur_feature_out->SetFID(FID_of_index[ifeature]);
+                        if (cur_attr_layer_out->CreateFeature(cur_feature_out) != OGRERR_NONE) {
+                            GCBS_ERROR("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
+                            throw std::string("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
+                        }
+                        OGRFeature::DestroyFeature(cur_feature_out);
+                    }
+                    if (cur_attr_layer_out->CommitTransaction() != OGRERR_NONE) {
+                        GCBS_WARN("Failed to commit transaction on attribute table '" + layer_name + "'");
+                    }
+
+                    prg->increment(double(1) / cube->size_t());
+                }
+                mutex.lock();
+                out_temp_files.push_back(output_file_cur);
+                mutex.unlock();
+                GDALClose(gpkg_out_cur);
+            }
+        }));
+    }
+    for (uint16_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers[ithread].join();
     }
 
+    // Combine layers with ogr2ogr
+    CPLStringList ogr2ogr_args;
+    ogr2ogr_args.AddString("-update");
+    ogr2ogr_args.AddString("-gt");
+    ogr2ogr_args.AddString("65536");
 
+    GDALVectorTranslateOptions *ogr2ogr_opts = GDALVectorTranslateOptionsNew(ogr2ogr_args.List(), NULL);
+    if (ogr2ogr_opts == NULL) {
+        GDALVectorTranslateOptionsFree(ogr2ogr_opts);
+        throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create ogr2ogr options.");
+    }
+
+    for (uint32_t i = 0; i < out_temp_files.size(); ++i) {
+        GDALDataset *temp_in = (GDALDataset *)GDALOpenEx(out_temp_files[i].c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL, NULL);
+        gpkg_out = (GDALDataset *)GDALVectorTranslate(output_file.c_str(), NULL, 1, (GDALDatasetH *)&temp_in, ogr2ogr_opts, NULL);
+        if (gpkg_out == NULL) {
+            GCBS_ERROR("ogr2ogr failed");
+        }
+        GDALVectorTranslateOptionsFree(ogr2ogr_opts);
+        GDALClose(gpkg_out);
+
+        filesystem::remove(out_temp_files[i]);
+    }
+
+    gpkg_out = (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL, NULL);
+    if (gpkg_out == NULL) {
+        GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
+        throw std::string("Opening output  GPKG file '" + output_file + "' failed");
+    }
 
     // create spatial views see https://gdal.org/drivers/vector/gpkg.html#spatial-views
     const char *gpkg_has_column_md = gpkg_driver->GetMetadataItem("SQLITE_HAS_COLUMN_METADATA", NULL);
@@ -775,13 +812,6 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
             field_names_str += (cube->bands().get(band_index[ifield]).name + "_" + agg_func_names[ifield]) + ",";
         }
         field_names_str += (cube->bands().get(band_index[agg_func_names.size() - 1]).name + "_" + agg_func_names[agg_func_names.size() - 1]);
-
-
-        gpkg_out =  (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL,NULL);
-        if (gpkg_out == NULL) {
-            GCBS_ERROR("Opening output GPKG file '" + output_file + "' failed");
-            throw std::string("Opening output  GPKG file '" + output_file + "' failed");
-        }
 
         for (uint32_t it = 0; it < cube->size_t(); ++it) {
             std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * it).to_string();
@@ -802,12 +832,12 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
         }
         // fix geometry type column in gpkg_geometry_columns table
-        std::string query =  "UPDATE gpkg_geometry_columns SET geometry_type_name = (SELECT geometry_type_name FROM gpkg_geometry_columns WHERE table_name = \"geom\")";
+        std::string query = "UPDATE gpkg_geometry_columns SET geometry_type_name = (SELECT geometry_type_name FROM gpkg_geometry_columns WHERE table_name = \"geom\")";
         gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
-        GDALClose(gpkg_out);
+        //GDALClose(gpkg_out);
     }
 
-        //GDALClose(gpkg_out);
+    GDALClose(gpkg_out);
     GDALClose(in_ogr_dataset);
     prg->finalize();
 }

@@ -409,6 +409,11 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         }
     }
 
+    if (agg_func_names.empty() || band_index.empty()) {
+        GCBS_ERROR("No valid summary statistics functions given");
+        return;
+    }
+
     // open input OGR dataset
     GDALDataset *in_ogr_dataset;
     in_ogr_dataset = (GDALDataset *)GDALOpenEx(ogr_dataset.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL,
@@ -522,7 +527,6 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     std::unordered_map<int32_t, int32_t> index_of_FID;
 
     uint32_t nfeatures = layer->GetFeatureCount();
-
     layer->ResetReading();
     OGRFeature *cur_feature;
     int32_t cur_index = 0;
@@ -559,11 +563,11 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         OGRFeature *in_feature = layer->GetFeature(FID_of_index[ifeature]);
         // TODO: if in_feature != NULL?
         geom_feature_out->SetGeometry(in_feature->GetGeometryRef());
+        geom_feature_out->SetFID(fid);
         if (geom_layer_out->CreateFeature(geom_feature_out) != OGRERR_NONE) {
             GCBS_ERROR("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
             throw std::string("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
         }
-        geom_feature_out->SetFID(fid);
         OGRFeature::DestroyFeature(geom_feature_out);
         OGRFeature::DestroyFeature(in_feature);
     }

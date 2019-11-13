@@ -463,7 +463,9 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
     // check that cube and ogr dataset have same spatial reference system.
     OGRSpatialReference srs_cube = cube->st_reference()->srs_ogr();
+    srs_cube.AutoIdentifyEPSG();
     OGRSpatialReference *srs_features = layer->GetSpatialRef();
+    srs_features->AutoIdentifyEPSG();
 
     if (!srs_cube.IsSame(srs_features)) {
         GCBS_ERROR("Data cube and input features have different SRSes");
@@ -824,12 +826,19 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
     // create spatial views see https://gdal.org/drivers/vector/gpkg.html#spatial-views
     const char *gpkg_has_column_md = gpkg_driver->GetMetadataItem("SQLITE_HAS_COLUMN_METADATA", NULL);
-    int32_t srs_auth_code = std::atoi(srs_features->GetAuthorityCode(NULL));
+
+    int32_t srs_auth_code = 0;
+    if (srs_features->GetAuthorityCode(NULL) != NULL) {
+        srs_auth_code = std::atoi(srs_features->GetAuthorityCode(NULL));
+    }
+
     if (gpkg_has_column_md == NULL || std::strcmp(gpkg_has_column_md, "YES") != 0) {
-        GCBS_WARN("GeoPackage OGR driver does not support SQLite column metadata; skipping creation of spatial views.");
-    } else if (srs_auth_code == 0) {
-        GCBS_WARN("Failed to identify authority code of spatial reference system; skipping creation of spatial views.");
-    } else {
+        GCBS_WARN("GeoPackage OGR driver does not support SQLite column metadata; skipping creation of spatial views");
+    } else  {
+        if (srs_auth_code == 0) {
+            GCBS_WARN("Failed to identify authority code of spatial reference system; creating spatial views with missing SRS");
+        }
+
         std::string field_names_str;
         for (uint16_t ifield = 0; ifield < agg_func_names.size() - 1; ++ifield) {
             field_names_str += (cube->bands().get(band_index[ifield]).name + "_" + agg_func_names[ifield]) + ",";
@@ -845,12 +854,12 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                     "' ON geom.fid = '" + layer_name + "'.fid;";
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
             query = "INSERT INTO gpkg_contents (table_name, identifier, data_type, srs_id) VALUES ( '" + view_name +
-                    "', '" + view_name + "', 'features'," + srs_features->GetAuthorityCode(NULL) +
+                    "', '" + view_name + "', 'features'," +  std::to_string(srs_auth_code) +
                     ")";
 
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
             query = "INSERT INTO gpkg_geometry_columns (table_name, column_name, geometry_type_name, srs_id, z, m) values ('" +
-                    view_name + "', 'geom', 'GEOMETRY', " + srs_features->GetAuthorityCode(NULL) +
+                    view_name + "', 'geom', 'GEOMETRY', " + std::to_string(srs_auth_code) +
                     ", 0, 0)";
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
         }

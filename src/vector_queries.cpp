@@ -411,7 +411,6 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
     // open input OGR dataset
     GDALDataset *in_ogr_dataset;
-
     in_ogr_dataset = (GDALDataset *)GDALOpenEx(ogr_dataset.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL,
                                                NULL);
     if (in_ogr_dataset == NULL) {
@@ -438,6 +437,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         GCBS_ERROR("invalid OGR layer");
         throw std::string("invalid OGR layer");
     }
+    ogr_layer = layer->GetName();
 
     // If layer has more than one geometry column, only the first will be used.
     // Warn if there are more geometry columns
@@ -575,10 +575,29 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     std::vector<std::thread> workers;
     std::vector<std::string> out_temp_files;
     for (uint16_t ithread = 0; ithread < nthreads; ++ithread) {
-        workers.push_back(std::thread([&](void) {
+        workers.push_back(std::thread([ithread, nthreads, &cube, &agg_func_names, &agg_func_creators, nfeatures, &features_in_chunk, &fid_column, &band_index, &output_file, &index_of_FID, FID_of_index, &mutex, &prg, &out_temp_files, &ogr_dataset, &ogr_layer](void) {
+            GDALDriver *gpkg_driver = GetGDALDriverManager()->GetDriverByName("GPKG");
+            //            if (gpkg_driver == NULL) {
+            //                GCBS_ERROR("OGR GeoPackage driver not found");
+            //                throw std::string("OGR GeoPackage driver not found");
+            //            }
+
+            GDALDataset *in_ogr_dataset = (GDALDataset *)GDALOpenEx(ogr_dataset.c_str(), GDAL_OF_VECTOR | GDAL_OF_READONLY, NULL, NULL,
+                                                                    NULL);
+            //            if (in_ogr_dataset == NULL) {
+            //                GCBS_ERROR("failed to open '" + ogr_dataset + "'");
+            //                throw std::string("failed to open '" + ogr_dataset + "'");
+            //            }
+
+            OGRLayer *layer = in_ogr_dataset->GetLayerByName(ogr_layer.c_str());
+            //            if (layer == NULL) {
+            //                GCBS_ERROR("invalid OGR layer");
+            //                throw std::string("invalid OGR layer");
+            //            }
+
             for (uint32_t ct = ithread; ct < cube->count_chunks_t(); ct += nthreads) {
                 std::string output_file_cur = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename(8, "zs_" + std::to_string(ithread) + "_", ".gpkg"));
-                GDALDataset *gpkg_out_cur = gpkg_driver->Create(output_file_cur.c_str(), 0, 0, 0, GDT_Unknown, NULL);
+                GDALDataset *gpkg_out = gpkg_driver->Create(output_file_cur.c_str(), 0, 0, 0, GDT_Unknown, NULL);
                 if (gpkg_out == NULL) {
                     GCBS_ERROR("Creation of GPKG file '" + output_file_cur + "' failed");
                     throw std::string("Creation of GPKG file '" + output_file_cur + "' failed");
@@ -719,7 +738,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 for (uint32_t it = 0; it < nt; ++it) {
                     std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
 
-                    OGRLayer *cur_attr_layer_out = gpkg_out_cur->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
+                    OGRLayer *cur_attr_layer_out = gpkg_out->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
                     if (cur_attr_layer_out == NULL) {
                         GCBS_ERROR("Failed to create output layer in '" + output_file + "'");
                         throw std::string("Failed to create output layer in  '" + output_file + "'");
@@ -745,10 +764,10 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                             double v = (*(res[ifield]))[ifeature * nt + it];
                             cur_feature_out->SetField(ifield, v);
                         }
-                        cur_feature_out->SetFID(FID_of_index[ifeature]);
+                        cur_feature_out->SetFID(FID_of_index.at(ifeature));
                         if (cur_attr_layer_out->CreateFeature(cur_feature_out) != OGRERR_NONE) {
-                            GCBS_ERROR("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
-                            throw std::string("Failed to create output feature with FID '" + std::to_string(FID_of_index[ifeature]) + "' in  '" + output_file + "'");
+                            GCBS_ERROR("Failed to create output feature with FID '" + std::to_string(FID_of_index.at(ifeature)) + "' in  '" + output_file + "'");
+                            throw std::string("Failed to create output feature with FID '" + std::to_string(FID_of_index.at(ifeature)) + "' in  '" + output_file + "'");
                         }
                         OGRFeature::DestroyFeature(cur_feature_out);
                     }
@@ -761,7 +780,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 mutex.lock();
                 out_temp_files.push_back(output_file_cur);
                 mutex.unlock();
-                GDALClose(gpkg_out_cur);
+                GDALClose(gpkg_out);
             }
         }));
     }
@@ -787,11 +806,11 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         if (gpkg_out == NULL) {
             GCBS_ERROR("ogr2ogr failed");
         }
-        GDALVectorTranslateOptionsFree(ogr2ogr_opts);
         GDALClose(gpkg_out);
 
         filesystem::remove(out_temp_files[i]);
     }
+    GDALVectorTranslateOptionsFree(ogr2ogr_opts);
 
     gpkg_out = (GDALDataset *)GDALOpenEx(output_file.c_str(), GDAL_OF_VECTOR | GDAL_OF_UPDATE, NULL, NULL, NULL);
     if (gpkg_out == NULL) {

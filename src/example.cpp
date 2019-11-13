@@ -293,7 +293,7 @@ int main(int argc, char* argv[]) {
             w.t1() = datetime::from_string("2018-01-04");
 
             auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
-            //chirps_cube->set_chunk_size(16, 1000, 1000);
+            chirps_cube->set_chunk_size(10, 256, 256);
 
             // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
 

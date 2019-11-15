@@ -211,6 +211,8 @@ class config {
    */
     void gdalcubes_cleanup() {
         curl_global_cleanup();
+        GDALDestroyDriverManager();
+        OGRCleanupAll();
     }
 
     /**

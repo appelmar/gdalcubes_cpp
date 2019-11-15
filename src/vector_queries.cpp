@@ -834,7 +834,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
     if (gpkg_has_column_md == NULL || std::strcmp(gpkg_has_column_md, "YES") != 0) {
         GCBS_WARN("GeoPackage OGR driver does not support SQLite column metadata; skipping creation of spatial views");
-    } else  {
+    } else {
         if (srs_auth_code == 0) {
             GCBS_WARN("Failed to identify authority code of spatial reference system; creating spatial views with missing SRS");
         }
@@ -854,7 +854,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                     "' ON geom.fid = '" + layer_name + "'.fid;";
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);
             query = "INSERT INTO gpkg_contents (table_name, identifier, data_type, srs_id) VALUES ( '" + view_name +
-                    "', '" + view_name + "', 'features'," +  std::to_string(srs_auth_code) +
+                    "', '" + view_name + "', 'features'," + std::to_string(srs_auth_code) +
                     ")";
 
             gpkg_out->ExecuteSQL(query.c_str(), NULL, NULL);

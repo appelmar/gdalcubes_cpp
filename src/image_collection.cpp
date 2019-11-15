@@ -169,8 +169,8 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::vector<std::regex> regex_band_pattern;
 
     /* TODO: The following will fail if other applications create image collections and assign ids to bands differently.
-         * A better solution would be to load band ids, names, and nums from the database bands table directly
-         */
+     * A better solution would be to load band ids, names, and nums from the database bands table directly
+     */
 
     std::vector<std::string> band_name;
     std::vector<uint16_t> band_num;
@@ -200,6 +200,7 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::regex regex_images(_format.json()["images"]["pattern"].get<std::string>());
 
     // @TODO: Make datetime optional, e.g., for DEMs
+
     std::string datetime_format = "%Y-%m-%d";
     if (!_format.json().count("datetime") || !_format.json()["datetime"].count("pattern")) {
         throw std::string("ERROR in image_collection::add(): image collection format does not contain a rule to derive date/time.");
@@ -208,6 +209,25 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
     std::regex regex_datetime(_format.json()["datetime"]["pattern"].get<std::string>());
     if (_format.json()["datetime"].count("format")) {
         datetime_format = _format.json()["datetime"]["format"].get<std::string>();
+    }
+
+    bool time_as_bands = false;  // time is stored as bands in the datasets
+    duration band_time_delta;
+    if (_format.json()["datetime"].count("bands")) {
+        // check if any band has band_num != 1
+        for (uint32_t ib = 0; ib < band_num.size(); ++ib) {
+            if (band_num[ib] != 1) {
+                GCBS_ERROR("Collection format has conflicting declaration of bands; one dataset may either accept multiple bands, or multiple points in time, but not both");
+                throw std::string("Collection format has conflicting declaration of bands; one dataset may either accept multiple bands, or multiple points in time, but not both");
+            }
+        }
+
+        if (_format.json()["datetime"]["bands"].count("dt")) {
+            time_as_bands = true;
+            band_time_delta = duration::from_string(_format.json()["datetime"]["bands"]["dt"].get<std::string>());
+        } else {
+            GCBS_WARN("Collection format seems to have time information in dataset bands, bot does not define how to relate bands to time; time extraction might be incorrect");
+        }
     }
 
     bool use_subdatasets = false;
@@ -396,26 +416,6 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             bbox.transform(proj4, "EPSG:4326");
         }
 
-        std::vector<image_band> bands;
-        for (uint16_t i = 0; i < dataset->GetRasterCount(); ++i) {
-            image_band b;
-            b.type = dataset->GetRasterBand(i + 1)->GetRasterDataType();
-            b.offset = dataset->GetRasterBand(i + 1)->GetOffset();
-            b.scale = dataset->GetRasterBand(i + 1)->GetScale();
-            b.unit = dataset->GetRasterBand(i + 1)->GetUnitType();
-            b.nodata = "";
-            int hasnodata = 0;
-            double nd = dataset->GetRasterBand(i + 1)->GetNoDataValue(&hasnodata);
-            if (hasnodata)
-                b.nodata = std::to_string(nd);
-            bands.push_back(b);
-        }
-        if (bands.empty()) {
-            if (strict) throw std::string("ERROR in image_collection::add(): " + *it + " doesn't contain any band data and will be ignored");
-            GCBS_WARN("Dataset " + *it + " doesn't contain any band data and will be ignored");
-            continue;
-        }
-
         // TODO: check consistency for all files of an image?!
         // -> add parameter checks=true / false
 
@@ -426,20 +426,153 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             continue;
         }
 
-        uint32_t image_id;
+        if (!time_as_bands) {
+            // Input dataset is a SINGLE image with only one point in time
 
-        std::string sql_select_image = "SELECT id FROM images WHERE name='" + res_image[1].str() + "'";
-        sqlite3_stmt* stmt;
-        sqlite3_prepare_v2(_db, sql_select_image.c_str(), -1, &stmt, NULL);
-        if (!stmt) {
-            // @TODO do error check here
-        }
-        if (sqlite3_step(stmt) == SQLITE_DONE) {
-            // Empty result --> image has not been added before
+            std::vector<image_band> bands;
+            for (uint16_t i = 0; i < dataset->GetRasterCount(); ++i) {
+                image_band b;
+                b.type = dataset->GetRasterBand(i + 1)->GetRasterDataType();
+                b.offset = dataset->GetRasterBand(i + 1)->GetOffset();
+                b.scale = dataset->GetRasterBand(i + 1)->GetScale();
+                b.unit = dataset->GetRasterBand(i + 1)->GetUnitType();
+                b.nodata = "";
+                int hasnodata = 0;
+                double nd = dataset->GetRasterBand(i + 1)->GetNoDataValue(&hasnodata);
+                if (hasnodata)
+                    b.nodata = std::to_string(nd);
+                bands.push_back(b);
+            }
+            if (bands.empty()) {
+                if (strict) throw std::string("ERROR in image_collection::add(): " + *it + " doesn't contain any band data and will be ignored");
+                GCBS_WARN("Dataset " + *it + " doesn't contain any band data and will be ignored");
+                continue;
+            }
 
-            // @TODO: Shall we check that all files óf the same image have the same date / time? Currently we don't.
+            uint32_t image_id;
+            std::string sql_select_image = "SELECT id FROM images WHERE name='" + res_image[1].str() + "'";
+            sqlite3_stmt* stmt;
+            sqlite3_prepare_v2(_db, sql_select_image.c_str(), -1, &stmt, NULL);
+            if (!stmt) {
+                // @TODO do error check here
+            }
+            if (sqlite3_step(stmt) == SQLITE_DONE) {
+                // Empty result --> image has not been added before
 
-            // Extract datetime
+                // @TODO: Shall we check that all files óf the same image have the same date / time? Currently we don't.
+
+                // Extract datetime
+                std::cmatch res_datetime;
+                if (!std::regex_match(it->c_str(), res_datetime, regex_datetime)) {  // not sure to continue or throw an exception here...
+                    if (strict) throw std::string("ERROR in image_collection::add(): datetime rule failed for " + std::string(*it));
+                    GCBS_WARN("Skipping " + *it + " due to failed datetime rule");
+                    continue;
+                }
+
+                std::stringstream os;
+                date::sys_seconds pt;
+                pt = datetime::tryparse(datetime_format, res_datetime[1].str());
+                os << date::format("%Y-%m-%dT%H:%M:%S", pt);
+
+                // Convert to ISO string including separators (boost::to_iso_string or boost::to_iso_extended_string do not work with SQLite datetime functions)
+                std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + res_image[1].str() + "','" +
+                                               os.str() + "'," +
+                                               std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
+                if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                    if (strict) throw std::string("ERROR in image_collection::add(): cannot add image to images table.");
+                    GCBS_WARN("Skipping " + *it + " due to failed image table insert");
+                    continue;
+                }
+                image_id = sqlite3_last_insert_rowid(_db);  // take care of race conditions if things run parallel at some point
+
+            } else {
+                image_id = sqlite3_column_int(stmt, 0);
+                // TODO: if checks, compare l,r,b,t, datetime,proj4 from images table with current GDAL dataset
+            }
+            sqlite3_finalize(stmt);
+
+            // Insert into gdalrefs table
+            for (uint16_t i = 0; i < band_name.size(); ++i) {
+                if (std::regex_match(*it, regex_band_pattern[i])) {
+                    // TODO: if checks, check whether bandnum exists in GDALdataset
+                    // TODO: if checks, compare band type, offset, scale, unit, etc. with current GDAL dataset
+
+                    if (!band_complete[i]) {
+                        std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'";
+
+                        if (!_format.json()["bands"][band_name[i]].count("scale"))
+                            sql_band_update += ",scale=" + std::to_string(bands[band_num[i] - 1].scale);
+                        if (!_format.json()["bands"][band_name[i]].count("offset"))
+                            sql_band_update += ",offset=" + std::to_string(bands[band_num[i] - 1].offset);
+                        if (!_format.json()["bands"][band_name[i]].count("unit"))
+                            sql_band_update += ",unit='" + bands[band_num[i] - 1].unit + "'";
+
+                        // TODO: also add no data if not defined in image collection?
+                        sql_band_update += " WHERE name='" + band_name[i] + "';";
+
+                        if (sqlite3_exec(_db, sql_band_update.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                            if (strict) throw std::string("ERROR in image_collection::add(): cannot update band table.");
+                            GCBS_WARN("Skipping " + *it + " due to failed band table update");
+                            continue;
+                        }
+                        band_complete[i] = true;
+                    }
+
+                    std::string sql_insert_gdalref = "INSERT INTO gdalrefs(descriptor, image_id, band_id, band_num) VALUES('" + *it + "'," + std::to_string(image_id) + "," + std::to_string(band_ids[i]) + "," + std::to_string(band_num[i]) + ");";
+                    if (sqlite3_exec(_db, sql_insert_gdalref.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                        if (strict) throw std::string("ERROR in image_collection::add(): cannot add dataset to gdalrefs table.");
+                        GCBS_WARN("Skipping " + *it + "  due to failed gdalrefs insert");
+                        break;  // break only works because there is nothing after the loop.
+                    }
+                }
+            }
+
+            // Read image metadata from GDALDataset
+            std::unordered_set<std::string> image_md_fields;
+
+            if (_format.json().count("image_md_fields")) {
+                image_md_fields = _format.json()["image_md_fields"].get<std::unordered_set<std::string>>();
+            }
+
+            if (image_md_fields.size() > 0) {
+                char** md_domains = dataset->GetMetadataDomainList();
+                for (auto cur_md_key = image_md_fields.begin(); cur_md_key != image_md_fields.end(); ++cur_md_key) {
+                    // has domain?
+                    std::size_t sep_pos = cur_md_key->find_first_of(":");
+                    if (sep_pos != std::string::npos) {
+                        // has domain
+
+                        std::string domain = cur_md_key->substr(0, sep_pos);
+                        std::string field = cur_md_key->substr(sep_pos + 1, std::string::npos);
+
+                        // does the domain exist?
+                        if (CSLFindString(md_domains, domain.c_str()) == -1) {
+                            // no
+                            continue;
+                        } else {
+                            // yes
+                            const char* value = CSLFetchNameValue(dataset->GetMetadata(domain.c_str()), field.c_str());
+                            if (value) {
+                                std::string sql_insert_image_md = "INSERT OR IGNORE INTO image_md(image_id, key, value) VALUES(" + std::to_string(image_id) + ",'" + *cur_md_key + "','" + std::string(value) + "');";
+                                sqlite3_exec(_db, sql_insert_image_md.c_str(), NULL, NULL, NULL);
+                            }
+                        }
+                    } else {
+                        // default domain
+                        const char* value = CSLFetchNameValue(dataset->GetMetadata(), cur_md_key->c_str());
+                        if (value) {
+                            std::string sql_insert_image_md = "INSERT OR IGNORE INTO image_md(image_id, key, value) VALUES(" + std::to_string(image_id) + ",'" + *cur_md_key + "','" + std::string(value) + "');";
+                            sqlite3_exec(_db, sql_insert_image_md.c_str(), NULL, NULL, NULL);
+                        }
+                    }
+                }
+                CSLDestroy(md_domains);
+            }
+
+        } else {
+            // Input dataset is multitemporal, bands represent different points in time
+            // Add as multiple images to the image collection as
+
             std::cmatch res_datetime;
             if (!std::regex_match(it->c_str(), res_datetime, regex_datetime)) {  // not sure to continue or throw an exception here...
                 if (strict) throw std::string("ERROR in image_collection::add(): datetime rule failed for " + std::string(*it));
@@ -447,56 +580,73 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
                 continue;
             }
 
-            std::stringstream os;
             date::sys_seconds pt;
             pt = datetime::tryparse(datetime_format, res_datetime[1].str());
-            os << date::format("%Y-%m-%dT%H:%M:%S", pt);
 
-            // Convert to ISO string including separators (boost::to_iso_string or boost::to_iso_extended_string do not work with SQLite datetime functions)
-            std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + res_image[1].str() + "','" +
-                                           os.str() + "'," +
-                                           std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
-            if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-                if (strict) throw std::string("ERROR in image_collection::add(): cannot add image to images table.");
-                GCBS_WARN("Skipping " + *it + " due to failed image table insert");
+            // find the corresponding band of the dataset (there can be only 1 because bands represent time)
+            // and update band information in database if needed
+            int16_t band_index = -1;
+            for (uint16_t i = 0; i < band_name.size(); ++i) {
+                if (std::regex_match(*it, regex_band_pattern[i])) {
+                    band_index = i;
+                    break;
+                }
+            }
+            if (band_index == -1) {
                 continue;
             }
-            image_id = sqlite3_last_insert_rowid(_db);  // take care of race conditions if things run parallel at some point
 
-        } else {
-            image_id = sqlite3_column_int(stmt, 0);
-            // TODO: if checks, compare l,r,b,t, datetime,proj4 from images table with current GDAL dataset
-        }
-        sqlite3_finalize(stmt);
+            if (!band_complete[band_index]) {
+                image_band b;
+                b.type = dataset->GetRasterBand(1)->GetRasterDataType();
+                b.offset = dataset->GetRasterBand(1)->GetOffset();
+                b.scale = dataset->GetRasterBand(1)->GetScale();
+                b.unit = dataset->GetRasterBand(1)->GetUnitType();
+                b.nodata = "";
+                int hasnodata = 0;
+                double nd = dataset->GetRasterBand(1)->GetNoDataValue(&hasnodata);
+                if (hasnodata)
+                    b.nodata = std::to_string(nd);
+                std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(b.type) + "'";
 
-        // Insert into gdalrefs table
-        for (uint16_t i = 0; i < band_name.size(); ++i) {
-            if (std::regex_match(*it, regex_band_pattern[i])) {
-                // TODO: if checks, check whether bandnum exists in GDALdataset
-                // TODO: if checks, compare band type, offset, scale, unit, etc. with current GDAL dataset
+                if (!_format.json()["bands"][band_name[band_index]].count("scale"))
+                    sql_band_update += ",scale=" + std::to_string(b.scale);
+                if (!_format.json()["bands"][band_name[band_index]].count("offset"))
+                    sql_band_update += ",offset=" + std::to_string(b.offset);
+                if (!_format.json()["bands"][band_name[band_index]].count("unit"))
+                    sql_band_update += ",unit='" + b.unit + "'";
 
-                if (!band_complete[i]) {
-                    std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'";
+                // TODO: also add no data if not defined in image collection?
+                sql_band_update += " WHERE name='" + band_name[band_index] + "';";
 
-                    if (!_format.json()["bands"][band_name[i]].count("scale"))
-                        sql_band_update += ",scale=" + std::to_string(bands[band_num[i] - 1].scale);
-                    if (!_format.json()["bands"][band_name[i]].count("offset"))
-                        sql_band_update += ",offset=" + std::to_string(bands[band_num[i] - 1].offset);
-                    if (!_format.json()["bands"][band_name[i]].count("unit"))
-                        sql_band_update += ",unit='" + bands[band_num[i] - 1].unit + "'";
+                if (sqlite3_exec(_db, sql_band_update.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                    if (strict) throw std::string("ERROR in image_collection::add(): cannot update band table.");
+                    GCBS_WARN("Skipping " + *it + " due to failed band table update");
+                    continue;
+                }
+                band_complete[band_index] = true;
+            }
 
-                    // TODO: also add no data if not defined in image collection?
-                    sql_band_update += "WHERE name='" + band_name[i] + "';";
+            // for all time steps (bands in the current dataset)
+            for (uint16_t i = 0; i < dataset->GetRasterCount(); ++i) {
+                // derive datetime
+                datetime t = datetime(pt, band_time_delta.dt_unit) + (band_time_delta * i);
 
-                    if (sqlite3_exec(_db, sql_band_update.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-                        if (strict) throw std::string("ERROR in image_collection::add(): cannot update band table.");
-                        GCBS_WARN("Skipping " + *it + " due to failed band table update");
-                        continue;
-                    }
-                    band_complete[i] = true;
+                // add image to collection
+                std::string image_name = res_image[1].str() + "_" + t.to_string();
+                std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + image_name + "','" +
+                                               t.to_string(datetime_unit::SECOND) + "'," +
+                                               std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
+                if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                    if (strict) throw std::string("ERROR in image_collection::add(): cannot add image to images table.");
+                    GCBS_WARN("Skipping " + *it + " due to failed image table insert");
+                    continue;
                 }
 
-                std::string sql_insert_gdalref = "INSERT INTO gdalrefs(descriptor, image_id, band_id, band_num) VALUES('" + *it + "'," + std::to_string(image_id) + "," + std::to_string(band_ids[i]) + "," + std::to_string(band_num[i]) + ");";
+                uint32_t image_id = sqlite3_last_insert_rowid(_db);  // take care of race conditions if things run parallel at some point
+
+                // add gdalref to collection
+                std::string sql_insert_gdalref = "INSERT INTO gdalrefs(descriptor, image_id, band_id, band_num) VALUES('" + *it + "'," + std::to_string(image_id) + "," + std::to_string(band_ids[band_index]) + "," + std::to_string(band_num[band_index]) + ");";
                 if (sqlite3_exec(_db, sql_insert_gdalref.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                     if (strict) throw std::string("ERROR in image_collection::add(): cannot add dataset to gdalrefs table.");
                     GCBS_WARN("Skipping " + *it + "  due to failed gdalrefs insert");
@@ -505,49 +655,6 @@ void image_collection::add(std::vector<std::string> descriptors, bool strict) {
             }
         }
         CPLFree(proj4);
-
-        // Read image metadata from GDALDataset
-        std::unordered_set<std::string> image_md_fields;
-
-        if (_format.json().count("image_md_fields")) {
-            image_md_fields = _format.json()["image_md_fields"].get<std::unordered_set<std::string>>();
-        }
-
-        if (image_md_fields.size() > 0) {
-            char** md_domains = dataset->GetMetadataDomainList();
-            for (auto cur_md_key = image_md_fields.begin(); cur_md_key != image_md_fields.end(); ++cur_md_key) {
-                // has domain?
-                std::size_t sep_pos = cur_md_key->find_first_of(":");
-                if (sep_pos != std::string::npos) {
-                    // has domain
-
-                    std::string domain = cur_md_key->substr(0, sep_pos);
-                    std::string field = cur_md_key->substr(sep_pos + 1, std::string::npos);
-
-                    // does the domain exist?
-                    if (CSLFindString(md_domains, domain.c_str()) == -1) {
-                        // no
-                        continue;
-                    } else {
-                        // yes
-                        const char* value = CSLFetchNameValue(dataset->GetMetadata(domain.c_str()), field.c_str());
-                        if (value) {
-                            std::string sql_insert_image_md = "INSERT OR IGNORE INTO image_md(image_id, key, value) VALUES(" + std::to_string(image_id) + ",'" + *cur_md_key + "','" + std::string(value) + "');";
-                            sqlite3_exec(_db, sql_insert_image_md.c_str(), NULL, NULL, NULL);
-                        }
-                    }
-                } else {
-                    // default domain
-                    const char* value = CSLFetchNameValue(dataset->GetMetadata(), cur_md_key->c_str());
-                    if (value) {
-                        std::string sql_insert_image_md = "INSERT OR IGNORE INTO image_md(image_id, key, value) VALUES(" + std::to_string(image_id) + ",'" + *cur_md_key + "','" + std::string(value) + "');";
-                        sqlite3_exec(_db, sql_insert_image_md.c_str(), NULL, NULL, NULL);
-                    }
-                }
-            }
-            CSLDestroy(md_domains);
-        }
-
         GDALClose((GDALDatasetH)dataset);
     }
     p->set(1);

@@ -367,6 +367,18 @@ class image_collection {
     sqlite3* _db;
 
     static std::string sqlite_as_string(sqlite3_stmt* stmt, uint16_t col);
+
+    /**
+     * Add a single image to the collection, where one GDAL dataset has spatial dimensions and variables / spectral bands
+     * @param descriptor GDAL dataset descriptor
+     */
+    void add_spaceband_image(const std::string& descriptor);
+
+    /**
+     * Add a single image to the collection, where one GDAL dataset has spatial dimensions and time encoded as bands but only one variable
+     * @param descriptor GDAL dataset descriptor
+     */
+    void add_spacetime_image(const std::string& descriptor);
 };
 
 }  // namespace gdalcubes

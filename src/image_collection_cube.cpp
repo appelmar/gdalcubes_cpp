@@ -414,9 +414,38 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         std::fill((double *)img_buf, ((double *)img_buf) + size_btyx[0] * size_btyx[3] * size_btyx[2], NAN);
 
         for (auto it = image_datasets.begin(); it != image_datasets.end(); ++it) {
+            GDALDataset *bandsel_vrt = nullptr;
             GDALDataset *g = (GDALDataset *)GDALOpen(it->first.c_str(), GA_ReadOnly);
             if (!g) {
                 throw std::string("ERROR in image_collection_cube::read_chunk(): GDAL cannot open'" + it->first + "'");
+            }
+
+            // If input dataset has more bands than requested
+            bool create_band_subset_vrt = false;
+            if (g->GetRasterCount() > int(it->second.size())) {
+                create_band_subset_vrt = true;
+                // create temporary VRT dataset
+
+                CPLStringList translate_args;
+                translate_args.AddString("-of");
+                translate_args.AddString("VRT");
+
+                for (uint16_t b = 0; b < it->second.size(); ++b) {
+                    translate_args.AddString("-b");
+                    translate_args.AddString(std::to_string(std::get<1>(it->second[b])).c_str());
+                }
+
+                GDALTranslateOptions *trans_options = GDALTranslateOptionsNew(translate_args.List(), NULL);
+                if (trans_options == NULL) {
+                    GCBS_ERROR("Cannot create gdal_translate options");
+                    throw std::string("Cannot create gdal_translate options");
+                }
+
+                bandsel_vrt = (GDALDataset *)GDALTranslate("", (GDALDatasetH)g, trans_options, NULL);
+                if (bandsel_vrt == NULL) {
+                    create_band_subset_vrt = false;
+                }
+                GDALTranslateOptionsFree(trans_options);
             }
 
             CPLStringList warp_args;
@@ -489,15 +518,20 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             }
 
             // log gdalwarp call
-            //            std::stringstream ss;
-            //            ss << "Running gdalwarp ";
-            //            for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
-            //                ss << warp_args[iws] << " ";
-            //            }
-            //            ss << it->first;
-            //            GCBS_TRACE(ss.str());
+            //    std::stringstream ss;
+            //    ss << "Running gdalwarp ";
+            //    for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
+            //        ss << warp_args[iws] << " ";
+            //    }
+            //    ss << it->first;
+            //    GCBS_DEBUG(ss.str());
 
-            GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
+            GDALDataset *gdal_out = nullptr;
+            if (create_band_subset_vrt && bandsel_vrt != nullptr) {
+                gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&bandsel_vrt), warp_opts, NULL);
+            } else {
+                gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
+            }
 
             // GDALDataset *gdal_out = (GDALDataset *)GDALWarp(("/vsimem/" + std::to_string(id) + "_" + std::to_string(i) + ".tif").c_str(), NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
             GDALWarpAppOptionsFree(warp_opts);
@@ -510,12 +544,18 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 if (b_internal < 0 || b_internal >= out->size()[0])
                     continue;
 
-                CPLErr res = gdal_out->GetRasterBand(std::get<1>(it->second[b]))->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                CPLErr res;
+                if (create_band_subset_vrt) {  // bands have been renumbered / sorted according to order of it->second
+                    res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                } else {
+                    res = gdal_out->GetRasterBand(std::get<1>(it->second[b]))->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                }
                 if (res != CE_None) {
                     GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                 }
             }
 
+            if (bandsel_vrt) GDALClose(bandsel_vrt);
             GDALClose(g);
             GDALClose(gdal_out);
         }
@@ -530,14 +570,37 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             if (mask_dataset_band.first.empty()) {
                 GCBS_WARN("Missing mask band for image '" + image_name + "', mask will be ignored");
             } else {
+                GDALDataset *bandsel_vrt = nullptr;
                 GDALDataset *g = (GDALDataset *)GDALOpen(mask_dataset_band.first.c_str(), GA_ReadOnly);
                 if (!g) {
                     throw std::string("ERROR in image_collection_cube::read_chunk(): GDAL cannot open'" + mask_dataset_band.first + "'");
                 }
 
-                //                OGRSpatialReference srs_in(g->GetProjectionRef());
-                //                double affine_in[6];
-                //                g->GetGeoTransform(affine_in);
+                // If input dataset has more bands than requested
+                bool create_band_subset_vrt = false;
+                if (g->GetRasterCount() > 1) {
+                    create_band_subset_vrt = true;
+                    // create temporary VRT dataset
+
+                    CPLStringList translate_args;
+                    translate_args.AddString("-of");
+                    translate_args.AddString("VRT");
+
+                    translate_args.AddString("-b");
+                    translate_args.AddString(std::to_string(mask_dataset_band.second).c_str());
+
+                    GDALTranslateOptions *trans_options = GDALTranslateOptionsNew(translate_args.List(), NULL);
+                    if (trans_options == NULL) {
+                        GCBS_ERROR("Cannot create gdal_translate options");
+                        throw std::string("Cannot create gdal_translate options");
+                    }
+
+                    bandsel_vrt = (GDALDataset *)GDALTranslate("", (GDALDatasetH)g, trans_options, NULL);
+                    if (bandsel_vrt == NULL) {
+                        create_band_subset_vrt = false;
+                    }
+                    GDALTranslateOptionsFree(trans_options);
+                }
 
                 CPLStringList warp_args;
                 warp_args.AddString("-of");
@@ -597,14 +660,19 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 //                ss << (mask_dataset_band.first);
                 //                GCBS_DEBUG(ss.str());
 
-                GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
-
+                GDALDataset *gdal_out = nullptr;
+                if (create_band_subset_vrt && bandsel_vrt != nullptr) {
+                    gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&bandsel_vrt), warp_opts, NULL);
+                } else {
+                    gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
+                }
                 GDALWarpAppOptionsFree(warp_opts);
 
                 CPLErr res = gdal_out->GetRasterBand(mask_dataset_band.second)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], mask_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                 if (res != CE_None) {
                     GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                 }
+                if (bandsel_vrt) GDALClose(bandsel_vrt);
                 GDALClose(g);
                 GDALClose(gdal_out);
                 _mask->apply((double *)mask_buf, (double *)img_buf, size_btyx[0], size_btyx[2], size_btyx[3]);

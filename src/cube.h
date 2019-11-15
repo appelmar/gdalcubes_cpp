@@ -417,9 +417,7 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * @brief Create an empty data cube
      */
-    cube() : _st_ref(nullptr), _chunk_size(), _bands() {
-        _chunk_size = {16, 256, 256};
-    }
+    cube() : _st_ref(nullptr), _chunk_size({16, 256, 256}), _bands() {}
 
     /**
      * @brief Create an empty data cube with given spacetime reference

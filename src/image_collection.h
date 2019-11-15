@@ -200,11 +200,7 @@ class image_collection {
     void operator=(const image_collection&) = delete;
 
     // move constructor
-    image_collection(image_collection&& A) {
-        _db = A._db;
-        _filename = A._filename;
-        _format = A._format;
-    }
+    image_collection(image_collection&& A) : _format(A._format), _filename(A._filename), _db(A._db) {}
 
     static std::shared_ptr<image_collection> create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
 

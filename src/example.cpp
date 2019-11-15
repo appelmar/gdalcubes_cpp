@@ -28,6 +28,7 @@
  */
 
 #include <iostream>
+#include "cube_factory.h"
 #include "gdalcubes.h"
 #include "image_collection_ops.h"
 
@@ -297,7 +298,14 @@ int main(int argc, char* argv[]) {
 
             // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
 
-            vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", {{"mean", "precipitation"}}, "/tmp/zonal_stats_chirps2.gpkg", true);
+            //vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", {{"mean", "precipitation"}}, "/tmp/zonal_stats_chirps2.gpkg", true);
+
+            std::ifstream i("/tmp/cube.json");
+            nlohmann::json j;
+            i >> j;
+            auto cube = cube_factory::instance()->create_from_json(j);
+
+            vector_queries::zonal_statistics(cube, "/home/marius/sciebo/ms_flurstuecke_filtered_larger_1ha.gpkg", {{"mean", "NDVI_median"}}, "/tmp/zonal_stats_NDVI.gpkg", true);
         }
 
         /**************************************************************************/

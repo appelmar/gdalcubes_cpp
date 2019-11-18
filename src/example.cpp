@@ -252,60 +252,77 @@ int main(int argc, char* argv[]) {
         //        }
 
         // test zonal statistics
+        //        {
+        //            cube_view w;
+        //            w.left() = -180;
+        //            w.top() = 50;
+        //            w.bottom() = -50;
+        //            w.right() = 180;
+        //            w.srs() = "EPSG:4326";
+        //            w.dx(0.2);
+        //            w.dy(0.2);
+        //            w.t0() = datetime::from_string("2019-01-01");
+        //            w.t1() = datetime::from_string("2019-01-01");
+        //            w.dt(duration::from_string("P1D"));
+        //            w.resampling_method() = resampling::resampling_type::RSMPL_AVERAGE;
+        //
+        //            //            auto ch = _helper_cube::create(w);
+        //            //            ch->set_chunk_size(1,100,100);
+        //            //            ch->write_netcdf_file("/home/marius/Desktop/gdalcubes_model.nc");
+        //
+        //            auto c = dummy_cube::create(w, 1, 1.0);
+        //
+        //            //vector_queries::zonal_statistics(c, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"count", "band1"}}, "/tmp/zonal_stats", true);
+        //
+        //            auto c1 = dummy_cube::create(w, 1, 1.0);
+        //            auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);
+        //
+        //            //vector_queries::zonal_statistics(c2,"/home/marius/sciebo/test_features.gpkg",{{"min","left"},{"max","left"},{"mean","left"},{"min","top"},{"max","top"},{"mean","top"}}, "/tmp/zonal_stats_coords_");
+        //
+        //            // Real world data (CHIRPS)
+        //            collection_format f("/home/marius/github/collection_formats/formats/CHIRPS_v2_0_daily_p05_tif.json");
+        //            std::vector<std::string> files;
+        //            filesystem::iterate_directory("/home/marius/eodata/CHIRPS/", [&files](const std::string& s) {
+        //                if (s.find(".tif") != s.npos) {
+        //                    files.push_back(s);
+        //                }
+        //            });
+        //            auto ic = image_collection::create(f, files, false);
+        //            //ic->write("CHIRPS.db");
+        //
+        //            w.t0() = datetime::from_string("2018-01-01");
+        //            w.t1() = datetime::from_string("2018-01-04");
+        //
+        //            auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
+        //            chirps_cube->set_chunk_size(10, 256, 256);
+        //
+        //            // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
+        //
+        //            //vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", {{"mean", "precipitation"}}, "/tmp/zonal_stats_chirps2.gpkg", true);
+        //
+        //            std::ifstream i("/tmp/cube.json");
+        //            nlohmann::json j;
+        //            i >> j;
+        //            auto cube = cube_factory::instance()->create_from_json(j);
+        //
+        //            vector_queries::zonal_statistics(cube, "/home/marius/sciebo/ms_flurstuecke_filtered_larger_1ha.gpkg", {{"mean", "NDVI_median"}}, "/tmp/zonal_stats_NDVI.gpkg", true);
+        //        }
+
+        // test collection format for spacetime GDAL datasets
         {
-            cube_view w;
-            w.left() = -180;
-            w.top() = 50;
-            w.bottom() = -50;
-            w.right() = 180;
-            w.srs() = "EPSG:4326";
-            w.dx(0.2);
-            w.dy(0.2);
-            w.t0() = datetime::from_string("2019-01-01");
-            w.t1() = datetime::from_string("2019-01-01");
-            w.dt(duration::from_string("P1D"));
-            w.resampling_method() = resampling::resampling_type::RSMPL_AVERAGE;
-
-            //            auto ch = _helper_cube::create(w);
-            //            ch->set_chunk_size(1,100,100);
-            //            ch->write_netcdf_file("/home/marius/Desktop/gdalcubes_model.nc");
-
-            auto c = dummy_cube::create(w, 1, 1.0);
-
-            //vector_queries::zonal_statistics(c, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"count", "band1"}}, "/tmp/zonal_stats", true);
-
-            auto c1 = dummy_cube::create(w, 1, 1.0);
-            auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);
-
-            //vector_queries::zonal_statistics(c2,"/home/marius/sciebo/test_features.gpkg",{{"min","left"},{"max","left"},{"mean","left"},{"min","top"},{"max","top"},{"mean","top"}}, "/tmp/zonal_stats_coords_");
-
-            // Real world data (CHIRPS)
-            collection_format f("/home/marius/github/collection_formats/formats/CHIRPS_v2_0_daily_p05_tif.json");
-            std::vector<std::string> files;
-            filesystem::iterate_directory("/home/marius/eodata/CHIRPS/", [&files](const std::string& s) {
-                if (s.find(".tif") != s.npos) {
-                    files.push_back(s);
-                }
-            });
-            auto ic = image_collection::create(f, files, false);
-            //ic->write("CHIRPS.db");
-
-            w.t0() = datetime::from_string("2018-01-01");
-            w.t1() = datetime::from_string("2018-01-04");
-
-            auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
-            chirps_cube->set_chunk_size(10, 256, 256);
-
-            // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
-
-            //vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", {{"mean", "precipitation"}}, "/tmp/zonal_stats_chirps2.gpkg", true);
+            //            std::vector<std::string> files = {"/home/marius/Desktop/pr_day_HadGEM2-ES_historical_r1i1p1_EWEMBI_19810101-19901231.nc4",
+            //                                              "/home/marius/Desktop/pr_day_HadGEM2-ES_historical_r1i1p1_EWEMBI_19910101-20001231.nc4",
+            //                                              "/home/marius/Desktop/pr_day_HadGEM2-ES_historical_r1i1p1_EWEMBI_20010101-20051231.nc4"};
+            //
+            //            collection_format f("/home/marius/sciebo/pr_day_HadGEM2-ES_historical_r1i1p1.json");
+            //            auto ic = image_collection::create(f, files, false);
+            //            ic->write("/home/marius/Desktop/test.db");
 
             std::ifstream i("/tmp/cube.json");
             nlohmann::json j;
             i >> j;
             auto cube = cube_factory::instance()->create_from_json(j);
-
-            vector_queries::zonal_statistics(cube, "/home/marius/sciebo/ms_flurstuecke_filtered_larger_1ha.gpkg", {{"mean", "NDVI_median"}}, "/tmp/zonal_stats_NDVI.gpkg", true);
+            cube->write_netcdf_file("/tmp/cube.nc");
         }
 
         /**************************************************************************/

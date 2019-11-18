@@ -22,8 +22,7 @@
 
 namespace gdalcubes {
 
-void image_collection_ops::translate_cog(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads) {
-    std::vector<image_collection::gdalrefs_row> gdalrefs = in->get_gdalrefs();
+void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads, bool force) {
 
     if (!filesystem::exists(out_dir)) {
         filesystem::mkdir_recursive(out_dir);
@@ -38,8 +37,15 @@ void image_collection_ops::translate_cog(std::shared_ptr<gdalcubes::image_collec
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
+
+
+    in->write(filesystem::join(out_dir, filesystem::filename(in->get_filename())));
+
+    std::mutex mutex;
+    std::vector<image_collection::gdalrefs_row> gdalrefs = in->get_gdalrefs();
+
     for (uint16_t it = 0; it < nthreads; ++it) {
-        thrds.push_back(std::thread([it, nthreads, &out_dir, &gdalrefs, &prg]() {
+        thrds.push_back(std::thread([it, nthreads, &out_dir, &gdalrefs, &prg, in, &mutex, force]() {
             for (uint32_t i = it; i < gdalrefs.size(); i += nthreads) {
                 prg->increment((double)1 / (double)gdalrefs.size());
                 std::string descr = gdalrefs[i].descriptor;
@@ -76,15 +82,29 @@ void image_collection_ops::translate_cog(std::shared_ptr<gdalcubes::image_collec
                     continue;
                 }
                 std::string outfile = filesystem::join(out_dir, std::to_string(gdalrefs[i].image_id) + "_" + std::to_string(gdalrefs[i].band_id) + ".tif");
-                GDALDatasetH out = GDALTranslate(outfile.c_str(), (GDALDatasetH)dataset, trans_options, NULL);
-                if (!out) {
-                    GCBS_WARN("Cannot translate GDAL dataset '" + descr + "'.");
-                    GDALClose((GDALDatasetH)dataset);
+                if (filesystem::exists(outfile) && !force) {
+                    GCBS_WARN(outfile + " already exists; set force=true to force recreation of existing files.");
+                }
+                else {
+                    GDALDatasetH out = GDALTranslate(outfile.c_str(), (GDALDatasetH)dataset, trans_options, NULL);
+                    if (!out) {
+                        GCBS_WARN("Cannot translate GDAL dataset '" + descr + "'.");
+                        GDALClose((GDALDatasetH)dataset);
+                        GDALTranslateOptionsFree(trans_options);
+                    }
+                    GDALClose(out);
                     GDALTranslateOptionsFree(trans_options);
+
+                    std::string sql = "UPDATE gdalrefs SET descriptor='" + outfile + "', band_num=1 " + "WHERE image_id=" + std::to_string(gdalrefs[i].image_id) + " AND band_id=" + std::to_string(gdalrefs[i].band_id) + ";" ;
+
+                    mutex.lock();
+                    if (sqlite3_exec(in->get_db_handle(), sql.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                        GCBS_WARN("Skipping image " + std::to_string(gdalrefs[i].image_id) + " due to failed band table update");
+                    }
+                    mutex.unlock();
                 }
                 GDALClose((GDALDatasetH)dataset);
-                GDALClose(out);
-                GDALTranslateOptionsFree(trans_options);
+
             }
         }));
     }

@@ -95,13 +95,14 @@ void print_usage(std::string command = "") {
         std::cout << "  -r, --resampling         Resampling algorithm, one of \"AVERAGE\", \"AVERAGE_MAGPHASE\", \"BILINEAR\", \"CUBIC\", \"CUBICSPLINE\", \"GAUSS\", \"LANCZOS\", \"MODE\", \"NEAREST\", or \"NONE\"." << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
-    } else if (command == "translate_cog") {
-        std::cout << "Usage: gdalcubes translate_cog [options] SOURCE DEST" << std::endl;
+    } else if (command == "translate_gtiff") {
+        std::cout << "Usage: gdalcubes translate_gtiff [options] SOURCE DEST" << std::endl;
         std::cout << std::endl;
         std::cout << "Translate all images in a collection (SOURCE) to cloud-optimized GeoTiffs under the DEST directory." << std::endl;
         std::cout << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel processing, defaults to 1" << std::endl;
+        std::cout << "  -f, --force              Force translation to GTiff even for already existing files" << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
     } else {
@@ -113,7 +114,7 @@ void print_usage(std::string command = "") {
         std::cout << "  create_collection        Create a new image collection from GDAL datasets" << std::endl;
         std::cout << "  exec                     Evaluate a data cube and store the result as a NetCDF file" << std::endl;
         std::cout << "  addo                     Build overview images for an existing image collection" << std::endl;
-        std::cout << "  translate_cog            Translate all images in a collection to cloud-optimized GeoTiffs" << std::endl;
+        std::cout << "  translate_gtiff          Translate all images in a collection to (tiled) GeoTiff files" << std::endl;
         std::cout << std::endl;
         std::cout << "Please use 'gdalcubes command --help' for further information about command-specific arguments." << std::endl;
     }
@@ -343,11 +344,12 @@ int main(int argc, char* argv[]) {
 
             image_collection_ops::create_overviews(ic, levels, resampling, nthreads);
 
-        } else if (cmd == "translate_cog") {
-            po::options_description cog_desc("exec arguments");
-            cog_desc.add_options()("input", po::value<std::string>(), "");
-            cog_desc.add_options()("output", po::value<std::string>(), "");
-            cog_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
+        } else if (cmd == "translate_gtiff") {
+            po::options_description gtiff_description("exec arguments");
+            gtiff_description.add_options()("input", po::value<std::string>(), "");
+            gtiff_description.add_options()("output", po::value<std::string>(), "");
+            gtiff_description.add_options()("force,f", "");
+            gtiff_description.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
 
             po::positional_options_description cog_pos;
             cog_pos.add("input", 1);
@@ -356,7 +358,7 @@ int main(int argc, char* argv[]) {
             try {
                 std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
                 opts.erase(opts.begin());
-                po::store(po::command_line_parser(opts).options(cog_desc).positional(cog_pos).run(), vm);
+                po::store(po::command_line_parser(opts).options(gtiff_description).positional(cog_pos).run(), vm);
             } catch (...) {
                 std::cout << "ERROR in gdalcubes translate_cog: invalid arguments." << std::endl;
                 print_usage("exec");
@@ -367,10 +369,13 @@ int main(int argc, char* argv[]) {
             std::string output = vm["output"].as<std::string>();
 
             uint16_t nthreads = vm["threads"].as<uint16_t>();
-
+            bool force = false;
+            if (vm.count("force")) {
+                force = true;
+            }
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
 
-            image_collection_ops::translate_cog(ic, output, nthreads);
+            image_collection_ops::translate_gtiff(ic, output, nthreads, force);
 
         }
 

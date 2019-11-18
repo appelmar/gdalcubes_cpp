@@ -959,6 +959,11 @@ std::vector<image_collection::bands_row> image_collection::get_available_bands()
     return out;
 }
 
+sqlite3* image_collection::get_db_handle() {
+    return _db;
+}
+
+
 std::vector<image_collection::gdalrefs_row> image_collection::get_gdalrefs() {
     std::vector<image_collection::gdalrefs_row> out;
 

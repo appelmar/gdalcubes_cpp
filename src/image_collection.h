@@ -361,6 +361,15 @@ class image_collection {
      */
     static std::vector<std::string> unroll_archives(std::vector<std::string> descriptors);
 
+
+    /**
+     * Return a pointer to the SQlite handle.
+     * Ownership is not transferred, i.e. do NOT call sqlite3_close() on the returned object.
+     * @return
+     */
+    sqlite3* get_db_handle();
+
+
    protected:
     collection_format _format;
     std::string _filename;

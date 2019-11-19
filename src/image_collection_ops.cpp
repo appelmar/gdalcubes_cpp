@@ -23,7 +23,6 @@
 namespace gdalcubes {
 
 void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads, bool force) {
-
     if (!filesystem::exists(out_dir)) {
         filesystem::mkdir_recursive(out_dir);
     }
@@ -36,8 +35,6 @@ void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_coll
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
-
-
 
     in->write(filesystem::join(out_dir, filesystem::filename(in->get_filename())));
 
@@ -83,9 +80,8 @@ void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_coll
                 }
                 std::string outfile = filesystem::join(out_dir, std::to_string(gdalrefs[i].image_id) + "_" + std::to_string(gdalrefs[i].band_id) + ".tif");
                 if (filesystem::exists(outfile) && !force) {
-                    GCBS_WARN(outfile + " already exists; set force=true to force recreation of existing files.");
-                }
-                else {
+                    GCBS_DEBUG(outfile + " already exists; set force=true to force recreation of existing files.");
+                } else {
                     GDALDatasetH out = GDALTranslate(outfile.c_str(), (GDALDatasetH)dataset, trans_options, NULL);
                     if (!out) {
                         GCBS_WARN("Cannot translate GDAL dataset '" + descr + "'.");
@@ -94,17 +90,17 @@ void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_coll
                     }
                     GDALClose(out);
                     GDALTranslateOptionsFree(trans_options);
-
-                    std::string sql = "UPDATE gdalrefs SET descriptor='" + outfile + "', band_num=1 " + "WHERE image_id=" + std::to_string(gdalrefs[i].image_id) + " AND band_id=" + std::to_string(gdalrefs[i].band_id) + ";" ;
-
-                    mutex.lock();
-                    if (sqlite3_exec(in->get_db_handle(), sql.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-                        GCBS_WARN("Skipping image " + std::to_string(gdalrefs[i].image_id) + " due to failed band table update");
-                    }
-                    mutex.unlock();
                 }
                 GDALClose((GDALDatasetH)dataset);
 
+                // Run SQL update anyway to fix broken links etc. if needed
+                std::string sql = "UPDATE gdalrefs SET descriptor='" + outfile + "', band_num=1 " + "WHERE image_id=" + std::to_string(gdalrefs[i].image_id) + " AND band_id=" + std::to_string(gdalrefs[i].band_id) + ";";
+
+                mutex.lock();
+                if (sqlite3_exec(in->get_db_handle(), sql.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                    GCBS_WARN("Skipping image " + std::to_string(gdalrefs[i].image_id) + " due to failed band table update");
+                }
+                mutex.unlock();
             }
         }));
     }

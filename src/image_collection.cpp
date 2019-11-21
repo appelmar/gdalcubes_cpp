@@ -50,10 +50,6 @@ image_collection::image_collection() : _format(), _filename(""), _db(nullptr) {
     if (sqlite3_exec(_db, sql_schema_collection_md.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
         throw std::string("ERROR in image_collection::create(): cannot create image collection schema (i).");
     }
-    std::string sql_insert_format = "INSERT INTO collection_md(key, value) VALUES('collection_format','" + _format.json().dump() + "');";
-    if (sqlite3_exec(_db, sql_insert_format.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
-        throw std::string("ERROR in image_collection::create(): cannot insert collection format to database.");
-    }
 
     std::string sql_insert_gdalcubes_version = "INSERT INTO collection_md(key, value) VALUES('GDALCUBES_VERSION','" + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH) + "');";
     if (sqlite3_exec(_db, sql_insert_gdalcubes_version.c_str(), NULL, NULL, NULL) != SQLITE_OK) {

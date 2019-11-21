@@ -104,6 +104,11 @@ image_collection::image_collection(collection_format format) : image_collection(
         throw std::string("ERROR in image_collection::create(): image collection format does not contain any bands.");
     }
 
+    std::string sql_insert_format = "INSERT INTO collection_md(key, value) VALUES('collection_format','" + _format.json().dump() + "');";
+    if (sqlite3_exec(_db, sql_insert_format.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+        throw std::string("ERROR in image_collection::create(): cannot insert collection format to database.");
+    }
+
     uint16_t band_id = 0;
     for (auto it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
         std::string sql_insert_band;

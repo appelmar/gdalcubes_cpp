@@ -161,9 +161,11 @@ std::shared_ptr<image_collection> image_collection::create(collection_format for
 }
 
 std::shared_ptr<image_collection> image_collection::create(std::vector<std::string> descriptors,
-                                                           std::vector<std::string> date_time) {
+                                                           std::vector<std::string> date_time,
+                                                           std::vector<std::string> band_names,
+                                                           bool use_subdatasets) {
     std::shared_ptr<image_collection> o = std::make_shared<image_collection>();
-    o->add_with_datetime(descriptors, date_time);
+    o->add_with_datetime(descriptors, date_time, band_names, use_subdatasets);
     return o;
 }
 

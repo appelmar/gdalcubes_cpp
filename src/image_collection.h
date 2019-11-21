@@ -209,7 +209,7 @@ class image_collection {
     image_collection(image_collection&& A) : _format(A._format), _filename(A._filename), _db(A._db) {}
 
     static std::shared_ptr<image_collection> create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
-    static std::shared_ptr<image_collection> create(std::vector<std::string> descriptors, std::vector<std::string> date_time);
+    static std::shared_ptr<image_collection> create(std::vector<std::string> descriptors, std::vector<std::string> date_time, std::vector<std::string> band_names = {}, bool use_subdatasets = false);
 
     std::string to_string();
 

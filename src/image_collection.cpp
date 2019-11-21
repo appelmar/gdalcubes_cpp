@@ -331,6 +331,7 @@ void image_collection::add_with_datetime(std::vector<std::string> descriptors, s
                     throw std::string("Failed to insert band into image collection database");
                 }
                 band_ids.push_back(sqlite3_last_insert_rowid(_db));
+                collection_contains_bands = true;
             }
         } else {
             // check consistency with other images

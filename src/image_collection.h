@@ -31,6 +31,8 @@
 #include "collection_format.h"
 #include "datetime.h"
 
+#include <sqlite3.h>
+
 namespace gdalcubes {
 
 template <typename Ta>

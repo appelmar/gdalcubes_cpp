@@ -27,6 +27,7 @@
  * IT WILL NOT RUN ON YOUR MACHINE:
  */
 
+#include <fstream>
 #include <iostream>
 #include "cube_factory.h"
 #include "gdalcubes.h"

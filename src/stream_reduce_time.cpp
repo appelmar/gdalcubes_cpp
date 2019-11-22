@@ -1,4 +1,5 @@
 #include "stream_reduce_time.h"
+#include <fstream>
 #include "external/tiny-process-library/process.hpp"
 
 namespace gdalcubes {

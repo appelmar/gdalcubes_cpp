@@ -231,8 +231,7 @@ struct resampling {
  */
 class cube_st_reference {
    public:
-    virtual ~cube_st_reference() {
-    }
+    virtual ~cube_st_reference() {}
 
     /**
          * Get the number of cells in x dimension

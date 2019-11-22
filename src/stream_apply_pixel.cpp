@@ -1,6 +1,8 @@
 #include "stream_apply_pixel.h"
 #include "external/tiny-process-library/process.hpp"
 
+#include <fstream>
+
 namespace gdalcubes {
 
 std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {

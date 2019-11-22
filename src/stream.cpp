@@ -26,6 +26,8 @@
 #include <stdlib.h>
 #include "external/tiny-process-library/process.hpp"
 
+#include <fstream>
+
 namespace gdalcubes {
 
 std::shared_ptr<chunk_data> stream_cube::read_chunk(chunkid_t id) {

@@ -31,6 +31,8 @@ SOFTWARE.
 #include "build_info.h"
 #include "filesystem.h"
 
+#include <fstream>
+
 #if defined(R_PACKAGE) && defined(__sun) && defined(__SVR4)
 #define USE_NCDF4 0
 #endif

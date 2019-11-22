@@ -23,6 +23,7 @@
 */
 
 #include "view.h"
+#include <fstream>
 #include "filesystem.h"
 
 namespace gdalcubes {

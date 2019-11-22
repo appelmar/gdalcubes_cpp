@@ -39,6 +39,8 @@
 #include "swarm.h"
 #include "utils.h"
 
+#include <fstream>
+
 using namespace gdalcubes;
 
 std::vector<std::string> string_list_from_text_file(std::string filename) {

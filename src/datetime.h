@@ -123,7 +123,6 @@ struct duration {
     inline friend bool operator!=(const duration& l, const duration& r) { return !(l == r); }
 
     duration convert(datetime_unit u);
-
 };
 
 /**

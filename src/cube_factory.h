@@ -79,7 +79,7 @@ class cube_factory {
         }
     };
 
-    std::map<std::string, std::function<std::shared_ptr<cube>( json11::Json&)>> cube_generators;
+    std::map<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>> cube_generators;
 };
 
 }  // namespace gdalcubes

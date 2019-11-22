@@ -25,12 +25,10 @@
 #ifndef VIEW_H
 #define VIEW_H
 
-
+#include <algorithm>
+#include "coord_types.h"
 #include "datetime.h"
 #include "external/json11/json11.hpp"
-#include "coord_types.h"
-#include <algorithm>
-
 
 namespace gdalcubes {
 

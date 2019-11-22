@@ -25,11 +25,10 @@
 #ifndef IMAGE_COLLECTION_H
 #define IMAGE_COLLECTION_H
 
-
 #include <ogr_spatialref.h>
 #include "collection_format.h"
-#include "datetime.h"
 #include "coord_types.h"
+#include "datetime.h"
 
 // SQLite forward declarations
 class sqlite3;

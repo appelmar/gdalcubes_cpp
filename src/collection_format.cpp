@@ -22,71 +22,62 @@
     SOFTWARE.
 */
 
-
 #include "collection_format.h"
-#include "filesystem.h"
 #include <fstream>
 #include <sstream>
+#include "filesystem.h"
 
 namespace gdalcubes {
 
-    bool collection_format::is_null() {
-        return _j.is_null();
-    }
+bool collection_format::is_null() {
+    return _j.is_null();
+}
 
+std::map<std::string, std::string> collection_format::list_presets() {
+    std::map<std::string, std::string> out;
 
-    std::map<std::string, std::string> collection_format::list_presets() {
-        std::map<std::string, std::string> out;
+    std::vector<std::string> dirs = config::instance()->get_collection_format_preset_dirs();
 
-        std::vector<std::string> dirs = config::instance()->get_collection_format_preset_dirs();
-
-        // do not use uint here because of descending iteration
-        for (int i = dirs.size() - 1; i >= 0; --i) {
-            if (!filesystem::exists(dirs[i])) {
-                continue;
-            }
-
-            filesystem::iterate_directory(dirs[i], [&out](const std::string& p) {
-                if (filesystem::is_regular_file(p) && filesystem::extension(p) == "json") {
-                    if (out.find(filesystem::stem(p)) == out.end())
-                        out.insert(std::pair<std::string, std::string>(filesystem::stem(p), filesystem::make_absolute(p)));
-                }
-            });
+    // do not use uint here because of descending iteration
+    for (int i = dirs.size() - 1; i >= 0; --i) {
+        if (!filesystem::exists(dirs[i])) {
+            continue;
         }
-        return out;
-    }
 
-
-    void collection_format::load_file(std::string filename) {
-
-        if ((!filesystem::exists(filename) && !filesystem::is_absolute(filename) && filesystem::parent(filename).empty()) || filesystem::is_directory(filename)) {
-            // simple filename without directories
-            GCBS_DEBUG("Couldn't find collection format '" + filename + "', looking for a preset with the same name");
-            std::map<std::string, std::string> preset_formats = list_presets();
-            if (preset_formats.find(filesystem::stem(filename)) != preset_formats.end()) {
-                filename = preset_formats[filesystem::stem(filename)];
-                GCBS_DEBUG("Found collection format preset at '" + filename + "'");
+        filesystem::iterate_directory(dirs[i], [&out](const std::string& p) {
+            if (filesystem::is_regular_file(p) && filesystem::extension(p) == "json") {
+                if (out.find(filesystem::stem(p)) == out.end())
+                    out.insert(std::pair<std::string, std::string>(filesystem::stem(p), filesystem::make_absolute(p)));
             }
+        });
+    }
+    return out;
+}
+
+void collection_format::load_file(std::string filename) {
+    if ((!filesystem::exists(filename) && !filesystem::is_absolute(filename) && filesystem::parent(filename).empty()) || filesystem::is_directory(filename)) {
+        // simple filename without directories
+        GCBS_DEBUG("Couldn't find collection format '" + filename + "', looking for a preset with the same name");
+        std::map<std::string, std::string> preset_formats = list_presets();
+        if (preset_formats.find(filesystem::stem(filename)) != preset_formats.end()) {
+            filename = preset_formats[filesystem::stem(filename)];
+            GCBS_DEBUG("Found collection format preset at '" + filename + "'");
         }
-        if (!filesystem::exists(filename) || filesystem::is_directory(filename))
-            throw std::string("ERROR in collection_format::load_file(): image collection format file does not exist.");
-
-        std::ifstream i(filename);
-        std::stringstream str;
-        str << i.rdbuf();
-
-        std::string err; // TODO: do something with err
-        _j = json11::Json::parse(str.str(), err);
     }
+    if (!filesystem::exists(filename) || filesystem::is_directory(filename))
+        throw std::string("ERROR in collection_format::load_file(): image collection format file does not exist.");
 
+    std::ifstream i(filename);
+    std::stringstream str;
+    str << i.rdbuf();
 
-    void collection_format::load_string(std::string jsonstr) {
-        std::string err; // TODO: do something with err
-        _j = json11::Json::parse(jsonstr, err);
-    }
+    std::string err;  // TODO: do something with err
+    _j = json11::Json::parse(str.str(), err);
+}
 
+void collection_format::load_string(std::string jsonstr) {
+    std::string err;  // TODO: do something with err
+    _j = json11::Json::parse(jsonstr, err);
+}
 
-
-
-
-} // namespace gdalcubes
+}  // namespace gdalcubes

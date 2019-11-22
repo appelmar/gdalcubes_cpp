@@ -315,7 +315,7 @@ int main(int argc, char* argv[]) {
             std::stringstream buf;
             buf << i.rdbuf();
             std::string err;
-            json11::Json j = json11::Json::parse(buf.str(),err);
+            json11::Json j = json11::Json::parse(buf.str(), err);
 
             std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(j);
             c->write_netcdf_file(output, deflate);

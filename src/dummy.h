@@ -71,7 +71,7 @@ class dummy_cube : public cube {
     json11::Json make_constructible_json() override {
         json11::Json::object out;
         out["cube_type"] = "dummy";
-        std::string err; // TODO: do something with err
+        std::string err;  // TODO: do something with err
         out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
         out["fill"] = _fill;
         out["chunk_size"] = json11::Json::array{(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]};

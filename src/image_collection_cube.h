@@ -24,11 +24,9 @@
 #ifndef IMAGE_COLLECTION_CUBE_H
 #define IMAGE_COLLECTION_CUBE_H
 
-
+#include <unordered_set>
 #include "cube.h"
 #include "image_collection.h"
-#include <unordered_set>
-
 
 namespace gdalcubes {
 
@@ -300,7 +298,7 @@ class image_collection_cube : public cube {
         json11::Json::object out;
         out["cube_type"] = "image_collection";
         out["chunk_size"] = json11::Json::array({(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]});
-        std::string err; // TODO: do something with err
+        std::string err;  // TODO: do something with err
         out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
         out["file"] = _collection->get_filename();
         if (_mask) {

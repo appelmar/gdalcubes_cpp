@@ -25,9 +25,9 @@
 
 #include <gdal_utils.h>
 #include <map>
+#include <unordered_map>
 #include "error.h"
 #include "utils.h"
-#include <unordered_map>
 
 namespace gdalcubes {
 

@@ -69,7 +69,7 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "reduce_time", [](json11::Json& j) {
             std::vector<std::pair<std::string, std::string>> band_reducers;
-            for (uint16_t i=0; i< j["reducer_bands"].array_items().size(); ++i) {
+            for (uint16_t i = 0; i < j["reducer_bands"].array_items().size(); ++i) {
                 band_reducers.push_back(std::make_pair(j["reducer_bands"][i][0].string_value(), j["reducer_bands"][i][1].string_value()));
             }
             auto x = reduce_time_cube::create(instance()->create_from_json(j["in_cube"]), band_reducers);
@@ -78,7 +78,7 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "reduce_space", [](json11::Json& j) {
             std::vector<std::pair<std::string, std::string>> band_reducers;
-            for (uint16_t i=0; i< j["reducer_bands"].array_items().size(); ++i) {
+            for (uint16_t i = 0; i < j["reducer_bands"].array_items().size(); ++i) {
                 band_reducers.push_back(std::make_pair(j["reducer_bands"][i][0].string_value(), j["reducer_bands"][i][1].string_value()));
             }
             auto x = reduce_time_cube::create(instance()->create_from_json(j["in_cube"]), band_reducers);
@@ -89,14 +89,14 @@ void cube_factory::register_default() {
         "window_time", [](json11::Json& j) {
             if (!j["kernel"].is_null()) {
                 std::vector<double> kernel;
-                for (uint16_t i=0; i< j["kernel"].array_items().size(); ++i) {
+                for (uint16_t i = 0; i < j["kernel"].array_items().size(); ++i) {
                     kernel.push_back(j["kernel"][i].number_value());
                 }
                 return window_time_cube::create(instance()->create_from_json(j["in_cube"]), kernel,
                                                 j["win_size_l"].int_value(), j["win_size_r"].int_value());
             } else {
                 std::vector<std::pair<std::string, std::string>> band_reducers;
-                for (uint16_t i=0; i< j["reducer_bands"].array_items().size(); ++i) {
+                for (uint16_t i = 0; i < j["reducer_bands"].array_items().size(); ++i) {
                     band_reducers.push_back(std::make_pair(j["reducer_bands"][i][0].string_value(), j["reducer_bands"][i][1].string_value()));
                 }
                 return window_time_cube::create(instance()->create_from_json(j["in_cube"]), band_reducers,
@@ -106,7 +106,7 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "select_bands", [](json11::Json& j) {
             std::vector<std::string> bands;
-            for (uint16_t i=0; i<j["bands"].array_items().size(); ++i) {
+            for (uint16_t i = 0; i < j["bands"].array_items().size(); ++i) {
                 bands.push_back(j["bands"][i].string_value());
             }
             auto x = select_bands_cube::create(instance()->create_from_json(j["in_cube"]), bands);
@@ -128,13 +128,13 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "apply_pixel", [](json11::Json& j) {
             std::vector<std::string> expr;
-            for (uint16_t i=0; i< j["expr"].array_items().size(); ++i) {
+            for (uint16_t i = 0; i < j["expr"].array_items().size(); ++i) {
                 expr.push_back(j["expr"][i].string_value());
             }
 
             if (!j["band_names"].is_null()) {
                 std::vector<std::string> bandnames;
-                for (uint16_t i=0; i< j["band_names"].array_items().size(); ++i) {
+                for (uint16_t i = 0; i < j["band_names"].array_items().size(); ++i) {
                     bandnames.push_back(j["bandnames"][i].string_value());
                 }
                 auto x = apply_pixel_cube::create(instance()->create_from_json(j["in_cube"]), expr, bandnames, j["keep_bands"].bool_value());
@@ -171,12 +171,12 @@ void cube_factory::register_default() {
                 } else {
                     std::string mask_type = j["mask"]["mask_type"].string_value();
                     std::vector<uint8_t> bits;
-                    for (uint16_t i=0; i<j["mask"]["bits"].array_items().size(); ++i) {
+                    for (uint16_t i = 0; i < j["mask"]["bits"].array_items().size(); ++i) {
                         bits.push_back(j["mask"]["bits"][i].int_value());
                     }
                     if (mask_type == "value_mask") {
                         std::unordered_set<double> vals;
-                        for (uint16_t i=0; i<j["mask"]["values"].array_items().size(); ++i) {
+                        for (uint16_t i = 0; i < j["mask"]["values"].array_items().size(); ++i) {
                             vals.insert(j["mask"]["values"][i].number_value());
                         }
                         x->set_mask(j["mask_band"].string_value(), std::make_shared<value_mask>(vals, j["mask"]["invert"].bool_value(), bits));
@@ -190,7 +190,7 @@ void cube_factory::register_default() {
 
             if (!j["warp_args"].is_null()) {
                 std::vector<std::string> warp_args;
-                for (uint16_t i=0; i<j["warp_args"].array_items().size(); ++i) {
+                for (uint16_t i = 0; i < j["warp_args"].array_items().size(); ++i) {
                     warp_args.push_back(j["warp_args"][i].string_value());
                 }
                 x->set_warp_args(warp_args);
@@ -210,7 +210,7 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "stream_reduce_time", [](json11::Json& j) {
             std::vector<std::string> names;
-            for (uint16_t i=0; i<j["names"].array_items().size(); ++i) {
+            for (uint16_t i = 0; i < j["names"].array_items().size(); ++i) {
                 names.push_back(j["names"][i].string_value());
             }
             auto x = stream_reduce_time_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].string_value(), j["nbands"].int_value(), names);
@@ -219,10 +219,10 @@ void cube_factory::register_default() {
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "stream_apply_pixel", [](json11::Json& j) {
-                std::vector<std::string> names;
-                for (uint16_t i=0; i<j["names"].array_items().size(); ++i) {
-                    names.push_back(j["names"][i].string_value());
-                }
+            std::vector<std::string> names;
+            for (uint16_t i = 0; i < j["names"].array_items().size(); ++i) {
+                names.push_back(j["names"][i].string_value());
+            }
             auto x = stream_apply_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].string_value(), j["nbands"].int_value(), names, j["keep_bands"].bool_value());
             return x;
         }));

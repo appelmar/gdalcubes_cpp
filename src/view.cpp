@@ -117,21 +117,21 @@ cube_view cube_view::read_json(std::string filename) {
     std::stringstream buf;
     buf << i.rdbuf();
 
-    std::string err; // TODO: do something with error
+    std::string err;  // TODO: do something with error
     json11::Json j = json11::Json::parse(buf.str(), err);
     return read(j);
 }
 
 cube_view cube_view::read_json_string(std::string str) {
     std::istringstream i(str);
-    std::string err; // TODO: do something with error
+    std::string err;  // TODO: do something with error
     json11::Json j = json11::Json::parse(str, err);
     return read(j);
 }
 
 void cube_view::write_json(std::string filename) {
-    json11::Json j = json11::Json::object {
-        {"space", json11::Json::object {{"nx", (int)_nx}, {"ny", (int)_ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"srs", _srs}}},
+    json11::Json j = json11::Json::object{
+        {"space", json11::Json::object{{"nx", (int)_nx}, {"ny", (int)_ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"srs", _srs}}},
         {"time", json11::Json::object{{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
         {"aggregation", aggregation::to_string(_aggregation)},
         {"resampling", resampling::to_string(_resampling)}};
@@ -146,9 +146,9 @@ void cube_view::write_json(std::string filename) {
 }
 
 std::string cube_view::write_json_string() {
-    json11::Json j = json11::Json::object {
-        {"space", json11::Json::object {{"nx", (int)_nx}, {"ny", (int)_ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"srs", _srs}}},
-        {"time", json11::Json::object {{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
+    json11::Json j = json11::Json::object{
+        {"space", json11::Json::object{{"nx", (int)_nx}, {"ny", (int)_ny}, {"left", _win.left}, {"right", _win.right}, {"top", _win.top}, {"bottom", _win.bottom}, {"srs", _srs}}},
+        {"time", json11::Json::object{{"dt", dt().to_string()}, {"t0", _t0.to_string()}, {"t1", _t1.to_string()}}},
         {"aggregation", aggregation::to_string(_aggregation)},
         {"resampling", resampling::to_string(_resampling)}};
     std::ostringstream o;

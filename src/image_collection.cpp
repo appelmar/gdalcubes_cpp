@@ -129,7 +129,6 @@ image_collection::image_collection(collection_format format) : image_collection(
     }
 }
 
-
 image_collection::image_collection(std::string filename) : _format(), _filename(filename), _db(nullptr) {
     // TODO: IMPLEMENT VERSIONING OF COLLECTION FORMATS AND CHECK COMPATIBILITY HERE
     if (!filesystem::exists(filename)) {
@@ -158,16 +157,12 @@ image_collection::image_collection(std::string filename) : _format(), _filename(
     sqlite3_finalize(stmt);
 }
 
-
-
 image_collection::~image_collection() {
     if (_db) {
         sqlite3_close(_db);
         _db = nullptr;
     }
 }
-
-
 
 std::shared_ptr<image_collection> image_collection::create(collection_format format, std::vector<std::string> descriptors, bool strict) {
     std::shared_ptr<image_collection> o = std::make_shared<image_collection>(format);

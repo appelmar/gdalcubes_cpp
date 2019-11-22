@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-
 namespace gdalcubes {
 
 std::shared_ptr<chunk_data> fill_time_cube::read_chunk(chunkid_t id) {

@@ -93,8 +93,8 @@ class reduce_cube : public cube {
  */
     void write_gdal_image(std::string path, std::string format = "GTiff", std::vector<std::string> co = std::vector<std::string>(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "reduce";
         out["reducer"] = _reducer;
         out["in_cube"] = _in_cube->make_constructible_json();

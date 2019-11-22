@@ -199,10 +199,10 @@ int main(int argc, char* argv[]) {
 
         // Test apply_pixel
         //        {
-        //            auto c = dummy_cube::create(v, 1, 1.0);
-        //            auto capply = apply_pixel_cube::create(c, {"day(t0)"});
-        //            auto cr = reduce_cube::create(capply, "median");
-        //            cr->write_netcdf_file("test_apply_reduce.nc");
+//                    auto c = dummy_cube::create(v, 1, 1.0);
+//                    auto capply = apply_pixel_cube::create(c, {"day(t0)"});
+//                    auto cr = reduce_cube::create(capply, "median");
+//                    cr->write_netcdf_file("test_apply_reduce.nc");
         //        }
 
         // Test query_points
@@ -319,11 +319,13 @@ int main(int argc, char* argv[]) {
             //            auto ic = image_collection::create(f, files, false);
             //            ic->write("/home/marius/Desktop/test.db");
 
-            std::ifstream i("/tmp/cube.json");
-            nlohmann::json j;
-            i >> j;
-            auto cube = cube_factory::instance()->create_from_json(j);
-            cube->write_netcdf_file("/tmp/cube.nc");
+//            std::ifstream i("/tmp/cube.json");
+//            std::stringstream buf;
+//            buf << i.rdbuf();
+//            std::string err;
+//            json11::Json j = json11::Json::parse(buf.str(),err);
+//            auto cube = cube_factory::instance()->create_from_json(j);
+//            cube->write_netcdf_file("/tmp/cube.nc");
         }
 
         /**************************************************************************/

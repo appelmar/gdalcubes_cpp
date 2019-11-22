@@ -132,6 +132,7 @@ else()
 endif()
 list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/tiny-process-library/process.cpp)
 
+list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/json11/json11.cpp)
 
 
 list(REMOVE_ITEM SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/example.cpp)

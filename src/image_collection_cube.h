@@ -24,15 +24,18 @@
 #ifndef IMAGE_COLLECTION_CUBE_H
 #define IMAGE_COLLECTION_CUBE_H
 
-#include <unordered_set>
+
 #include "cube.h"
+#include "image_collection.h"
+#include <unordered_set>
+
 
 namespace gdalcubes {
 
 struct image_mask {
     virtual ~image_mask() {}
     virtual void apply(double *mask_buf, double *pixel_buf, uint32_t nb, uint32_t ny, uint32_t nx) = 0;
-    virtual nlohmann::json as_json() = 0;
+    virtual json11::Json as_json() = 0;
 };
 
 struct value_mask : public image_mask {
@@ -72,8 +75,8 @@ struct value_mask : public image_mask {
         }
     }
 
-    nlohmann::json as_json() override {
-        nlohmann::json out;
+    json11::Json as_json() override {
+        json11::Json::object out;
         out["mask_type"] = "value_mask";
         out["values"] = _mask_values;
         out["invert"] = _invert;
@@ -125,8 +128,8 @@ struct range_mask : public image_mask {
         }
     }
 
-    nlohmann::json as_json() override {
-        nlohmann::json out;
+    json11::Json as_json() override {
+        json11::Json::object out;
         out["mask_type"] = "range_mask";
         out["min"] = _min;
         out["max"] = _max;
@@ -290,14 +293,15 @@ class image_collection_cube : public cube {
         _chunk_size = {t, y, x};
     }
 
-    nlohmann::json make_constructible_json() override {
+    json11::Json make_constructible_json() override {
         if (_collection->is_temporary()) {
             throw std::string("ERROR in image_collection_cube::make_constructible_json(): image collection is temporary, please export as file using write() first.");
         }
-        nlohmann::json out;
+        json11::Json::object out;
         out["cube_type"] = "image_collection";
-        out["chunk_size"] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
-        out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
+        out["chunk_size"] = json11::Json::array({(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]});
+        std::string err; // TODO: do something with err
+        out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
         out["file"] = _collection->get_filename();
         if (_mask) {
             out["mask"] = _mask->as_json();

@@ -827,7 +827,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @return a JSON object which can be used to recreate it with cube_factory
      * @see cube_factory
      */
-    virtual nlohmann::json make_constructible_json() = 0;
+    virtual json11::Json make_constructible_json() = 0;
 
    protected:
     /**

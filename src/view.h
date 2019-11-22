@@ -25,10 +25,11 @@
 #ifndef VIEW_H
 #define VIEW_H
 
-#include <algorithm>
+
 #include "datetime.h"
-#include "external/json.hpp"
-#include "image_collection.h"
+#include "external/json11/json11.hpp"
+#include "coord_types.h"
+#include <algorithm>
 
 namespace gdalcubes {
 
@@ -585,7 +586,7 @@ class cube_view : public cube_st_reference {
     inline resampling::resampling_type &resampling_method() { return _resampling; }
 
    private:
-    static cube_view read(nlohmann::json j);
+    static cube_view read(json11::Json j);
 
     resampling::resampling_type _resampling;
     aggregation::aggregation_type _aggregation;

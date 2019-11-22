@@ -68,12 +68,13 @@ class dummy_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "dummy";
-        out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
+        std::string err; // TODO: do something with err
+        out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
         out["fill"] = _fill;
-        out["chunk_size"] = _chunk_size;
+        out["chunk_size"] = json11::Json::array{(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]};
         return out;
     }
 

@@ -26,7 +26,7 @@
 #define COLLECTION_FORMAT_H
 
 #include "config.h"
-#include "external/json.hpp"
+#include "external/json11/json11.hpp"
 
 #include <string>
 
@@ -67,10 +67,10 @@ class collection_format {
      * Returns the raw json document.
      * @return JSON object from json library (see https://github.com/nlohmann/json)
      */
-    inline nlohmann::json& json() { return _j; }
+    inline json11::Json& json() { return _j; }
 
    private:
-    nlohmann::json _j;
+    json11::Json _j;
 };
 
 }  // namespace gdalcubes

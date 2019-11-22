@@ -111,8 +111,8 @@ class stream_cube : public cube {
 
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    virtual nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    virtual json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "stream";
         out["command"] = _cmd;
         out["in_cube"] = _in_cube->make_constructible_json();

@@ -66,8 +66,8 @@ class stream_reduce_time_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "stream_reduce_time_cube";
         out["cmd"] = _cmd;
         out["nbands"] = _nbands;

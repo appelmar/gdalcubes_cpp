@@ -4,6 +4,7 @@
 #include <gdal_utils.h>
 #include <ogrsf_frmts.h>
 #include <thread>
+#include <unordered_map>
 
 namespace gdalcubes {
 

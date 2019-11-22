@@ -31,7 +31,7 @@
 namespace gdalcubes {
 
     bool collection_format::is_null() {
-        return _j.empty();
+        return _j.is_null();
     }
 
 
@@ -58,7 +58,6 @@ namespace gdalcubes {
 
 
     void collection_format::load_file(std::string filename) {
-        _j.clear();
 
         if ((!filesystem::exists(filename) && !filesystem::is_absolute(filename) && filesystem::parent(filename).empty()) || filesystem::is_directory(filename)) {
             // simple filename without directories
@@ -73,14 +72,17 @@ namespace gdalcubes {
             throw std::string("ERROR in collection_format::load_file(): image collection format file does not exist.");
 
         std::ifstream i(filename);
-        i >> _j;
+        std::stringstream str;
+        str << i.rdbuf();
+
+        std::string err; // TODO: do something with err
+        _j = json11::Json::parse(str.str(), err);
     }
 
 
     void collection_format::load_string(std::string jsonstr) {
-        _j.clear();
-        std::istringstream ss(jsonstr);
-        ss >> _j;
+        std::string err; // TODO: do something with err
+        _j = json11::Json::parse(jsonstr, err);
     }
 
 

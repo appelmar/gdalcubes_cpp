@@ -121,8 +121,8 @@ class select_bands_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "select_bands";
         out["bands"] = _band_sel;
         out["in_cube"] = _in_cube->make_constructible_json();

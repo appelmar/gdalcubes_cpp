@@ -100,8 +100,8 @@ class reduce_space_cube : public cube {
      * @param p chunk processor instance, defaults to the current global configuration in config::instance()->get_default_chunk_processor()
  */
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "reduce_space";
         out["reducer_bands"] = _reducer_bands;
         out["in_cube"] = _in_cube->make_constructible_json();

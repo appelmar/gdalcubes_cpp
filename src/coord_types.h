@@ -26,6 +26,8 @@
 #ifndef COORD_TYPES_H
 #define COORD_TYPES_H
 
+#include <ogr_spatialref.h>
+
 namespace gdalcubes {
 
     template <typename Ta>

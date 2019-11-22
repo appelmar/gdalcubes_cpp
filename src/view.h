@@ -31,6 +31,7 @@
 #include "coord_types.h"
 #include <algorithm>
 
+
 namespace gdalcubes {
 
 /**

@@ -176,6 +176,182 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
     return out;
 }
 
+
+
+std::vector<std::vector<std::vector<double>>> vector_queries::query_timeseries(std::shared_ptr<cube> cube,
+                                                                               std::vector<double> x,
+                                                                               std::vector<double> y,
+                                                                               std::string srs) {
+    if (x.size() != y.size() || y.size()) {
+        GCBS_ERROR("Point coordinate vectors x, y must have identical length");
+        throw std::string("Point coordinate vectors x, y must have identical length");
+    }
+
+    if (x.empty()) {
+        GCBS_ERROR("Point coordinate vectors x, y must have length > 0");
+        throw std::string("Point coordinate vectors x, y must have length > 0");
+    }
+
+
+    if (!cube) {
+        GCBS_ERROR("Invalid data cube pointer");
+        throw std::string("Invalid data cube pointer");
+    }
+
+    uint32_t nthreads = config::instance()->get_default_chunk_processor()->max_threads();
+
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
+
+    // coordinate transformation
+    if (cube->st_reference()->srs() != srs) {
+        OGRSpatialReference srs_in;
+        OGRSpatialReference srs_out;
+        srs_in.SetFromUserInput(cube->st_reference()->srs().c_str());
+        srs_out.SetFromUserInput(srs.c_str());
+
+        if (!srs_in.IsSame(&srs_out)) {
+            std::vector<std::thread> workers_transform;
+            uint32_t n = (uint32_t)std::ceil(double(x.size()) / double(nthreads));  // points per thread
+
+            for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+                workers_transform.push_back(std::thread([&cube, &srs, &srs_in, &srs_out, &x, &y, ithread, n](void) {
+                    OGRCoordinateTransformation *coord_transform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
+
+                    int begin = ithread * n;
+                    int end = std::min(uint32_t(ithread * n + n), uint32_t(x.size()));
+                    int count = end - begin;
+
+                    // change coordinates in place, should be safe because vectors don't change their sizes
+                    if (count > 0) {
+                        if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
+                            throw std::string("ERROR: coordinate transformation failed (from " + cube->st_reference()->srs() + " to " + srs + ").");
+                        }
+                    }
+                    OCTDestroyCoordinateTransformation(coord_transform);
+                }));
+            }
+            for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+                workers_transform[ithread].join();
+            }
+        }
+    }
+
+
+
+    // TODO: possible without additional copy?
+    std::vector<double> ipoints;  // array indexes
+    //    ix.resize(x.size());
+    //    iy.resize(x.size());
+    ipoints.resize(x.size());
+
+    std::map<chunkid_t, std::vector<uint32_t>> chunk_index;
+    std::vector<std::thread> workers_preprocess;
+    std::mutex mtx;
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers_preprocess.push_back(std::thread([&mtx, &cube, &x, &y, &chunk_index, ithread, nthreads](void) {
+            for (uint32_t i = ithread; i < x.size(); i += nthreads) {
+                // array coordinates
+                x[i] = (x[i] - cube->st_reference()->left()) / cube->st_reference()->dx();
+                //iy.push_back(cube->st_reference()->ny() - 1 - ((y[i] - cube->st_reference()->bottom()) / cube->st_reference()->dy()));  // top 0
+                y[i] = (y[i] - cube->st_reference()->bottom()) / cube->st_reference()->dy();
+
+                if (x[i] < 0 || x[i] >= cube->size_x() ||
+                    y[i] < 0 || y[i] >= cube->size_y()) {  // if point is outside of the cube
+                    continue;
+                }
+                uint32_t cx = x[i] / cube->chunk_size()[2];
+                uint32_t cy = y[i] / cube->chunk_size()[1];
+                chunkid_t c = cube->chunk_id_from_coords({0,cy,cx});
+
+                mtx.lock();
+                chunk_index[c].push_back(i);
+                mtx.unlock();
+            }
+        }));
+    }
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers_preprocess[ithread].join();
+    }
+
+
+
+    std::vector<std::vector<std::vector<double>>> out;
+    out.resize(cube->bands().count());
+    for (uint16_t ib = 0; ib < out.size(); ++ib) {
+        out[ib].resize(cube->size_t());
+        for (uint32_t it=0; it < out[ib].size(); ++it) {
+            out[ib][it].resize(x.size(), NAN);
+        }
+    }
+
+    std::vector<chunkid_t> chunks;  // vector of keys in chunk_index
+    for (auto iter = chunk_index.begin(); iter != chunk_index.end(); ++iter) {
+        chunks.push_back(iter->first);
+    }
+
+    std::vector<std::thread> workers;
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers.push_back(std::thread([&prg, &cube, &out, &chunk_index, &chunks, &x, &y, ithread, nthreads](void) {
+            for (uint32_t ic = ithread; ic < chunks.size(); ic += nthreads) {
+                try {
+                    for (uint32_t ct = 0; ct < cube->count_chunks_t(); ct++) {
+                        chunkid_t cur_chunk = ic + ct * (cube->count_chunks_x() * cube->count_chunks_y());
+                        if (cur_chunk < cube->count_chunks()) {  // if chunk exists
+                            uint32_t nt_in_chunk = cube->chunk_size(cur_chunk)[0];
+                            std::shared_ptr<chunk_data> dat = cube->read_chunk(cur_chunk);
+                            if (!dat->empty()) {  // if chunk is not empty
+                                // iterate over all query points within the current chunk
+                                for (uint32_t i = 0; i < chunk_index[chunks[ic]].size(); ++i) {
+                                    double ixc = x[chunk_index[chunks[ic]][i]];
+                                    double iyc = y[chunk_index[chunks[ic]][i]];
+
+                                    int iix = ((int)std::floor(ixc)) % cube->chunk_size()[2];
+                                    int iiy = dat->size()[2] - 1 - (((int)std::floor(iyc)) % cube->chunk_size()[1]);
+
+                                    // check to prevent out of bounds faults
+                                    if (iix < 0 || uint32_t(iix) >= dat->size()[3]) continue;
+                                    if (iiy < 0 || uint32_t(iiy) >= dat->size()[2]) continue;
+
+                                    for (uint16_t ib = 0; ib < out.size(); ++ib) {
+                                        for (uint32_t it = 0; it < nt_in_chunk; ++it) {
+                                            out[ib][ct*cube->chunk_size()[0] + it][chunk_index[chunks[ic]][i]] = ((double *)dat->buf())[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3] + iiy * dat->size()[3] + iix];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        prg->increment((double)1 / ((double)chunks.size()*(double)cube->count_chunks_t()));
+                    }
+                } catch (std::string s) {
+                    GCBS_ERROR(s);
+                    continue;
+                } catch (...) {
+                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(chunks[ic]));
+                    continue;
+                }
+            }
+        }));
+    }
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers[ithread].join();
+    }
+    prg->finalize();
+
+    return out;
+}
+
+
+
+
+
+
+
+
+
+
+
 struct zonal_statistics_func {
     zonal_statistics_func() : _nfeatures(0), _nt(0){};
     virtual ~zonal_statistics_func(){};
@@ -359,7 +535,60 @@ struct zonal_statistics_median : public zonal_statistics_func {
     std::vector<std::vector<double>> _values;
 };
 
-// TODO: implement var and sd aggregation functions
+
+
+    struct zonal_statistics_var: public zonal_statistics_func {
+        void init(uint32_t nfeatures, uint32_t nt) override {
+            zonal_statistics_func::init(nfeatures, nt);
+            _n.resize(_nt * _nfeatures, 0);
+            _cur_mean.resize(_nt * _nfeatures, 0);
+            _cur_M2 = std::make_shared<std::vector<double>>();
+            _cur_M2->resize(_nt * _nfeatures, 0);
+        }
+
+        void update(double x, uint32_t ifeature, uint32_t it) override {
+            if (std::isfinite(x)) {
+                _n[ifeature * _nt + it]++;
+                double delta = x - _cur_mean[ifeature * _nt + it];
+                _cur_mean[ifeature * _nt + it] += delta / _n[ifeature * _nt + it];
+                double delta2 =  x - _cur_mean[ifeature * _nt + it];
+                (*_cur_M2)[ifeature * _nt + it] += delta * delta2;
+            }
+        }
+
+        std::shared_ptr<std::vector<double>> finalize() override {
+            for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+                if (_n[i] < 2) {
+                    (*_cur_M2)[i] = NAN;
+                }
+                else {
+                    (*_cur_M2)[i] =  (*_cur_M2)[i] / double(_n[i]);
+                }
+            }
+            return _cur_M2;
+        }
+
+        std::vector<uint32_t> _n;
+        std::vector<double> _cur_mean;
+        std::shared_ptr<std::vector<double>> _cur_M2;
+    };
+
+
+    struct zonal_statistics_sd: public zonal_statistics_var {
+        std::shared_ptr<std::vector<double>> finalize() override {
+            for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+                if (_n[i] < 2) {
+                    (*_cur_M2)[i] = NAN;
+                }
+                else {
+                    (*_cur_M2)[i] = std::sqrt((*_cur_M2)[i] / double(_n[i]));
+                }
+            }
+            return _cur_M2;
+        }
+    };
+
+
 void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset,
                                       std::vector<std::pair<std::string, std::string>> agg_band_functions,
                                       std::string out_path, bool overwrite_if_exists, std::string ogr_layer) {
@@ -400,7 +629,11 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_mean()); });
             } else if (agg_band_functions[i].first == "median") {
                 agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_median()); });
-            }  // TODO: Add sd and var
+            }  else if (agg_band_functions[i].first == "sd") {
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_sd()); });
+            } else if (agg_band_functions[i].first == "var") {
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_var()); });
+            }
             else {
                 GCBS_WARN("There is no aggregation function '" + agg_band_functions[i].first + "', related summary statistics will be ignored.");
                 continue;

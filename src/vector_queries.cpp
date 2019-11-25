@@ -182,7 +182,7 @@ std::vector<std::vector<std::vector<double>>> vector_queries::query_timeseries(s
                                                                                std::vector<double> x,
                                                                                std::vector<double> y,
                                                                                std::string srs) {
-    if (x.size() != y.size() || y.size()) {
+    if (x.size() != y.size()) {
         GCBS_ERROR("Point coordinate vectors x, y must have identical length");
         throw std::string("Point coordinate vectors x, y must have identical length");
     }

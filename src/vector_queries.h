@@ -45,7 +45,6 @@ class vector_queries {
          */
     static std::vector<std::vector<double>> query_points(std::shared_ptr<cube> cube, std::vector<double> x, std::vector<double> y, std::vector<std::string> t, std::string srs);
 
-
     /**
     * Query complete time series of a datacube at irregular spatial points
     *
@@ -61,7 +60,6 @@ class vector_queries {
      * data frame columns (time) and the third vector represents the points (data frame rows)
     */
     static std::vector<std::vector<std::vector<double>>> query_timeseries(std::shared_ptr<cube> cube, std::vector<double> x, std::vector<double> y, std::string srs);
-
 
     /**
      * Query summary statistics of a data cube over spatial polygons

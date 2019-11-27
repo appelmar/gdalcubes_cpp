@@ -35,14 +35,12 @@ gdalcubes makes use of the following third party software.
 
 ------------------------------------------------------------------------------------------------------------------------
 
-**[json](https://github.com/nlohmann/json): JSON for Modern C++**
-    - Copyright (c) 2013-2018 Niels Lohmann
+**[json11](https://github.com/dropbox/json11)**
+    - Copyright (c) 2013 Dropbox, Inc.
     - License: [MIT license](https://opensource.org/licenses/MIT) (see below)
-    - gdalcubes distributes a **modified** version of the library under `src/external/json.hpp`, modifications are limited to commenting out diagnostic pragmas (see https://github.com/appelmar/gdalcubes/commit/9e936155489a97c5bb211e13e757236762ee1d96)
+    - gdalcubes distributes the library under `src/external/json11/*`
 
-    MIT License
-
-    Copyright (c) 2013-2018 Niels Lohmann
+    Copyright (c) 2013 Dropbox, Inc.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -51,16 +49,16 @@ gdalcubes makes use of the following third party software.
     copies of the Software, and to permit persons to whom the Software is
     furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
 
 
 ------------------------------------------------------------------------------------------------------------------------

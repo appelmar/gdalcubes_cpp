@@ -680,10 +680,10 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     // check that cube and ogr dataset have same spatial reference system.
     OGRSpatialReference srs_cube = cube->st_reference()->srs_ogr();
     srs_cube.AutoIdentifyEPSG();
-    OGRSpatialReference *srs_features = layer->GetSpatialRef();
-    srs_features->AutoIdentifyEPSG();
+    OGRSpatialReference srs_features = *(layer->GetSpatialRef());
+    srs_features.AutoIdentifyEPSG();
 
-    if (!srs_cube.IsSame(srs_features)) {
+    if (!srs_cube.IsSame(&srs_features)) {
         GCBS_ERROR("Data cube and input features have different SRSes");
         GDALClose(in_ogr_dataset);
         // TODO: do we have to clean up more things here?
@@ -770,7 +770,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
 
     // Copy geometries from input dataset
-    OGRLayer *geom_layer_out = gpkg_out->CreateLayer("geom", srs_features, geom_type, NULL);
+    OGRLayer *geom_layer_out = gpkg_out->CreateLayer("geom", &srs_features, geom_type, NULL);
     if (geom_layer_out == NULL) {
         GCBS_ERROR("Failed to create output layer in  '" + output_file + "'");
         throw std::string("Failed to create output layer in  '" + output_file + "'");
@@ -790,6 +790,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         OGRFeature::DestroyFeature(in_feature);
     }
     GDALClose(gpkg_out);
+    GDALClose(in_ogr_dataset);
 
     uint16_t nthreads = config::instance()->get_default_chunk_processor()->max_threads();
 
@@ -1004,7 +1005,9 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 mutex.unlock();
                 GDALClose(gpkg_out);
             }
+            GDALClose(in_ogr_dataset);
         }));
+
     }
     for (uint16_t ithread = 0; ithread < nthreads; ++ithread) {
         workers[ithread].join();
@@ -1029,6 +1032,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
             GCBS_ERROR("ogr2ogr failed");
         }
         GDALClose(gpkg_out);
+        GDALClose(temp_in);
 
         filesystem::remove(out_temp_files[i]);
     }
@@ -1044,8 +1048,13 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     const char *gpkg_has_column_md = gpkg_driver->GetMetadataItem("SQLITE_HAS_COLUMN_METADATA", NULL);
 
     int32_t srs_auth_code = 0;
-    if (srs_features->GetAuthorityCode(NULL) != NULL) {
-        srs_auth_code = std::atoi(srs_features->GetAuthorityCode(NULL));
+    const char* authcode_char = srs_features.GetAuthorityCode(NULL);
+    std::string authcode_str;
+    if (std::strlen(authcode_char) > 0 ) {
+        authcode_str = authcode_char;
+    }
+    if (!authcode_str.empty()) {
+        srs_auth_code = std::atoi(authcode_str.c_str());
     }
 
     if (gpkg_has_column_md == NULL || std::strcmp(gpkg_has_column_md, "YES") != 0) {
@@ -1086,7 +1095,6 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
 
     GDALClose(gpkg_out);
-    GDALClose(in_ogr_dataset);
     prg->finalize();
 }
 

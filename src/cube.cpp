@@ -866,7 +866,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
 
 
-void cube::write_chunked_netcdf(std::string dir, std::string name, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
+void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
 
 
     if (name.empty()) {
@@ -929,9 +929,9 @@ void cube::write_chunked_netcdf(std::string dir, std::string name, uint8_t compr
 #endif
 
         int d_t, d_y, d_x;
-        nc_def_dim(ncout, "time", size_t(), &d_t);
-        nc_def_dim(ncout, yname.c_str(), size_y(), &d_y);
-        nc_def_dim(ncout, xname.c_str(), size_x(), &d_x);
+        nc_def_dim(ncout, "time", dat->size()[1], &d_t);
+        nc_def_dim(ncout, yname.c_str(), dat->size()[2], &d_y);
+        nc_def_dim(ncout, xname.c_str(), dat->size()[3], &d_x);
 
         int v_t, v_y, v_x;
         nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
@@ -946,7 +946,7 @@ void cube::write_chunked_netcdf(std::string dir, std::string name, uint8_t compr
         char *wkt;
         srs.exportToWkt(&wkt);
 
-        double geoloc_array[6] = {bbox.s.left, st_reference()->dx(), 0.0, bbox.s.top, 0.0, st_reference()->dy()};
+        double geoloc_array[6] = {bbox.s.left, st_reference()->dx(), 0.0, bbox.s.top, 0.0, -st_reference()->dy()};
         nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
         nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 

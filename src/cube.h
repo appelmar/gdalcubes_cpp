@@ -799,8 +799,8 @@ class cube : public std::enable_shared_from_this<cube> {
                            std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
 
-    void write_chunked_netcdf(std::string dir, std::string name = "", uint8_t compression_level = 0,
-                              std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    void write_chunks_netcdf(std::string dir, std::string name = "", uint8_t compression_level = 0,
+                             std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     /**
      * Get the cube's bands

@@ -94,13 +94,13 @@ cube_view cube_view::read(json11::Json j) {
         throw std::string("ERROR in cube_view::read(): expected either 'space' or 'tile' in JSON cube view");
     }
 
-    if (!j["resampling"].is_null()) {
+    if (j["resampling"].is_null()) {
         v._resampling = resampling::resampling_type::RSMPL_NEAR;
     } else {
         v._resampling = resampling::from_string(j["resampling"].string_value());
     }
 
-    if (!j["aggregation"].is_null()) {
+    if (j["aggregation"].is_null()) {
         v._aggregation = aggregation::aggregation_type::AGG_NONE;
     } else {
         v._aggregation = aggregation::from_string(j["aggregation"].string_value());

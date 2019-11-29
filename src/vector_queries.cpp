@@ -1007,7 +1007,6 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
             }
             GDALClose(in_ogr_dataset);
         }));
-
     }
     for (uint16_t ithread = 0; ithread < nthreads; ++ithread) {
         workers[ithread].join();
@@ -1048,9 +1047,9 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     const char *gpkg_has_column_md = gpkg_driver->GetMetadataItem("SQLITE_HAS_COLUMN_METADATA", NULL);
 
     int32_t srs_auth_code = 0;
-    const char* authcode_char = srs_features.GetAuthorityCode(NULL);
+    const char *authcode_char = srs_features.GetAuthorityCode(NULL);
     std::string authcode_str;
-    if (std::strlen(authcode_char) > 0 ) {
+    if (std::strlen(authcode_char) > 0) {
         authcode_str = authcode_char;
     }
     if (!authcode_str.empty()) {

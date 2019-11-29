@@ -546,7 +546,6 @@ class cube_st_reference {
  */
 class cube_view : public cube_st_reference {
    public:
-
     cube_view() : _resampling(resampling::resampling_type::RSMPL_NEAR), _aggregation(aggregation::aggregation_type::AGG_FIRST) {}
     /**
          * Deserializes a cube_view object from a JSON file.

@@ -40,9 +40,20 @@
 #include "stream_reduce_time.h"
 #include "window_time.h"
 
+#include <fstream>
+
 namespace gdalcubes {
 
 cube_factory* cube_factory::_instance = 0;
+
+std::shared_ptr<cube> cube_factory::create_from_json_file(std::string path) {
+    std::ifstream i(path);
+    std::stringstream buf;
+    buf << i.rdbuf();
+    std::string err;
+    json11::Json j = json11::Json::parse(buf.str(), err);
+    return (create_from_json(j));
+}
 
 std::shared_ptr<cube> cube_factory::create_from_json(json11::Json j) {
     if (j["cube_type"].is_null()) {

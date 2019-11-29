@@ -51,6 +51,8 @@ class cube_factory {
      */
     std::shared_ptr<cube> create_from_json(json11::Json j);
 
+    std::shared_ptr<cube> create_from_json_file(std::string path);
+
     /**
      * @brief Registers a cube type with a function to create objects of this type from a JSON description.
      *

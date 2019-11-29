@@ -310,14 +310,7 @@ int main(int argc, char* argv[]) {
                     config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
                 }
             }
-
-            std::ifstream i(input);
-            std::stringstream buf;
-            buf << i.rdbuf();
-            std::string err;
-            json11::Json j = json11::Json::parse(buf.str(), err);
-
-            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(j);
+            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json_file(input);
             c->write_netcdf_file(output, deflate);
 
         } else if (cmd == "addo") {

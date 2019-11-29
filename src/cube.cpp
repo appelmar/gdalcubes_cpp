@@ -864,11 +864,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     }
 }
 
-
-
 void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
-
-
     if (name.empty()) {
         name = utils::generate_unique_filename();
     }
@@ -879,19 +875,14 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
         if (!filesystem::is_directory(dir)) {
             throw std::string("ERROR in cube::write_chunks_netcdf(): output is not a directory");
         }
-    }
-    else {
+    } else {
         filesystem::mkdir_recursive(dir);
     }
-
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-
-
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, prg, &compression_level, &name, &dir](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
-
         std::string fname = filesystem::join(dir, name + "_" + std::to_string(id) + ".nc");
 
         double *dim_x = (double *)std::calloc(dat->size()[3], sizeof(double));
@@ -908,7 +899,7 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
             dim_t[i] = (i * st_reference()->dt().dt_interval);
         }
         for (uint32_t i = 0; i < dat->size()[2]; ++i) {
-            dim_y[i] = bbox.s.top - (i+0.5) * st_reference()->dy();
+            dim_y[i] = bbox.s.top - (i + 0.5) * st_reference()->dy();
             //dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
         }
         for (uint32_t i = 0; i < dat->size()[3]; ++i) {
@@ -937,7 +928,6 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
         nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
         nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
         nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
-
 
         std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
         nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
@@ -1064,17 +1054,7 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
 
     p->apply(shared_from_this(), f);
     prg->finalize();
-
 }
-
-
-
-
-
-
-
-
-
 
 void chunk_processor_singlethread::apply(std::shared_ptr<cube> c,
                                          std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f) {

@@ -1,5 +1,5 @@
 {
-  "description" : "Collection format for the MODIS MCD64A1 (Aqua and Terra) product",
+  "description" : "Collection format for the MODIS MCD64A1 product (burned area by day)",
   "tags" : ["MODIS", "Fire"],
   "pattern" : ".*\\.hdf.*",
   "subdatasets" : true,
@@ -11,23 +11,23 @@
     "format" : "%Y%j"
   },
   "bands" : {
-    "Burn Date" : {
-      "pattern" : ".+Burn Date",
+    "BurnDate" : {
+      "pattern" : ".+Burn Date.*",
       "nodata" : -1
     },
     "BurnDateUncertainty" : {
-      "pattern" : ".+Burn Date Uncertainty",
+      "pattern" : ".+Burn Date Uncertainty.*",
       "nodata" : 0
     },
     "QA" : {
       "pattern" : ".+QA.*"
     },
     "FirstDay" : {
-      "pattern" : ".+First Day",
+      "pattern" : ".+First Day.*",
       "nodata" : -1
     },
     "LastDay" : {
-      "pattern" : ".+Last Day",
+      "pattern" : ".+Last Day.*",
       "nodata" : -1
     }
   }

@@ -125,9 +125,9 @@ class window_time_cube : public cube {
         if (!_kernel.empty()) {
             out["kernel"] = _kernel;
         } else {
-            std::vector<std::vector<std::string>> rb;
+            json11::Json::array rb;
             for (uint16_t i=0; i<_reducer_bands.size(); ++i) {
-                rb.push_back({_reducer_bands[i].first, _reducer_bands[i].second});
+                rb.push_back(json11::Json::array({_reducer_bands[i].first, _reducer_bands[i].second}));
             }
             out["reducer_bands"] = rb;
         }

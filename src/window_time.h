@@ -125,7 +125,11 @@ class window_time_cube : public cube {
         if (!_kernel.empty()) {
             out["kernel"] = _kernel;
         } else {
-            out["reducer_bands"] = _reducer_bands;
+            std::vector<std::vector<std::string>> rb;
+            for (uint16_t i=0; i<_reducer_bands.size(); ++i) {
+                rb.push_back({_reducer_bands[i].first, _reducer_bands[i].second});
+            }
+            out["reducer_bands"] = rb;
         }
         out["win_size_l"] = _win_size_l;
         out["win_size_r"] = _win_size_r;

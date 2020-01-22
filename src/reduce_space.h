@@ -103,7 +103,11 @@ class reduce_space_cube : public cube {
     json11::Json make_constructible_json() override {
         json11::Json::object out;
         out["cube_type"] = "reduce_space";
-        out["reducer_bands"] = _reducer_bands;
+        std::vector<std::vector<std::string>> rb;
+        for (uint16_t i=0; i<_reducer_bands.size(); ++i) {
+            rb.push_back({_reducer_bands[i].first, _reducer_bands[i].second});
+        }
+        out["reducer_bands"] = rb;
         out["in_cube"] = _in_cube->make_constructible_json();
         return out;
     }

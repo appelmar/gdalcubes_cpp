@@ -169,6 +169,11 @@ class config {
         //srand(time(NULL)); // R will complain if calling srand...
         CPLSetErrorHandler(CPLQuietErrorHandler);
 
+        // For GDAL 3, force traditional x, y (lon, lat) order
+#if GDAL_VERSION_MAJOR > 2
+    CPLSetConfigOption("OGR_CT_FORCE_TRADITIONAL_GIS_ORDER", "YES");
+#endif
+
         // Add default locations where to look for collection format presets
 
         if (std::getenv("GDALCUBES_DATA_DIR") != NULL) {

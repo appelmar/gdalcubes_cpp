@@ -445,7 +445,7 @@ class cube : public std::enable_shared_from_this<cube> {
 
         // 2. Find out which chunk contains the integer view coordinates
         id += cumprod * (s[2] / _chunk_size[2]);
-        cumprod *= (uint32_t)std::ceil(((double)_st_ref->nx()) / ((double)_chunk_size[2]));
+        cumprod *= (uint32_t)std::ceil(((double) _st_ref->nx()) / ((double)_chunk_size[2]));
         id += cumprod * (s[1] / _chunk_size[1]);
         cumprod *= (uint32_t)std::ceil(((double)(_st_ref->ny()) / ((double)_chunk_size[1])));
         id += cumprod * (s[0] / _chunk_size[0]);
@@ -568,7 +568,7 @@ class cube : public std::enable_shared_from_this<cube> {
     * @return Total number of chunk in x direction
     */
     inline uint32_t count_chunks_x() const {
-        return std::ceil((double)_st_ref->nx() / (double)_chunk_size[2]);
+        return std::ceil((double) _st_ref->nx() / (double)_chunk_size[2]);
     }
 
     /**
@@ -576,7 +576,7 @@ class cube : public std::enable_shared_from_this<cube> {
     * @return Total number of chunk in y direction
     */
     inline uint32_t count_chunks_y() const {
-        return std::ceil((double)_st_ref->ny() / (double)_chunk_size[1]);
+        return std::ceil((double) _st_ref->ny() / (double)_chunk_size[1]);
     }
 
     /**
@@ -584,7 +584,7 @@ class cube : public std::enable_shared_from_this<cube> {
     * @return Total number of chunk in t direction
     */
     inline uint32_t count_chunks_t() const {
-        return std::ceil((double)_st_ref->nt() / (double)_chunk_size[0]);
+        return std::ceil((double) _st_ref->nt() / (double)_chunk_size[0]);
     }
 
     /**

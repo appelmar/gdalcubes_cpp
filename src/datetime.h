@@ -283,15 +283,15 @@ class datetime {
 
     inline friend bool operator!=(const datetime& l, const datetime& r) { return !(l == r); }
 
-    friend bool operator<(datetime& l, datetime& r) {
+    friend bool operator<(const datetime& l, const datetime& r) {
         if (l.unit() != r._unit) return false;
 
         if (l.unit() == datetime_unit::NONE) return false;
         return ((l - r).dt_interval < 0);
     }
-    inline friend bool operator>(datetime& l, datetime& r) { return r < l; }
-    inline friend bool operator<=(datetime& l, datetime& r) { return !(l > r); }
-    inline friend bool operator>=(datetime& l, datetime& r) { return !(l < r); }
+    inline friend bool operator>(const datetime& l, const datetime& r) { return r < l; }
+    inline friend bool operator<=(const datetime& l, const datetime& r) { return !(l > r); }
+    inline friend bool operator>=(const datetime& l, const datetime& r) { return !(l < r); }
 
     friend datetime operator+(datetime l, const duration& r) {
         datetime out(l._p);

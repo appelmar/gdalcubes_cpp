@@ -465,14 +465,14 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             GDALDataset *gdal_out = nullptr;
             if (create_band_subset_vrt && bandsel_vrt != nullptr) {
                 //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&bandsel_vrt), warp_opts, NULL);
-                gdal_out = gdalwarp_client::warp(bandsel_vrt, src_srs.c_str(), _st_ref->srs().c_str(),cextent.s.left, cextent.s.right,
-                        cextent.s.top, cextent.s.bottom,size_btyx[3], size_btyx[2],
-                        resampling::to_string(view()->resampling_method()),nodata_value_list);
+                gdal_out = gdalwarp_client::warp(bandsel_vrt, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                 cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                 resampling::to_string(view()->resampling_method()), nodata_value_list);
             } else {
                 //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
-                gdal_out = gdalwarp_client::warp(g, src_srs.c_str(), _st_ref->srs().c_str(),cextent.s.left, cextent.s.right,
-                                                 cextent.s.top, cextent.s.bottom,size_btyx[3], size_btyx[2],
-                                                 resampling::to_string(view()->resampling_method()),nodata_value_list);
+                gdal_out = gdalwarp_client::warp(g, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                 cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                 resampling::to_string(view()->resampling_method()), nodata_value_list);
             }
 
             // For each band, call RasterIO to read and copy data to the right position in the buffers
@@ -544,14 +544,14 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 GDALDataset *gdal_out = nullptr;
                 if (create_band_subset_vrt && bandsel_vrt != nullptr) {
                     //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&bandsel_vrt), warp_opts, NULL);
-                    gdal_out = gdalwarp_client::warp(bandsel_vrt, src_srs.c_str(), _st_ref->srs().c_str(),cextent.s.left, cextent.s.right,
-                                                     cextent.s.top, cextent.s.bottom,size_btyx[3], size_btyx[2],
-                                                     "near",std::vector<double>());
+                    gdal_out = gdalwarp_client::warp(bandsel_vrt, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                     cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                     "near", std::vector<double>());
                 } else {
                     //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
-                    gdal_out = gdalwarp_client::warp(g, src_srs.c_str(), _st_ref->srs().c_str(),cextent.s.left, cextent.s.right,
-                                                     cextent.s.top, cextent.s.bottom,size_btyx[3], size_btyx[2],
-                                                     "near",std::vector<double>());
+                    gdal_out = gdalwarp_client::warp(g, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                     cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                     "near", std::vector<double>());
                 }
                 CPLErr res = gdal_out->GetRasterBand(mask_dataset_band.second)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], mask_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                 if (res != CE_None) {
@@ -607,49 +607,54 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
 
     std::string srs = ic->distinct_srs();
     if (srs.empty()) {
-        out.srs() = "EPSG:3857";
+        out.srs("EPSG:3857");
     } else {
-        out.srs() = srs;
+        out.srs(srs);
     }
 
     // Transform WGS84 boundaries to target srs
     bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326", out.srs().c_str());
-    out.left() = ext_transformed.left;
-    out.right() = ext_transformed.right;
-    out.top() = ext_transformed.top;
-    out.bottom() = ext_transformed.bottom;
+    out.left(ext_transformed.left);
+    out.right(ext_transformed.right);
+    out.top(ext_transformed.top);
+    out.bottom(ext_transformed.bottom);
 
     uint32_t ncells_space = 512 * 512;
     double asp_ratio = (out.right() - out.left()) / (out.top() - out.bottom());
-    out.nx() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0);
-    out.ny() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0);
+    out.nx((uint32_t) std::fmax((uint32_t) sqrt(ncells_space * asp_ratio), 1.0));
+    out.ny((uint32_t) std::fmax((uint32_t) sqrt(ncells_space * 1 / asp_ratio), 1.0));
 
-    out.t0() = extent.t0;
-    out.t1() = extent.t1;
+    out.t0(extent.t0);
+    out.t1(extent.t1);
 
     duration d = out.t1() - out.t0();
 
     if (out.t0() == out.t1()) {
-        out.dt_unit() = datetime_unit::DAY;
-        out.dt_interval() = 1;
+        out.dt_unit(datetime_unit::DAY) ;
+        out.dt_interval(1);
     } else {
         if (d.convert(datetime_unit::YEAR).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::YEAR;
+            out.dt_unit(datetime_unit::YEAR);
         } else if (d.convert(datetime_unit::MONTH).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::MONTH;
+            out.dt_unit(datetime_unit::MONTH);
         } else if (d.convert(datetime_unit::DAY).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::DAY;
+            out.dt_unit(datetime_unit::DAY);
         } else if (d.convert(datetime_unit::HOUR).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::HOUR;
+            out.dt_unit(datetime_unit::HOUR);
         } else if (d.convert(datetime_unit::MINUTE).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::MINUTE;
+            out.dt_unit(datetime_unit::MINUTE);
         } else if (d.convert(datetime_unit::SECOND).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::SECOND;
+            out.dt_unit(datetime_unit::SECOND);
         } else {
-            out.dt_unit() = datetime_unit::DAY;
+            out.dt_unit(datetime_unit::DAY);
         }
-        out.t0().unit() = out.dt().dt_unit;
-        out.t1().unit() = out.dt().dt_unit;
+
+        datetime t0 = out.t0();
+        datetime t1 = out.t1();
+        t0.unit() = out.dt().dt_unit;
+        t1.unit() = out.dt().dt_unit;
+        out.t0(t0);
+        out.t1(t1);
         out.nt(4);
     }
 

@@ -38,7 +38,7 @@ class stream_reduce_time_cube : public cube {
     stream_reduce_time_cube(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
                             std::vector<std::string> names = std::vector<std::string>()) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _st_ref->dt((_st_ref->t1() - _st_ref->t0()) + 1);
-        _st_ref->t1() = _st_ref->t0();  // set nt=1
+        _st_ref->t1(_st_ref->t0());  // set nt=1
         _chunk_size[0] = 1;
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -84,16 +84,16 @@ class stream_reduce_time_cube : public cube {
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         // copy fields from st_reference type
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
+        _st_ref->win(stref->win());
+        _st_ref->srs(stref->srs());
+        _st_ref->ny(stref->ny());
+        _st_ref->nx(stref->nx());
+        _st_ref->t0(stref->t0());
+        _st_ref->t1(stref->t1());
         _st_ref->dt(stref->dt());
 
         _st_ref->dt((_st_ref->t1() - _st_ref->t0()) + 1);
-        _st_ref->t1() = _st_ref->t0();  // set nt=1
+        _st_ref->t1(_st_ref->t0());  // set nt=1
         //assert(_st_ref->nt() == 1);
     }
 };

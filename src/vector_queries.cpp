@@ -54,7 +54,8 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
                     // change coordinates in place, should be safe because vectors don't change their sizes
                     if (count > 0) {
                         if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
-                            throw std::string("ERROR: coordinate transformation failed (from " + cube->st_reference()->srs() + " to " + srs + ").");
+                            throw std::string("ERROR: coordinate transformation failed (from " +
+                                                      cube->st_reference()->srs() + " to " + srs + ").");
                         }
                     }
                     OCTDestroyCoordinateTransformation(coord_transform);
@@ -222,7 +223,8 @@ std::vector<std::vector<std::vector<double>>> vector_queries::query_timeseries(s
                     // change coordinates in place, should be safe because vectors don't change their sizes
                     if (count > 0) {
                         if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
-                            throw std::string("ERROR: coordinate transformation failed (from " + cube->st_reference()->srs() + " to " + srs + ").");
+                            throw std::string("ERROR: coordinate transformation failed (from " +
+                                                      cube->st_reference()->srs() + " to " + srs + ").");
                         }
                     }
                     OCTDestroyCoordinateTransformation(coord_transform);
@@ -306,8 +308,10 @@ std::vector<std::vector<std::vector<double>>> vector_queries::query_timeseries(s
                                     double ixc = x[chunk_index[chunks[ic]][i]];
                                     double iyc = y[chunk_index[chunks[ic]][i]];
 
-                                    int iix = (ixc - cube->bounds_from_chunk(cur_chunk).s.left) / cube->st_reference()->dx();
-                                    int iiy = (cube->bounds_from_chunk(cur_chunk).s.top - iyc) / cube->st_reference()->dy();
+                                    int iix = (ixc - cube->bounds_from_chunk(cur_chunk).s.left) /
+                                            cube->st_reference()->dx();
+                                    int iiy = (cube->bounds_from_chunk(cur_chunk).s.top - iyc) /
+                                            cube->st_reference()->dy();
 
                                     // check to prevent out of bounds faults
                                     if (iix < 0 || uint32_t(iix) >= dat->size()[3]) continue;
@@ -859,16 +863,20 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                 OGREnvelope feature_bbox;
                                 feature->GetGeometryRef()->getEnvelope(&feature_bbox);
 
-                                int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) / cube->st_reference()->dx()), 0);
-                                int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) / cube->st_reference()->dx()), (int32_t)chunk->size()[3] - 1);
+                                int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) /
+                                                                                       cube->st_reference()->dx()), 0);
+                                int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) /
+                                                                                    cube->st_reference()->dx()), (int32_t)chunk->size()[3] - 1);
 
                                 bool outside = false;
                                 if (x_end < 0 || x_start > int32_t(chunk->size()[3] - 1)) {
                                     outside = true;
                                 }
 
-                                int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) / cube->st_reference()->dy()), 0);
-                                int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) / cube->st_reference()->dy()), (int32_t)chunk->size()[2] - 1);
+                                int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) /
+                                                                                       cube->st_reference()->dy()), 0);
+                                int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) /
+                                                                                    cube->st_reference()->dy()), (int32_t)chunk->size()[2] - 1);
 
                                 if (y_end < 0 || y_start > int32_t(chunk->size()[2] - 1)) {
                                     outside = true;
@@ -890,10 +898,14 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                     rasterize_args.AddString(std::to_string(cube->st_reference()->dx()).c_str());
                                     rasterize_args.AddString(std::to_string(cube->st_reference()->dy()).c_str());
                                     rasterize_args.AddString("-te");
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start * cube->st_reference()->dx()).c_str());      // xmin
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end + 1) * cube->st_reference()->dy()).c_str());   // ymin
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) * cube->st_reference()->dx()).c_str());  // xmax
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start * cube->st_reference()->dy()).c_str());       // ymax
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start *
+                                                                                                          cube->st_reference()->dx()).c_str());      // xmin
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end + 1) *
+                                                                                                         cube->st_reference()->dy()).c_str());   // ymin
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) *
+                                                                                                          cube->st_reference()->dx()).c_str());  // xmax
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start *
+                                                                                                         cube->st_reference()->dy()).c_str());       // ymax
                                     rasterize_args.AddString("-where");
                                     std::string where = fid_column + "=" + std::to_string(fid);
                                     rasterize_args.AddString(where.c_str());
@@ -959,7 +971,8 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
                 // write output layers
                 for (uint32_t it = 0; it < nt; ++it) {
-                    std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
+                    std::string layer_name = "attr_" + (cube->st_reference()->t0() +
+                            cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
 
                     OGRLayer *cur_attr_layer_out = gpkg_out->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
                     if (cur_attr_layer_out == NULL) {

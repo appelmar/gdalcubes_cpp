@@ -81,12 +81,12 @@ class join_bands_cube : public cube {
             }
         }
 
-        _st_ref->win() = _in_A->st_reference()->win();
-        _st_ref->srs() = _in_A->st_reference()->srs();
-        _st_ref->ny() = _in_A->st_reference()->ny();
-        _st_ref->nx() = _in_A->st_reference()->nx();
-        _st_ref->t0() = _in_A->st_reference()->t0();
-        _st_ref->t1() = _in_A->st_reference()->t1();
+        _st_ref->win(_in_A->st_reference()->win());
+        _st_ref->srs(_in_A->st_reference()->srs());
+        _st_ref->ny(_in_A->st_reference()->ny());
+        _st_ref->nx(_in_A->st_reference()->nx());
+        _st_ref->t0(_in_A->st_reference()->t0());
+        _st_ref->t1(_in_A->st_reference()->t1());
         _st_ref->dt(_in_A->st_reference()->dt());
 
         _chunk_size[0] = _in_A->chunk_size()[0];
@@ -128,12 +128,12 @@ class join_bands_cube : public cube {
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
         // copy fields from st_reference type
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
+        _st_ref->win(stref->win());
+        _st_ref->srs(stref->srs());
+        _st_ref->ny(stref->ny());
+        _st_ref->nx(stref->nx());
+        _st_ref->t0(stref->t0());
+        _st_ref->t1(stref->t1());
         _st_ref->dt(stref->dt());
     }
 };

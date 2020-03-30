@@ -200,7 +200,8 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() +
+                st_reference()->dt() * it).to_string() + ".tif");
 
         GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), ot, out_co.List());
         char *wkt_out;
@@ -243,7 +244,9 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, cog, overviews](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         for (uint32_t it = 0; it < dat->size()[1]; ++it) {
             uint32_t cur_t_index = chunk_limits(id).low[0] + it;
-            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * cur_t_index).to_string() + ".tif");
+            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() +
+                    st_reference()->dt() * cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() +
+                    st_reference()->dt() * cur_t_index).to_string() + ".tif");
 
             mtx[cur_t_index].lock();
             GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
@@ -323,7 +326,8 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     if (overviews) {
         for (uint32_t it = 0; it < size_t(); ++it) {
-            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() +
+                    st_reference()->dt() * it).to_string() + ".tif");
 
             GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
             if (!gdal_out) {
@@ -481,15 +485,16 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     }
 
     if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-        _st_ref->dt_unit() = datetime_unit::DAY;
-        _st_ref->dt_interval() *= 7;  // UDUNIT does not support week
+        _st_ref->dt_unit(datetime_unit::DAY);
+        _st_ref->dt_interval(_st_ref->dt_interval() * 7);  // UDUNIT does not support week
     }
 
     for (uint32_t i = 0; i < size_t(); ++i) {
         dim_t[i] = (i * st_reference()->dt().dt_interval);
     }
     for (uint32_t i = 0; i < size_y(); ++i) {
-        dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
+        dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) *
+                                                                                    st_reference()->dy();  // cell center
     }
     for (uint32_t i = 0; i < size_x(); ++i) {
         dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
@@ -501,8 +506,10 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
             dim_t_bnds[2 * i + 1] = ((i + 1) * st_reference()->dt().dt_interval);
         }
         for (uint32_t i = 0; i < size_y(); ++i) {
-            dim_y_bnds[2 * i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i)*st_reference()->dy();
-            dim_y_bnds[2 * i + 1] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 1) * st_reference()->dy();
+            dim_y_bnds[2 * i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i) *
+                                                                                                 st_reference()->dy();
+            dim_y_bnds[2 * i + 1] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 1) *
+                                                                                                     st_reference()->dy();
         }
         for (uint32_t i = 0; i < size_x(); ++i) {
             dim_x_bnds[2 * i] = st_reference()->win().left + (i + 0) * st_reference()->dx();
@@ -559,7 +566,8 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     char *wkt;
     srs.exportToWkt(&wkt);
 
-    double geoloc_array[6] = {st_reference()->left(), st_reference()->dx(), 0.0, st_reference()->top(), 0.0, st_reference()->dy()};
+    double geoloc_array[6] = {st_reference()->left(), st_reference()->dx(), 0.0, st_reference()->top(), 0.0,
+                              st_reference()->dy()};
     nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
     nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
@@ -829,12 +837,15 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     if (with_VRT) {
         for (uint32_t it = 0; it < size_t(); ++it) {
             std::string dir = filesystem::directory(path);
-            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".vrt");
+            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + (st_reference()->t0() +
+                    st_reference()->dt() * it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + (st_reference()->t0() +
+                    st_reference()->dt() * it).to_string() + ".vrt");
 
             std::ofstream fout(outfile);
             fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
             fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
-            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(st_reference()->dx()) << ", "
+            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(
+                    st_reference()->dx()) << ", "
                  << "0.0"
                  << ", " << utils::dbl_to_string(st_reference()->top()) << ", "
                  << "0.0"
@@ -873,8 +884,8 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     int *dim_t = (int *)std::calloc(dat->size()[1], sizeof(int));
 
     if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-        _st_ref->dt_unit() = datetime_unit::DAY;
-        _st_ref->dt_interval() *= 7;  // UDUNIT does not support week
+        _st_ref->dt_unit(datetime_unit::DAY);
+        _st_ref->dt_interval(_st_ref->dt_interval() * 7);  // UDUNIT does not support week
     }
     bounds_st bbox = this->bounds_from_chunk(id);
 
@@ -1060,8 +1071,8 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
         int *dim_t = (int *)std::calloc(dat->size()[1], sizeof(int));
 
         if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-            _st_ref->dt_unit() = datetime_unit::DAY;
-            _st_ref->dt_interval() *= 7;  // UDUNIT does not support week
+            _st_ref->dt_unit(datetime_unit::DAY);
+            _st_ref->dt_interval(_st_ref->dt_interval() * 7);  // UDUNIT does not support week
         }
         bounds_st bbox = this->bounds_from_chunk(id);
 

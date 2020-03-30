@@ -93,18 +93,18 @@ class stream_cube : public cube {
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
 
         if (c0->size()[2] == 1) {
-            _st_ref->ny() = in_cube->count_chunks_y();
+            _st_ref->ny(in_cube->count_chunks_y()) ;
         } else if (c0->size()[2] == csize_in[2]) {
             _keep_input_ny = true;
-            _st_ref->ny() = in_cube->size()[2];
+            _st_ref->ny(in_cube->size()[2]) ;
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
 
         if (c0->size()[3] == 1) {
-            _st_ref->nx() = in_cube->count_chunks_x();
+            _st_ref->nx(in_cube->count_chunks_x());
         } else if (c0->size()[3] == csize_in[3]) {
             _keep_input_nx = true;
-            _st_ref->nx() = in_cube->size()[3];
+            _st_ref->nx(in_cube->size()[3]);
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
     }
@@ -136,17 +136,17 @@ class stream_cube : public cube {
     std::shared_ptr<chunk_data> stream_chunk_file(std::shared_ptr<chunk_data> data, chunkid_t id);
 
     virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
+        _st_ref->win(stref->win());
+        _st_ref->srs(stref->srs());
+        _st_ref->ny(stref->ny());
+        _st_ref->nx(stref->nx());
+        _st_ref->t0(stref->t0());
+        _st_ref->t1(stref->t1());
         _st_ref->dt(stref->dt());
 
         if (!_keep_input_nt) _st_ref->nt(count_chunks_t());
-        if (!_keep_input_ny) _st_ref->ny() = count_chunks_y();
-        if (!_keep_input_nx) _st_ref->nx() = count_chunks_x();
+        if (!_keep_input_ny) _st_ref->ny(count_chunks_y());
+        if (!_keep_input_nx) _st_ref->nx(count_chunks_x());
     }
 };
 

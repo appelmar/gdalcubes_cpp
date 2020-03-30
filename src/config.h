@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -127,6 +127,10 @@ class config {
         return _server_worker_threads_max;
     }
 
+    inline bool get_gdal_use_overviews() { return _gdal_use_overviews; }
+    inline void set_gdal_use_overviews(bool use_overviews) { _gdal_use_overviews = use_overviews; }
+
+
     inline bool get_swarm_curl_verbose() { return _swarm_curl_verbose; }
     inline void set_swarm_curl_verbose(bool verbose) { _swarm_curl_verbose = verbose; }
 
@@ -138,6 +142,7 @@ class config {
     inline bool get_gdal_debug() { return _gdal_debug; }
     void set_gdal_debug(bool debug);
 
+    void set_gdal_log(std::string logfile);
     void set_gdal_num_threads(uint16_t threads);
 
     inline uint16_t get_gdal_num_threads() { return _gdal_num_threads; }
@@ -184,6 +189,7 @@ class config {
     bool _swarm_curl_verbose;
     uint16_t _gdal_num_threads;
     bool _gdal_debug;
+    bool _gdal_use_overviews;
     std::string _streaming_dir;
     std::vector<std::string> _collection_format_preset_dirs;
 

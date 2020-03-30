@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,7 @@ config::config() : _chunk_processor(std::make_shared<chunk_processor_singlethrea
                    _server_worker_threads_max(1),
                    _swarm_curl_verbose(false),
                    _gdal_num_threads(1),
+                   _gdal_use_overviews(true),
                    _streaming_dir(filesystem::get_tempdir()),
                    _collection_format_preset_dirs() {}
 
@@ -66,6 +67,16 @@ void config::set_gdal_debug(bool debug) {
         CPLSetConfigOption("CPL_DEBUG", "ON");
     else
         CPLSetConfigOption("CPL_DEBUG", "OFF");
+}
+
+void config::set_gdal_log(std::string logfile) {
+    if (logfile.empty()) {
+        CPLSetConfigOption("CPL_LOG_ERRORS", "OFF");
+    }
+    else {
+        CPLSetConfigOption("CPL_LOG", logfile.c_str());
+        CPLSetConfigOption("CPL_LOG_ERRORS", "ON");
+    }
 }
 
 void config::set_gdal_num_threads(uint16_t threads) {

@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -277,11 +277,6 @@ class image_collection_cube : public cube {
         GCBS_ERROR("Band '" + band + "' does not exist in image collection, image mask will not be modified.");
     }
 
-    // set additional GDAL warp arguments like whether or not to use overviews, how GCPs should be interpolated, or
-    // performance settings
-    void set_warp_args(std::vector<std::string> args) {
-        _warp_args = args;  // TODO: do some checks that users do not overwrite settings like -of, -r, -tr, -ts, -te, -s_srs, -t_srs, -ot, -wt
-    }
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
@@ -305,7 +300,6 @@ class image_collection_cube : public cube {
             out["mask"] = _mask->as_json();
             out["mask_band"] = _mask_band;
         }
-        out["warp_args"] = _warp_args;
         return out;
     }
 
@@ -341,7 +335,6 @@ class image_collection_cube : public cube {
 
     std::shared_ptr<image_mask> _mask;
     std::string _mask_band;
-    std::vector<std::string> _warp_args;
 };
 
 }  // namespace gdalcubes

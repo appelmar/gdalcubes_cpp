@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -198,15 +198,6 @@ void cube_factory::register_default() {
                     }
                 }
             }
-
-            if (!j["warp_args"].is_null()) {
-                std::vector<std::string> warp_args;
-                for (uint16_t i = 0; i < j["warp_args"].array_items().size(); ++i) {
-                    warp_args.push_back(j["warp_args"][i].string_value());
-                }
-                x->set_warp_args(warp_args);
-            }
-
             return x;
         }));
 

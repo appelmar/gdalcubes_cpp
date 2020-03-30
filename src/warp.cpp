@@ -451,7 +451,7 @@ namespace gdalcubes {
 #if GDAL_VERSION_MAJOR >= 3
             bSuccess = psInfo->poForwardTransform->Transform(nPointCount, x, y, z, panSuccess);
 #else
-            bSuccess = psInfo->poForwardTransform->Transform(nPointCount, x, y, z, panSuccess);
+            bSuccess = psInfo->poForwardTransform->Transform(nPointCount, x, y, z);
 #endif
         }
         return bSuccess;

@@ -313,9 +313,10 @@ namespace gdalcubes {
 
         gdalwarp_client::gdalcubes_transform_info * psInfo = static_cast<gdalwarp_client::gdalcubes_transform_info *>(pTransformerArg);
 
-        for( int i = 0; i < nPointCount; i++ )
-        {
-            panSuccess[i] = ( x[i] != HUGE_VAL && y[i] != HUGE_VAL );
+        if (panSuccess) {
+            for (int i = 0; i < nPointCount; i++) {
+                panSuccess[i] = (x[i] != HUGE_VAL && y[i] != HUGE_VAL);
+            }
         }
 
         // 1. convert source / destination image coordinates to georeferenced coordinates
@@ -332,8 +333,10 @@ namespace gdalcubes {
 
         for( int i = 0; i < nPointCount; i++ )
         {
-            if( !panSuccess[i] )
-                continue;
+            if (panSuccess) {
+                if( !panSuccess[i] )
+                    continue;
+            }
 
             const double dfNewX = padfGeoTransform[0]
                                   + x[i] * padfGeoTransform[1]
@@ -368,8 +371,11 @@ namespace gdalcubes {
 
         for( int i = 0; i < nPointCount; i++ )
         {
-            if( !panSuccess[i] )
-                continue;
+            if (panSuccess) {
+                if( !panSuccess[i] )
+                    continue;
+            }
+
             const double dfNewX = padfGeoTransform[0]
                                   + x[i] * padfGeoTransform[1]
                                   + y[i] * padfGeoTransform[2];
@@ -434,11 +440,19 @@ namespace gdalcubes {
             }
             else
             {
+#if GDAL_VERSION_MAJOR >= 3
                 bSuccess = psInfo->poReverseTransform->Transform(nPointCount, x, y, z, panSuccess);
+#else
+                bSuccess = psInfo->poReverseTransform->Transform(nPointCount, x, y, z);
+#endif
             }
         }
         else {
+#if GDAL_VERSION_MAJOR >= 3
             bSuccess = psInfo->poForwardTransform->Transform(nPointCount, x, y, z, panSuccess);
+#else
+            bSuccess = psInfo->poForwardTransform->Transform(nPointCount, x, y, z, panSuccess);
+#endif
         }
         return bSuccess;
     }

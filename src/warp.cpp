@@ -394,7 +394,11 @@ namespace gdalcubes {
         // TODO: add area of interest for GDAL >= 3.0
         // TODO: add further options, e.g. from global config options
 
-        OGRCoordinateTransformation *poForwardTransform = OGRCreateCoordinateTransformation(in->GetSpatialRef(), out->GetSpatialRef());
+        OGRSpatialReference srs_in;
+        OGRSpatialReference srs_out;
+        srs_in.SetFromUserInput(in->GetProjectionRef());
+        srs_out.SetFromUserInput(out->GetProjectionRef());
+        OGRCoordinateTransformation *poForwardTransform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
         if( poForwardTransform == nullptr )
             return nullptr;
 
@@ -402,7 +406,7 @@ namespace gdalcubes {
         res->poForwardTransform = poForwardTransform;
         res->poReverseTransform = nullptr;
 
-        res->poReverseTransform = OGRCreateCoordinateTransformation( out->GetSpatialRef(), in->GetSpatialRef());
+        res->poReverseTransform = OGRCreateCoordinateTransformation(  &srs_out,  &srs_in);
 
         return(res);
     }

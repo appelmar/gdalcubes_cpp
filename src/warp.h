@@ -112,7 +112,7 @@ namespace gdalcubes {
         // implements GDALTransformerFunc signature
         static int transform(void *pTransformerArg,
                              int bDstToSrc, int nPointCount,
-                             double *x, double *y, double *z, int *panSuccess);
+                             double *x, double *y, double *z = nullptr, int *panSuccess = nullptr);
 
         static gdalcubes_reprojection_info* create_reprojection(GDALDataset* in, GDALDataset* out);
         static void destroy_reprojection(gdalcubes_reprojection_info* reprojection);
@@ -120,7 +120,7 @@ namespace gdalcubes {
         // implements GDALTransformerFunc signature
         static int reproject(void *pTransformerArg,
                              int bDstToSrc, int nPointCount,
-                             double *x, double *y, double *z, int *panSuccess);
+                             double *x, double *y, double *z = nullptr, int *panSuccess = nullptr);
 
     };
 

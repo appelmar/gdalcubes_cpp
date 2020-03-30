@@ -295,8 +295,8 @@ namespace gdalcubes {
         // Set reprojection transform if needed
         OGRSpatialReference srs_in;
         OGRSpatialReference srs_out;
-        srs_in.importFromWkt(in->GetProjectionRef());
-        srs_out.importFromWkt(out->GetProjectionRef());
+        srs_in.SetFromUserInput(in->GetProjectionRef());
+        srs_out.SetFromUserInput(out->GetProjectionRef());
         if (!srs_in.IsSame(&srs_out)) {
             res->pReprojectArg = gdal_transformation_cache::instance()->get(in, out);
             res->pReproject = reproject;

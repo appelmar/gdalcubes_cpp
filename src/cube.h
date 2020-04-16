@@ -728,14 +728,7 @@ class cube : public std::enable_shared_from_this<cube> {
      */
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) = 0;
 
-    /**
-     * @brief Update the spatiotemporal reference of this and all connected cubes
-     * @param stref new spatiotemporal reference / data cube view
-     */
-    void update_st_reference(std::shared_ptr<cube_stref_regular> stref) {
-        std::set<std::shared_ptr<cube>> cset;
-        update_st_reference_recursion(stref, cset);
-    }
+
 
     /**
      * @brief Write a data cube as a set of GeoTIFF files under a given directory
@@ -860,36 +853,6 @@ class cube : public std::enable_shared_from_this<cube> {
      */
     std::vector<std::weak_ptr<cube>> _succ;
 
-    /**
-     * @brief Set the spatiotemporal reference for this instance only (but not for connected cubes)
-     * @param stref new spatiotemporal reference / data cube view
-     */
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) = 0;
-
-    /**
-    * @brief Recursively update the st reference of connected cubes
-    *
-    *
-    * @param stref new spatiotemporal reference / data cube view
-    * @param scet set of cubes instances which have already been processed to avoid cyclic calls
-    */
-    void
-    update_st_reference_recursion(std::shared_ptr<cube_stref> stref, std::set<std::shared_ptr<cube>> &cset) {
-        if (cset.count(shared_from_this()) > 0) return;
-        this->set_st_reference(stref);
-        cset.insert(shared_from_this());
-
-        for (uint16_t i = 0; i < _pre.size(); ++i) {
-            std::shared_ptr<cube> p = _pre[i].lock();
-            if (p)
-                p->update_st_reference_recursion(stref, cset);
-        }
-        for (uint16_t i = 0; i < _succ.size(); ++i) {
-            std::shared_ptr<cube> p = _succ[i].lock();
-            if (p)
-                p->update_st_reference_recursion(stref, cset);
-        }
-    }
 };
 
 }  // namespace gdalcubes

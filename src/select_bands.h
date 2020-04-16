@@ -134,10 +134,7 @@ class select_bands_cube : public cube {
     std::vector<std::string> _band_sel;
     bool _input_is_image_collection_cube;
 
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        // copy fields from st_reference type
-        _st_ref = stref->copy();
-    }
+
 };
 
 }  // namespace gdalcubes

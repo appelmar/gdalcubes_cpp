@@ -130,24 +130,6 @@ class reduce_time_cube : public cube {
     std::shared_ptr<cube> _in_cube;
     std::vector<std::pair<std::string, std::string>> _reducer_bands;
 
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        // copy fields from st_reference type
-        _st_ref = stref->copy();
-
-
-        if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
-            std::shared_ptr<cube_stref_regular> st = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-            st->dt((st->t1() - st->t0()) + 1);
-            st->t1(st->t0()) ;  // set nt=1
-        }
-        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
-            std::shared_ptr<cube_stref_labeled_time> st = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
-            st->dt((st->t1() - st->t0()) + 1);
-            //stref->t1(stref->t0()) ;  // set nt=1
-            st->set_time_labels({st->t0()});
-        }
-
-    }
 };
 }  // namespace gdalcubes
 

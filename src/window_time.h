@@ -150,10 +150,6 @@ class window_time_cube : public cube {
     std::vector<uint16_t> _band_idx_in;
     std::vector<double> _kernel;
 
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        // copy fields from st_reference type
-        _st_ref = stref->copy();
-    }
 
     std::function<double(double *buf, uint16_t n)> get_default_reducer_by_name(std::string name);
 

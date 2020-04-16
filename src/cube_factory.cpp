@@ -34,6 +34,7 @@
 #include "join_bands.h"
 #include "reduce_time.h"
 #include "select_bands.h"
+#include "select_time.h"
 #include "stream.h"
 #include "stream_apply_pixel.h"
 #include "stream_reduce_time.h"
@@ -160,6 +161,16 @@ void cube_factory::register_default() {
             auto x = stream_cube::create(instance()->create_from_json(j["in_cube"]), j["command"].string_value(), j["file_streaming"].bool_value());
             return x;
         }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+            "select_time", [](json11::Json& j) {
+                std::vector<std::string> t;
+                for (uint16_t i = 0; i < j["t"].array_items().size(); ++i) {
+                    t.push_back(j["t"][i].string_value());
+                }
+                auto x = select_time_cube::create(instance()->create_from_json(j["in_cube"]),t);
+                return x;
+            }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "image_collection", [](json11::Json& j) {

@@ -91,10 +91,7 @@ class stream_apply_pixel_cube : public cube {
     std::vector<std::string> _names;
     bool _keep_bands;
 
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        // copy fields from st_reference type
-        _st_ref = stref->copy();
-    }
+
 };
 
 }  // namespace gdalcubes

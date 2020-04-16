@@ -95,9 +95,6 @@ class filter_pixel_cube : public cube {
     std::shared_ptr<cube> _in_cube;
     std::string _pred;
 
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        _st_ref = stref->copy();
-    }
 
     bool parse_predicate();
 };

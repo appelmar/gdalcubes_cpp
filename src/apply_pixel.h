@@ -165,9 +165,6 @@ class apply_pixel_cube : public cube {
 
     bool _keep_bands;
 
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        _st_ref = stref->copy();
-    }
 
     bool parse_expressions();
 };

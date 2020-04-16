@@ -157,31 +157,7 @@ class stream_cube : public cube {
 
     std::shared_ptr<chunk_data> stream_chunk_file(std::shared_ptr<chunk_data> data, chunkid_t id);
 
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        _st_ref = stref->copy();
 
-        if (!_st_ref->has_regular_space()) {
-            throw std::string("ERROR: chunk streaming currently does not support irregular spatial dimensions");
-        }
-        // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
-        std::shared_ptr<cube_stref_regular> st = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-
-        if (!_keep_input_nt)  {
-
-            if (st->has_regular_time()) {
-                st->nt(count_chunks_t());
-            }
-            else {
-                std::vector<datetime> labels;
-                for (uint32_t it = 0; it < _in_cube->size_t(); it += _in_cube->chunk_size()[0]) {
-                    labels.push_back(stref->datetime_at_index(it));
-                }
-                std::dynamic_pointer_cast<cube_stref_labeled_time>(st)->set_time_labels(labels);
-            }
-        }
-        if (!_keep_input_ny) st->ny(count_chunks_y());
-        if (!_keep_input_nx) st->nx(count_chunks_x());
-    }
 };
 
 }  // namespace gdalcubes

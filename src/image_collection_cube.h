@@ -305,21 +305,7 @@ class image_collection_cube : public cube {
 
     static cube_view default_view(std::shared_ptr<image_collection> ic);
 
-   protected:
-    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
-        // _st_ref has always type cube_view, whereas stref can have types st_reference or cube_view
 
-        // copy fields from st_reference type
-        _st_ref = stref->copy();
-
-
-        // if view: copy aggregation and resampling
-        std::shared_ptr<cube_view> v = std::dynamic_pointer_cast<cube_view>(stref);
-        if (v) {
-            std::dynamic_pointer_cast<cube_view>(_st_ref)->aggregation_method() = v->aggregation_method();
-            std::dynamic_pointer_cast<cube_view>(_st_ref)->resampling_method() = v->resampling_method();
-        }
-    }
 
    private:
     const std::shared_ptr<image_collection> _collection;

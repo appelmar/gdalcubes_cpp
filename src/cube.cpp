@@ -57,16 +57,23 @@ void cube::write_chunks_gtiff(std::string dir, std::shared_ptr<chunk_processor> 
         throw std::string("ERROR: cannot find GDAL driver for GTiff.");
     }
 
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: GeoTIFF export currently does not support irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, gtiff_driver](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, gtiff_driver, stref](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
         double affine[6];
         affine[0] = cextent.s.left;
         affine[3] = cextent.s.top;
-        affine[1] = _st_ref->dx();
-        affine[5] = -_st_ref->dy();
+        affine[1] = stref->dx();
+        affine[5] = -stref->dy();
         affine[2] = 0.0;
         affine[4] = 0.0;
 
@@ -168,6 +175,14 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
         throw std::string("ERROR: cannot find GDAL driver for GTiff.");
     }
 
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: GeoTIFF export currently does not support irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
+
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
@@ -200,8 +215,8 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() +
-                st_reference()->dt() * it).to_string() + ".tif");
+        std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix +
+                st_reference()->datetime_at_index(it).to_string() + ".tif");
 
         GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), ot, out_co.List());
         char *wkt_out;
@@ -213,8 +228,8 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
         double affine[6];
         affine[0] = st_reference()->left();
         affine[3] = st_reference()->top();
-        affine[1] = st_reference()->dx();
-        affine[5] = -st_reference()->dy();
+        affine[1] = stref->dx();
+        affine[5] = -stref->dy();
         affine[2] = 0.0;
         affine[4] = 0.0;
         GDALSetGeoTransform(gdal_out, affine);
@@ -244,9 +259,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, cog, overviews](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         for (uint32_t it = 0; it < dat->size()[1]; ++it) {
             uint32_t cur_t_index = chunk_limits(id).low[0] + it;
-            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() +
-                    st_reference()->dt() * cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() +
-                    st_reference()->dt() * cur_t_index).to_string() + ".tif");
+            std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + ".tif");
 
             mtx[cur_t_index].lock();
             GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
@@ -326,8 +339,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     if (overviews) {
         for (uint32_t it = 0; it < size_t(); ++it) {
-            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() +
-                    st_reference()->dt() * it).to_string() + ".tif");
+            std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string()  + ".tif");
 
             GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
             if (!gdal_out) {
@@ -394,7 +406,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                     GCBS_ERROR("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                     throw std::string("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                 }
-                std::string cogname = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+                std::string cogname = filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string()  + ".tif");
                 GDALDatasetH gdal_cog = GDALTranslate(cogname.c_str(), (GDALDatasetH)gdal_out, trans_options, NULL);
 
                 GDALClose((GDALDatasetH)gdal_out);
@@ -425,6 +437,13 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     if (!filesystem::exists(filesystem::parent(op))) {
         filesystem::mkdir_recursive(filesystem::parent(op));
     }
+
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: netCDF export currently does not support irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
@@ -484,36 +503,50 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         dim_t_bnds = (int *)std::calloc(size_t() * 2, sizeof(int));
     }
 
-    if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-        _st_ref->dt_unit(datetime_unit::DAY);
-        _st_ref->dt_interval(_st_ref->dt_interval() * 7);  // UDUNIT does not support week
+    if (stref->dt().dt_unit == datetime_unit::WEEK) {
+        stref->dt_unit(datetime_unit::DAY);
+        stref->dt_interval(stref->dt_interval() * 7);  // UDUNIT does not support week
     }
 
-    for (uint32_t i = 0; i < size_t(); ++i) {
-        dim_t[i] = (i * st_reference()->dt().dt_interval);
+    if (stref->has_regular_time()) {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (i * stref->dt().dt_interval);
+        }
     }
+    else {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+        }
+    }
+
     for (uint32_t i = 0; i < size_y(); ++i) {
-        dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) *
-                                                                                    st_reference()->dy();  // cell center
+        dim_y[i] = stref->win().bottom + size_y() * stref->dy() - (i + 0.5) * stref->dy();  // cell center
     }
     for (uint32_t i = 0; i < size_x(); ++i) {
-        dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
+        dim_x[i] = stref->win().left + (i + 0.5) * stref->dx();
     }
 
     if (write_bounds) {
-        for (uint32_t i = 0; i < size_t(); ++i) {
-            dim_t_bnds[2 * i] = (i * st_reference()->dt().dt_interval);
-            dim_t_bnds[2 * i + 1] = ((i + 1) * st_reference()->dt().dt_interval);
+        if (stref->has_regular_time()) {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t_bnds[2 * i] = (i * stref->dt().dt_interval);
+                dim_t_bnds[2 * i + 1] = ((i + 1) * stref->dt().dt_interval);
+            }
         }
+        else {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t_bnds[2 * i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+                dim_t_bnds[2 * i + 1] =  dim_t_bnds[2 * i] + stref->dt_interval();
+            }
+        }
+
         for (uint32_t i = 0; i < size_y(); ++i) {
-            dim_y_bnds[2 * i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i) *
-                                                                                                 st_reference()->dy();
-            dim_y_bnds[2 * i + 1] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 1) *
-                                                                                                     st_reference()->dy();
+            dim_y_bnds[2 * i] = stref->win().bottom + size_y() * stref->dy() - (i) * stref->dy();
+            dim_y_bnds[2 * i + 1] = stref->win().bottom + size_y() * stref->dy() - (i + 1) * stref->dy();
         }
         for (uint32_t i = 0; i < size_x(); ++i) {
-            dim_x_bnds[2 * i] = st_reference()->win().left + (i + 0) * st_reference()->dx();
-            dim_x_bnds[2 * i + 1] = st_reference()->win().left + (i + 1) * st_reference()->dx();
+            dim_x_bnds[2 * i] = stref->win().left + (i + 0) * stref->dx();
+            dim_x_bnds[2 * i + 1] = stref->win().left + (i + 1) * stref->dx();
         }
     }
 
@@ -566,27 +599,26 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     char *wkt;
     srs.exportToWkt(&wkt);
 
-    double geoloc_array[6] = {st_reference()->left(), st_reference()->dx(), 0.0, st_reference()->top(), 0.0,
-                              st_reference()->dy()};
+    double geoloc_array[6] = {stref->left(), stref->dx(), 0.0, stref->top(), 0.0, stref->dy()};
     nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
     nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
     std::string dtunit_str;
-    if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
+    if (stref->dt().dt_unit == datetime_unit::YEAR) {
         dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
-    } else if (_st_ref->dt().dt_unit == datetime_unit::MONTH) {
+    } else if (stref->dt().dt_unit == datetime_unit::MONTH) {
         dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
-    } else if (_st_ref->dt().dt_unit == datetime_unit::DAY) {
+    } else if (stref->dt().dt_unit == datetime_unit::DAY) {
         dtunit_str = "days";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::HOUR) {
+    } else if (stref->dt().dt_unit == datetime_unit::HOUR) {
         dtunit_str = "hours";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::MINUTE) {
+    } else if (stref->dt().dt_unit == datetime_unit::MINUTE) {
         dtunit_str = "minutes";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::SECOND) {
+    } else if (stref->dt().dt_unit == datetime_unit::SECOND) {
         dtunit_str = "seconds";
     }
     dtunit_str += " since ";
-    dtunit_str += _st_ref->t0().to_string(datetime_unit::SECOND);
+    dtunit_str += stref->t0().to_string(datetime_unit::SECOND);
 
     nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
     nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
@@ -837,20 +869,18 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     if (with_VRT) {
         for (uint32_t it = 0; it < size_t(); ++it) {
             std::string dir = filesystem::directory(path);
-            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + (st_reference()->t0() +
-                    st_reference()->dt() * it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + (st_reference()->t0() +
-                    st_reference()->dt() * it).to_string() + ".vrt");
+            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + st_reference()->datetime_at_index(it).to_string()  + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" +st_reference()->datetime_at_index(it).to_string()  + ".vrt");
 
             std::ofstream fout(outfile);
             fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
             fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
             fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(
-                    st_reference()->dx()) << ", "
+                    stref->dx()) << ", "
                  << "0.0"
-                 << ", " << utils::dbl_to_string(st_reference()->top()) << ", "
+                 << ", " << utils::dbl_to_string(stref->top()) << ", "
                  << "0.0"
                  << ", "
-                 << "-" << utils::dbl_to_string(st_reference()->dy()) << "</GeoTransform>" << std::endl;
+                 << "-" << utils::dbl_to_string(stref->dy()) << "</GeoTransform>" << std::endl;
 
             for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                 fout << "<VRTRasterBand dataType=\"Float64\" band=\"" << ib + 1 << "\">" << std::endl;
@@ -877,27 +907,44 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
 void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, uint8_t compression_level) {
     std::string fname = path;  // TODO: check for existence etc.
+
+
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: netCDF export does not supported irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
+
     std::shared_ptr<chunk_data> dat = this->read_chunk(id);
 
     double *dim_x = (double *)std::calloc(dat->size()[3], sizeof(double));
     double *dim_y = (double *)std::calloc(dat->size()[2], sizeof(double));
     int *dim_t = (int *)std::calloc(dat->size()[1], sizeof(int));
 
-    if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-        _st_ref->dt_unit(datetime_unit::DAY);
-        _st_ref->dt_interval(_st_ref->dt_interval() * 7);  // UDUNIT does not support week
+    if (stref->dt().dt_unit == datetime_unit::WEEK) {
+        stref->dt_unit(datetime_unit::DAY);
+        stref->dt_interval(stref->dt_interval() * 7);  // UDUNIT does not support week
     }
     bounds_st bbox = this->bounds_from_chunk(id);
 
-    for (uint32_t i = 0; i < dat->size()[1]; ++i) {
-        dim_t[i] = (i * st_reference()->dt().dt_interval);
+    if (stref->has_regular_time()) {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (i * stref->dt().dt_interval);
+        }
+    }
+    else {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+        }
     }
     for (uint32_t i = 0; i < dat->size()[2]; ++i) {
-        dim_y[i] = bbox.s.top - (i + 0.5) * st_reference()->dy();
+        dim_y[i] = bbox.s.top - (i + 0.5) * stref->dy();
         //dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
     }
     for (uint32_t i = 0; i < dat->size()[3]; ++i) {
-        dim_x[i] = bbox.s.left + (i + 0.5) * st_reference()->dx();
+        dim_x[i] = bbox.s.left + (i + 0.5) * stref->dx();
         //dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
     }
 
@@ -930,22 +977,22 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     char *wkt;
     srs.exportToWkt(&wkt);
 
-    double geoloc_array[6] = {bbox.s.left, st_reference()->dx(), 0.0, bbox.s.top, 0.0, -st_reference()->dy()};
+    double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
     nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
     nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
     std::string dtunit_str;
-    if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
+    if (stref->dt().dt_unit == datetime_unit::YEAR) {
         dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
-    } else if (_st_ref->dt().dt_unit == datetime_unit::MONTH) {
+    } else if (stref->dt().dt_unit == datetime_unit::MONTH) {
         dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
-    } else if (_st_ref->dt().dt_unit == datetime_unit::DAY) {
+    } else if (stref->dt().dt_unit == datetime_unit::DAY) {
         dtunit_str = "days";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::HOUR) {
+    } else if (stref->dt().dt_unit == datetime_unit::HOUR) {
         dtunit_str = "hours";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::MINUTE) {
+    } else if (stref->dt().dt_unit == datetime_unit::MINUTE) {
         dtunit_str = "minutes";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::SECOND) {
+    } else if (stref->dt().dt_unit == datetime_unit::SECOND) {
         dtunit_str = "seconds";
     }
     dtunit_str += " since ";
@@ -1066,25 +1113,39 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, prg, &compression_level, &name, &dir](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         std::string fname = filesystem::join(dir, name + "_" + std::to_string(id) + ".nc");
 
+        if (!_st_ref->has_regular_space()) {
+            throw std::string("ERROR: netCDF export currently does not support irregular spatial dimensions");
+        }
+
+        // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+        std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
         double *dim_x = (double *)std::calloc(dat->size()[3], sizeof(double));
         double *dim_y = (double *)std::calloc(dat->size()[2], sizeof(double));
         int *dim_t = (int *)std::calloc(dat->size()[1], sizeof(int));
 
-        if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-            _st_ref->dt_unit(datetime_unit::DAY);
-            _st_ref->dt_interval(_st_ref->dt_interval() * 7);  // UDUNIT does not support week
+        if (stref->dt().dt_unit == datetime_unit::WEEK) {
+            stref->dt_unit(datetime_unit::DAY);
+            stref->dt_interval(stref->dt_interval() * 7);  // UDUNIT does not support week
         }
         bounds_st bbox = this->bounds_from_chunk(id);
 
-        for (uint32_t i = 0; i < dat->size()[1]; ++i) {
-            dim_t[i] = (i * st_reference()->dt().dt_interval);
+        if (stref->has_regular_time()) {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t[i] = (i * stref->dt().dt_interval);
+            }
+        }
+        else {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+            }
         }
         for (uint32_t i = 0; i < dat->size()[2]; ++i) {
-            dim_y[i] = bbox.s.top - (i + 0.5) * st_reference()->dy();
+            dim_y[i] = bbox.s.top - (i + 0.5) * stref->dy();
             //dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
         }
         for (uint32_t i = 0; i < dat->size()[3]; ++i) {
-            dim_x[i] = bbox.s.left + (i + 0.5) * st_reference()->dx();
+            dim_x[i] = bbox.s.left + (i + 0.5) * stref->dx();
             //dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
         }
 
@@ -1117,22 +1178,22 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
         char *wkt;
         srs.exportToWkt(&wkt);
 
-        double geoloc_array[6] = {bbox.s.left, st_reference()->dx(), 0.0, bbox.s.top, 0.0, -st_reference()->dy()};
+        double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
         nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
         nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
         std::string dtunit_str;
-        if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
+        if (stref->dt().dt_unit == datetime_unit::YEAR) {
             dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
-        } else if (_st_ref->dt().dt_unit == datetime_unit::MONTH) {
+        } else if (stref->dt().dt_unit == datetime_unit::MONTH) {
             dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
-        } else if (_st_ref->dt().dt_unit == datetime_unit::DAY) {
+        } else if (stref->dt().dt_unit == datetime_unit::DAY) {
             dtunit_str = "days";
-        } else if (_st_ref->dt().dt_unit == datetime_unit::HOUR) {
+        } else if (stref->dt().dt_unit == datetime_unit::HOUR) {
             dtunit_str = "hours";
-        } else if (_st_ref->dt().dt_unit == datetime_unit::MINUTE) {
+        } else if (stref->dt().dt_unit == datetime_unit::MINUTE) {
             dtunit_str = "minutes";
-        } else if (_st_ref->dt().dt_unit == datetime_unit::SECOND) {
+        } else if (stref->dt().dt_unit == datetime_unit::SECOND) {
             dtunit_str = "seconds";
         }
         dtunit_str += " since ";

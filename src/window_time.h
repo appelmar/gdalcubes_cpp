@@ -74,10 +74,14 @@ class window_time_cube : public cube {
 
    public:
     window_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands,
-                     uint16_t win_size_l, uint16_t win_size_r) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel() {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+                     uint16_t win_size_l, uint16_t win_size_r) : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(reducer_bands), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel() {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
+
+        if (!_st_ref->has_regular_time()) {
+            GCBS_WARN("Cube has irregular time dimension, window sizes may vary over time");
+        }
 
         for (uint16_t i = 0; i < reducer_bands.size(); ++i) {
             std::string reducerstr = reducer_bands[i].first;
@@ -93,7 +97,7 @@ class window_time_cube : public cube {
     }
 
     window_time_cube(std::shared_ptr<cube> in, std::vector<double> kernel, uint16_t win_size_l, uint16_t win_size_r)
-        : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel(kernel) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+        : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(), _win_size_l(win_size_l), _win_size_r(win_size_r), _f(), _band_idx_in(), _kernel(kernel) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -146,15 +150,9 @@ class window_time_cube : public cube {
     std::vector<uint16_t> _band_idx_in;
     std::vector<double> _kernel;
 
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
         // copy fields from st_reference type
-        _st_ref->win(stref->win());
-        _st_ref->srs(stref->srs());
-        _st_ref->ny(stref->ny());
-        _st_ref->nx(stref->nx());
-        _st_ref->t0(stref->t0());
-        _st_ref->t1(stref->t1());
-        _st_ref->dt(stref->dt());
+        _st_ref = stref->copy();
     }
 
     std::function<double(double *buf, uint16_t n)> get_default_reducer_by_name(std::string name);

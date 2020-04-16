@@ -306,17 +306,11 @@ class image_collection_cube : public cube {
     static cube_view default_view(std::shared_ptr<image_collection> ic);
 
    protected:
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
         // _st_ref has always type cube_view, whereas stref can have types st_reference or cube_view
 
         // copy fields from st_reference type
-        _st_ref->win(stref->win());
-        _st_ref->srs(stref->srs());
-        _st_ref->ny(stref->ny());
-        _st_ref->nx(stref->nx());
-        _st_ref->t0(stref->t0());
-        _st_ref->t1(stref->t1());
-        _st_ref->dt(stref->dt());
+        _st_ref = stref->copy();
 
 
         // if view: copy aggregation and resampling

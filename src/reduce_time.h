@@ -51,9 +51,20 @@ class reduce_time_cube : public cube {
     }
 
    public:
-    reduce_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
-        _st_ref->dt((_st_ref->t1() - _st_ref->t0()) + 1);
-        _st_ref->t1(_st_ref->t0()) ;  // set nt=1
+    reduce_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+
+        if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
+            std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+            stref->dt((stref->t1() - stref->t0()) + 1);
+            stref->t1(stref->t0()) ;  // set nt=1
+        }
+        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+            std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
+            stref->dt((stref->t1() - stref->t0()) + 1);
+            //stref->t1(stref->t0()) ;  // set nt=1
+            stref->set_time_labels({stref->t0()});
+        }
+
         assert(_st_ref->nt() == 1);
         _chunk_size[0] = 1;
         _chunk_size[1] = _in_cube->chunk_size()[1];
@@ -101,7 +112,7 @@ class reduce_time_cube : public cube {
  * @param co GDAL create options
      * @param p chunk processor instance, defaults to the current global configuration in config::instance()->get_default_chunk_processor()
  */
-    void write_gdal_image(std::string path, std::string format = "GTiff", std::vector<std::string> co = std::vector<std::string>(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
+    //void write_gdal_image(std::string path, std::string format = "GTiff", std::vector<std::string> co = std::vector<std::string>(), std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     json11::Json make_constructible_json() override {
         json11::Json::object out;
@@ -119,19 +130,23 @@ class reduce_time_cube : public cube {
     std::shared_ptr<cube> _in_cube;
     std::vector<std::pair<std::string, std::string>> _reducer_bands;
 
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
         // copy fields from st_reference type
-        _st_ref->win(stref->win());
-        _st_ref->srs(stref->srs());
-        _st_ref->ny(stref->ny());
-        _st_ref->nx(stref->nx());
-        _st_ref->t0(stref->t0());
-        _st_ref->t1(stref->t1());
-        _st_ref->dt(stref->dt());
+        _st_ref = stref->copy();
 
-        _st_ref->dt((_st_ref->t1() - _st_ref->t0()) + 1);
-        _st_ref->t1(_st_ref->t0());  // set nt=1
-        //assert(_st_ref->nt() == 1);
+
+        if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
+            std::shared_ptr<cube_stref_regular> st = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+            st->dt((st->t1() - st->t0()) + 1);
+            st->t1(st->t0()) ;  // set nt=1
+        }
+        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+            std::shared_ptr<cube_stref_labeled_time> st = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
+            st->dt((st->t1() - st->t0()) + 1);
+            //stref->t1(stref->t0()) ;  // set nt=1
+            st->set_time_labels({st->t0()});
+        }
+
     }
 };
 }  // namespace gdalcubes

@@ -50,9 +50,17 @@ class reduce_space_cube : public cube {
     }
 
    public:
-    reduce_space_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
-        _st_ref->nx(1);
-        _st_ref->ny(1);
+    reduce_space_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+        if (cube_stref::type_string(_st_ref) == "cube_stref_regular" ) {
+            std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+            stref->nx(1);
+            stref->ny(1);
+        }
+        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+            std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
+            stref->nx(1);
+            stref->ny(1);
+        }
         assert(_st_ref->nx() == 1 && _st_ref->ny() == 1);
 
         _chunk_size[0] = _in_cube->chunk_size()[0];
@@ -116,17 +124,19 @@ class reduce_space_cube : public cube {
     std::shared_ptr<cube> _in_cube;
     std::vector<std::pair<std::string, std::string>> _reducer_bands;
 
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
         // copy fields from st_reference type
-        _st_ref->win(stref->win());
-        _st_ref->srs(stref->srs());
-
-        _st_ref->nx(1);
-        _st_ref->ny(1);
-
-        _st_ref->t0(stref->t0());
-        _st_ref->t1(stref->t1());
-        _st_ref->dt(stref->dt());
+        _st_ref = stref->copy();
+        if (cube_stref::type_string(_st_ref) == "cube_stref_regular" ) {
+            std::shared_ptr<cube_stref_regular> st = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+            st->nx(1);
+            st->ny(1);
+        }
+        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+            std::shared_ptr<cube_stref_labeled_time> st = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
+            st->nx(1);
+            st->ny(1);
+        }
     }
 };
 

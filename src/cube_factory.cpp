@@ -32,7 +32,6 @@
 #include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
-#include "reduce.h"
 #include "reduce_time.h"
 #include "select_bands.h"
 #include "stream.h"
@@ -72,11 +71,6 @@ void cube_factory::register_cube_type(std::string type_name,
 
 void cube_factory::register_default() {
     /* register data cube types */
-    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
-        "reduce", [](json11::Json& j) {
-            auto x = reduce_cube::create(instance()->create_from_json(j["in_cube"]), j["reducer"].string_value());
-            return x;
-        }));
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "reduce_time", [](json11::Json& j) {
             std::vector<std::pair<std::string, std::string>> band_reducers;

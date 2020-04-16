@@ -68,7 +68,7 @@ class select_bands_cube : public cube {
     }
 
    public:
-    select_bands_cube(std::shared_ptr<cube> in, std::vector<std::string> bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _band_sel(bands), _input_is_image_collection_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    select_bands_cube(std::shared_ptr<cube> in, std::vector<std::string> bands) : cube(in->st_reference()->copy()), _in_cube(in), _band_sel(bands), _input_is_image_collection_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -87,7 +87,7 @@ class select_bands_cube : public cube {
         }
     }
 
-    select_bands_cube(std::shared_ptr<cube> in, std::vector<uint16_t> bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _band_sel(), _input_is_image_collection_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    select_bands_cube(std::shared_ptr<cube> in, std::vector<uint16_t> bands) : cube(in->st_reference()->copy()), _in_cube(in), _band_sel(), _input_is_image_collection_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -134,15 +134,9 @@ class select_bands_cube : public cube {
     std::vector<std::string> _band_sel;
     bool _input_is_image_collection_cube;
 
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
         // copy fields from st_reference type
-        _st_ref->win(stref->win());
-        _st_ref->srs(stref->srs());
-        _st_ref->ny(stref->ny());
-        _st_ref->nx(stref->nx());
-        _st_ref->t0(stref->t0());
-        _st_ref->t1(stref->t1());
-        _st_ref->dt(stref->dt());
+        _st_ref = stref->copy();
     }
 };
 

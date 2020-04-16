@@ -118,11 +118,7 @@ file(GLOB SOURCE_FILES
     "*.cpp" "*.h"
 )
 
-if (NOT DEFINED USE_EXPRTK)
-    list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyexpr/tinyexpr.c)
-endif()
-
-
+list(APPEND SOURCE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/external/tinyexpr/tinyexpr.c)
 
 #add_subdirectory("external/tiny-process-library")
 if(WIN32)

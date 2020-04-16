@@ -34,7 +34,6 @@
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "image_collection_ops.h"
-#include "reduce.h"
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"

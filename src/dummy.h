@@ -81,15 +81,9 @@ class dummy_cube : public cube {
    private:
     double _fill;
 
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
         // copy fields from st_reference type
-        _st_ref->win(stref->win());
-        _st_ref->srs(stref->srs());
-        _st_ref->ny(stref->ny());
-        _st_ref->nx(stref->nx());
-        _st_ref->t0(stref->t0());
-        _st_ref->t1(stref->t1());
-        _st_ref->dt(stref->dt());
+        _st_ref = stref->copy();
     }
 };
 }  // namespace gdalcubes

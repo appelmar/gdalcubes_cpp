@@ -97,8 +97,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
                 } else {
                     dt.unit() = cube->st_reference()->dt().dt_unit;
                 }
-                duration delta = cube->st_reference()->dt();
-                it[i] = (dt - cube->st_reference()->t0()) / delta;
+                it[i] = cube->st_reference()->index_at_datetime(dt);
 
                 if (it[i] < 0 || it[i] >= cube->size_t() ||
                     x[i] < 0 || x[i] >= cube->size_x() ||
@@ -971,8 +970,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
                 // write output layers
                 for (uint32_t it = 0; it < nt; ++it) {
-                    std::string layer_name = "attr_" + (cube->st_reference()->t0() +
-                            cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
+                    std::string layer_name = "attr_" +   cube->st_reference()->datetime_at_index((it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
 
                     OGRLayer *cur_attr_layer_out = gpkg_out->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
                     if (cur_attr_layer_out == NULL) {
@@ -1083,8 +1081,8 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         field_names_str += (cube->bands().get(band_index[agg_func_names.size() - 1]).name + "_" + agg_func_names[agg_func_names.size() - 1]);
 
         for (uint32_t it = 0; it < cube->size_t(); ++it) {
-            std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * it).to_string();
-            std::string view_name = "map_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * it).to_string();
+            std::string layer_name = "attr_" + cube->st_reference()->datetime_at_index(it).to_string();
+            std::string view_name = "map_" + cube->st_reference()->datetime_at_index(it).to_string();
 
             std::string query;
             query = "CREATE VIEW '" + view_name + "' AS SELECT geom.fid AS OGC_FID, geom.geom, " + field_names_str + " FROM geom JOIN '" + layer_name +

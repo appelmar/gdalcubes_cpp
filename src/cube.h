@@ -423,7 +423,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Create an empty data cube with given spacetime reference
      * @param st_ref space time reference (extent, size, SRS) of the cube
      */
-    cube(std::shared_ptr<cube_st_reference> st_ref) : _st_ref(st_ref), _chunk_size(), _bands(), _pre(), _succ() {
+    cube(std::shared_ptr<cube_stref> st_ref) : _st_ref(st_ref), _chunk_size(), _bands(), _pre(), _succ() {
         _chunk_size = {16, 256, 256};
 
         // TODO: add bands
@@ -675,7 +675,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Get the spatiotemporal reference (extent, size, projection) of a cube
      * @return a cube_st_reference object
      */
-    inline std::shared_ptr<cube_st_reference> st_reference() { return _st_ref; }
+    inline std::shared_ptr<cube_stref> st_reference() { return _st_ref; }
 
     /**
     * @brief Set the spatiotemporal reference (extent, size, projection) of a cube
@@ -684,7 +684,7 @@ class cube : public std::enable_shared_from_this<cube> {
      *
      * @param st_ref new cube_st_reference object (or from a derived class)
     */
-    inline void st_reference(std::shared_ptr<cube_st_reference> st_ref) {
+    inline void st_reference(std::shared_ptr<cube_stref_regular> st_ref) {
         _st_ref = st_ref;
     }
 
@@ -732,7 +732,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Update the spatiotemporal reference of this and all connected cubes
      * @param stref new spatiotemporal reference / data cube view
      */
-    void update_st_reference(std::shared_ptr<cube_st_reference> stref) {
+    void update_st_reference(std::shared_ptr<cube_stref_regular> stref) {
         std::set<std::shared_ptr<cube>> cset;
         update_st_reference_recursion(stref, cset);
     }
@@ -838,7 +838,7 @@ class cube : public std::enable_shared_from_this<cube> {
     /**
      * Spacetime reference of a cube, including extent, size, and projection
      */
-    std::shared_ptr<cube_st_reference> _st_ref;  // TODO: replace with unique_ptr
+    std::shared_ptr<cube_stref> _st_ref;  // TODO: replace with unique_ptr
 
     /**
      * @brief Size of chunks / number of cells per chunk in the order (datetime, y, x)
@@ -864,7 +864,7 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief Set the spatiotemporal reference for this instance only (but not for connected cubes)
      * @param stref new spatiotemporal reference / data cube view
      */
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) = 0;
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) = 0;
 
     /**
     * @brief Recursively update the st reference of connected cubes
@@ -874,7 +874,7 @@ class cube : public std::enable_shared_from_this<cube> {
     * @param scet set of cubes instances which have already been processed to avoid cyclic calls
     */
     void
-    update_st_reference_recursion(std::shared_ptr<cube_st_reference> stref, std::set<std::shared_ptr<cube>> &cset) {
+    update_st_reference_recursion(std::shared_ptr<cube_stref> stref, std::set<std::shared_ptr<cube>> &cset) {
         if (cset.count(shared_from_this()) > 0) return;
         this->set_st_reference(stref);
         cset.insert(shared_from_this());

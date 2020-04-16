@@ -121,39 +121,37 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
                 values[_in_cube->bands().count() + 8] = (double)(_in_cube->chunk_limits(id).low[0] + (i / (in->size()[2] * in->size()[3])));  // _t
             }
             if (_var_usage[expr_idx].count("t0")) {
-                values[_in_cube->bands().count() + 0] = (_in_cube->st_reference()->t0() +
-                        _in_cube->st_reference()->dt() * (int)(values[_in_cube->bands().count() + 8])).epoch_time();
+                values[_in_cube->bands().count() + 0] = (_in_cube->st_reference()->datetime_at_index((int)(values[_in_cube->bands().count() + 8]))).epoch_time();
             }
             if (_var_usage[expr_idx].count("t1")) {
-                values[_in_cube->bands().count() + 1] = (_in_cube->st_reference()->t0() +
-                        _in_cube->st_reference()->dt() * (int)(values[_in_cube->bands().count() + 8] + 1)).epoch_time();
+                values[_in_cube->bands().count() + 1] = (_in_cube->st_reference()->datetime_at_index((int)(values[_in_cube->bands().count() + 8] + 1))).epoch_time();
             }
 
             if (_var_usage[expr_idx].count("ix") || _var_usage[expr_idx].count("left") || _var_usage[expr_idx].count("right")) {
                 values[_in_cube->bands().count() + 6] = (double)(_in_cube->chunk_limits(id).low[2] + (i % in->size()[3]));
             }
-            if (_var_usage[expr_idx].count("left")) {
-                values[_in_cube->bands().count() + 2] = _in_cube->st_reference()->left() +
-                        _in_cube->st_reference()->dx() * values[_in_cube->bands().count() + 6];
-            }
-            if (_var_usage[expr_idx].count("right")) {
-                values[_in_cube->bands().count() + 3] = _in_cube->st_reference()->left() +
-                        _in_cube->st_reference()->dx() * (values[_in_cube->bands().count() + 6] + 1);
-            }
-
             if (_var_usage[expr_idx].count("iy") || _var_usage[expr_idx].count("top") || _var_usage[expr_idx].count("bottom")) {
                 values[_in_cube->bands().count() + 7] = (double)(_in_cube->size_y() - 1 - (_in_cube->chunk_limits(id).high[1] - ((i / in->size()[3]) % in->size()[2])));
             }
 
-            if (_var_usage[expr_idx].count("top")) {
-                values[_in_cube->bands().count() + 4] = _in_cube->st_reference()->top() -
-                        _in_cube->st_reference()->dy() * values[_in_cube->bands().count() + 7];
+            if (_in_cube->st_reference()->has_regular_space()) {
+                if (_var_usage[expr_idx].count("left")) {
+                    values[_in_cube->bands().count() + 2] = _in_cube->st_reference()->left() +
+                                                            _in_cube->st_reference()->dx() * values[_in_cube->bands().count() + 6];
+                }
+                if (_var_usage[expr_idx].count("right")) {
+                    values[_in_cube->bands().count() + 3] = _in_cube->st_reference()->left() +
+                                                            _in_cube->st_reference()->dx() * (values[_in_cube->bands().count() + 6] + 1);
+                }
+                if (_var_usage[expr_idx].count("top")) {
+                    values[_in_cube->bands().count() + 4] = _in_cube->st_reference()->top() -
+                                                            _in_cube->st_reference()->dy() * values[_in_cube->bands().count() + 7];
+                }
+                if (_var_usage[expr_idx].count("bottom")) {
+                    values[_in_cube->bands().count() + 5] = _in_cube->st_reference()->top() -
+                                                            _in_cube->st_reference()->dy() * (values[_in_cube->bands().count() + 7] + 1);
+                }
             }
-            if (_var_usage[expr_idx].count("bottom")) {
-                values[_in_cube->bands().count() + 5] = _in_cube->st_reference()->top() -
-                        _in_cube->st_reference()->dy() * (values[_in_cube->bands().count() + 7] + 1);
-            }
-
             ((double*)out->buf())[outb * in->size()[1] * in->size()[2] * in->size()[3] + i] = te_eval(expr[expr_idx]);
         }
         ++outb;

@@ -53,11 +53,26 @@ class join_bands_cube : public cube {
 
    public:
     join_bands_cube(std::shared_ptr<cube> A, std::shared_ptr<cube> B, std::string prefix_A = "A", std::string prefix_B = "B") : cube(), _in_A(A), _in_B(B), _prefix_A(prefix_A), _prefix_B(prefix_B) {
-        _st_ref = std::make_shared<cube_st_reference>();
+        _st_ref = std::make_shared<cube_stref_regular>();
 
-        // Check that A and B have identical shape
-        if (*(_in_A->st_reference()) != *(_in_B->st_reference())) {
-            throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cubes have different shape");
+        if (cube_stref::type_string(_in_A->st_reference()) != cube_stref::type_string(_in_B->st_reference())) {
+            throw std::string("ERROR in join_bands_cube::join_bands_cube(): Incompatible spatial / temporal reference types");
+        }
+        if (cube_stref::type_string(_in_A->st_reference()) == "cube_stref_regular") {
+            std::shared_ptr<cube_stref_regular> stref_A = std::dynamic_pointer_cast<cube_stref_regular>(_in_A->st_reference());
+            std::shared_ptr<cube_stref_regular> stref_B = std::dynamic_pointer_cast<cube_stref_regular>(_in_B->st_reference());
+            // Check that A and B have identical shape
+            if (*(stref_A) != *(stref_B)) {
+                throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cubes have different shape");
+            }
+        }
+        else if (cube_stref::type_string(_in_A->st_reference()) == "cube_stref_labeled_time") {
+            std::shared_ptr<cube_stref_labeled_time> stref_A = std::dynamic_pointer_cast<cube_stref_labeled_time>(_in_A->st_reference());
+            std::shared_ptr<cube_stref_labeled_time> stref_B = std::dynamic_pointer_cast<cube_stref_labeled_time>(_in_B->st_reference());
+            // Check that A and B have identical shape
+            if (*(stref_A) != *(stref_B)) {
+                throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cubes have different shape");
+            }
         }
 
         if (!(_in_A->chunk_size()[0] == _in_B->chunk_size()[0] &&
@@ -81,13 +96,8 @@ class join_bands_cube : public cube {
             }
         }
 
-        _st_ref->win(_in_A->st_reference()->win());
-        _st_ref->srs(_in_A->st_reference()->srs());
-        _st_ref->ny(_in_A->st_reference()->ny());
-        _st_ref->nx(_in_A->st_reference()->nx());
-        _st_ref->t0(_in_A->st_reference()->t0());
-        _st_ref->t1(_in_A->st_reference()->t1());
-        _st_ref->dt(_in_A->st_reference()->dt());
+
+        _st_ref = _in_A->st_reference();
 
         _chunk_size[0] = _in_A->chunk_size()[0];
         _chunk_size[1] = _in_A->chunk_size()[1];
@@ -126,15 +136,9 @@ class join_bands_cube : public cube {
     std::string _prefix_A;
     std::string _prefix_B;
 
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
+    virtual void set_st_reference(std::shared_ptr<cube_stref> stref) override {
         // copy fields from st_reference type
-        _st_ref->win(stref->win());
-        _st_ref->srs(stref->srs());
-        _st_ref->ny(stref->ny());
-        _st_ref->nx(stref->nx());
-        _st_ref->t0(stref->t0());
-        _st_ref->t1(stref->t1());
-        _st_ref->dt(stref->dt());
+        _st_ref = stref->copy();
     }
 };
 

@@ -718,6 +718,18 @@ public:
         }
     }
 
+    std::vector<datetime> get_time_labels() {
+        return _t_values;
+    }
+
+    std::vector<std::string> get_time_labels_as_string() {
+        std::vector<std::string> out;
+        for (uint32_t i=0; i<_t_values.size(); ++i) {
+            out.push_back(_t_values[i].to_string());
+        }
+        return out;
+    }
+
 
 
 

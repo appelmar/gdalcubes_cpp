@@ -91,8 +91,6 @@ namespace gdalcubes {
         dst_geotransform[4] = 0.0;
         dst_geotransform[5] = (te_bottom - te_top) / double(ts_y);
 
-        GCBS_DEBUG(std::to_string(ts_x) + "x" + std::to_string(ts_y));
-
         GDALDriver* mem_driver = (GDALDriver*)GDALGetDriverByName( "MEM");
         if (mem_driver == NULL) {
             GCBS_ERROR("Cannot find GDAL MEM driver");

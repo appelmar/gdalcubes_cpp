@@ -36,7 +36,11 @@ class select_time_cube : public cube {
     * @return a shared pointer to the created data cube instance
     */
     static std::shared_ptr<select_time_cube> create(std::shared_ptr<cube> in, std::vector<std::string> t) {
-        std::shared_ptr<select_time_cube> out = std::make_shared<select_time_cube>(in, t);
+        std::vector<datetime> dt;
+        for (uint32_t i=0; i<t.size(); ++i) {
+            dt.push_back(datetime::from_string(t[i]));
+        }
+        std::shared_ptr<select_time_cube> out = std::make_shared<select_time_cube>(in, dt);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
@@ -67,6 +71,7 @@ class select_time_cube : public cube {
         stref->srs(stref_orig->srs());
         stref->nx(stref_orig->nx());
         stref->ny(stref_orig->ny());
+        stref->dt(stref_orig->dt());
 
         std::vector<datetime> dt;
         for (uint32_t i=0; i<t.size(); ++i) {
@@ -84,15 +89,7 @@ class select_time_cube : public cube {
 
     }
 
-    select_time_cube(std::shared_ptr<cube> in, std::vector<std::string> t) : cube(in->st_reference()->copy()), _in_cube(in), _t() {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
-        std::vector<datetime> dt;
-        for (uint32_t i=0; i<t.size(); ++i) {
-            dt.push_back(datetime::from_string(t[i]));
-        }
-        select_time_cube(in, dt);
-    }
 
-        public:
     ~select_time_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;

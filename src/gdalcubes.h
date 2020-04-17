@@ -40,6 +40,7 @@
 #include "reduce_space.h"
 #include "reduce_time.h"
 #include "select_bands.h"
+#include "select_time.h"
 #include "stream.h"
 #include "stream_apply_pixel.h"
 #include "stream_reduce_time.h"

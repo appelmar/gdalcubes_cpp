@@ -52,6 +52,11 @@ class select_time_cube : public cube {
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
 
+        if (t.empty()) {
+            GCBS_ERROR("ERROR in select_time_cube::select_time_cube(): missing time slices");
+            throw std::string("ERROR: missing time slices in select_time()");
+        }
+
         for (uint16_t i=0; i<_in_cube->bands().count(); ++i) {
             band b = in->bands().get(i);
             _bands.add(b);
@@ -82,11 +87,14 @@ class select_time_cube : public cube {
         if (dt.size() < t.size()) {
             GCBS_WARN("One or more time slices are outside of the input cube and will be ignored");
         }
+        if (dt.empty()) {
+            GCBS_ERROR("ERROR in select_time_cube::select_time_cube(): resulting cube does not contain any time slice");
+            throw std::string("ERROR: resulting cube does not contain any time slice");
+        }
         _t = dt;
         stref->set_time_labels(dt);
         _st_ref = stref;
         // TODO: what if t is not sorted
-
     }
 
 

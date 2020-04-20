@@ -56,8 +56,7 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
 
     // 1. get bounding box of polygon
     OGRGeometry *p = nullptr;
-    const char *wktstr = _wkt.c_str();
-    OGRErr res = OGRGeometryFactory::createFromWkt(wktstr, &srsogr, &p);
+    OGRErr res = OGRGeometryFactory::createFromWkt(_wkt.c_str(), &srsogr, &p);
     if (res != OGRERR_NONE) {
         //            if (res == OGRERR_NOT_ENOUGH_DATA) {}
         //            if (res == OGRERR_UNSUPPORTED_GEOMETRY_TYPE) {}
@@ -113,7 +112,6 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
     // Create new OGR dataset with single feature...
     std::string output_file = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename(8, "crop_", ".gpkg"));
     _ogr_dataset = output_file;
-    GCBS_DEBUG(_ogr_dataset);
     GDALDriver *gpkg_driver = GetGDALDriverManager()->GetDriverByName("GPKG");
     GDALDataset *gpkg_out = gpkg_driver->Create(output_file.c_str(), 0, 0, 0, GDT_Unknown, NULL);
     if (gpkg_out == NULL) {
@@ -141,17 +139,20 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
 std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("filter_geom_cube::read_chunk(" + std::to_string(id) + ")");
 
-    if (id >= count_chunks())
-        return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
-
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
+
+    if (id >= count_chunks())
+        return out;  // chunk is outside of the view, we don't need to read anything.
 
     auto chunkcoords = chunk_coords_from_id(id);
     if (chunkcoords[2] < _min_chunk_x || chunkcoords[2] > _max_chunk_x || chunkcoords[1] < _min_chunk_y || chunkcoords[1] > _max_chunk_y) {
-        return std::shared_ptr<chunk_data>();  // chunk does not intersect with polygon
+        return out;  // chunk does not intersect with polygon
     }
 
     std::shared_ptr<chunk_data> in = _in_cube->read_chunk(id);
+    if (in->empty()) {
+        return out;
+    }
     out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
     out->buf(std::calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
 

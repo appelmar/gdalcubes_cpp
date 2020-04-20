@@ -235,94 +235,108 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
         // Setting NoData value seems to be not needed for Float64 GeoTIFFs
         //gdal_out->GetRasterBand(1)->SetNoDataValue(NAN); // GeoTIFF supports only one NoData value for all bands
-
         if (packing.type != packed_export::packing_type::PACK_NONE) {
             if (packing.scale.size() > 1) {
                 for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                     gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[ib]);
                     gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[ib]);
                     gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[ib]);
+                    gdal_out->GetRasterBand(ib + 1)->Fill(packing.nodata[ib]);
                 }
             } else {
                 for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                     gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[0]);
                     gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[0]);
                     gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[0]);
+                    gdal_out->GetRasterBand(ib + 1)->Fill(packing.nodata[0]);
                 }
             }
         }
+        else {
+            // Fill nodata value
+            for (uint16_t ib=0; ib < size_bands(); ++ib) {
+                gdal_out->GetRasterBand(ib+1)->Fill(NAN);
+            }
+
+        }
+
         GDALClose((GDALDatasetH)gdal_out);
     }
 
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, cog, overviews](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
-        for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-            uint32_t cur_t_index = chunk_limits(id).low[0] + it;
-            std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + ".tif");
 
-            mtx[cur_t_index].lock();
-            GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
-            if (!gdal_out) {
-                GCBS_WARN("GDAL failed to open " + name);
-                mtx[cur_t_index].unlock();
-                continue;
-            }
+        if (!dat->empty()) {
+            for (uint32_t it = 0; it < dat->size()[1]; ++it) {
+                uint32_t cur_t_index = chunk_limits(id).low[0] + it;
+                std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + ".tif");
 
-            // apply packing
-            if (packing.type != packed_export::packing_type::PACK_NONE) {
-                for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-                    double cur_scale;
-                    double cur_offset;
-                    double cur_nodata;
-                    if (packing.scale.size() == size_bands()) {
-                        cur_scale = packing.scale[ib];
-                        cur_offset = packing.offset[ib];
-                        cur_nodata = packing.nodata[ib];
-                    } else {
-                        cur_scale = packing.scale[0];
-                        cur_offset = packing.offset[0];
-                        cur_nodata = packing.nodata[0];
-                    }
+                mtx[cur_t_index].lock();
+                GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
+                if (!gdal_out) {
+                    GCBS_WARN("GDAL failed to open " + name);
+                    mtx[cur_t_index].unlock();
+                    continue;
+                }
 
-                    /*
-                     * If band of cube already has scale + offset, we do not apply this before.
-                     * As a consequence, provided scale and offset values refer to actual data values
-                     * but ignore band metadata. The following commented code would apply the
-                     * unpacking before
-                     */
-                    /*
-                    if (bands().get(ib).scale != 1 || bands().get(ib).offset != 0) {
+                // apply packing
+                if (packing.type != packed_export::packing_type::PACK_NONE) {
+                    for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                        double cur_scale;
+                        double cur_offset;
+                        double cur_nodata;
+                        if (packing.scale.size() == size_bands()) {
+                            cur_scale = packing.scale[ib];
+                            cur_offset = packing.offset[ib];
+                            cur_nodata = packing.nodata[ib];
+                        } else {
+                            cur_scale = packing.scale[0];
+                            cur_offset = packing.offset[0];
+                            cur_nodata = packing.nodata[0];
+                        }
+
+                        /*
+                         * If band of cube already has scale + offset, we do not apply this before.
+                         * As a consequence, provided scale and offset values refer to actual data values
+                         * but ignore band metadata. The following commented code would apply the
+                         * unpacking before
+                         */
+                        /*
+                        if (bands().get(ib).scale != 1 || bands().get(ib).offset != 0) {
+                            for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
+                                double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
+                                                                     it * dat->size()[2] * dat->size()[3]  + i];
+                                v = v * bands().get(ib).scale + bands().get(ib).offset;
+                            }
+                        } */
+
                         for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
                             double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
-                                                                 it * dat->size()[2] * dat->size()[3]  + i];
-                            v = v * bands().get(ib).scale + bands().get(ib).offset;
-                        }
-                    } */
-
-                    for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
-                        double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
-                                                             it * dat->size()[2] * dat->size()[3] + i];
-                        if (std::isnan(v)) {
-                            v = cur_nodata;
-                        } else {
-                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                                                                 it * dat->size()[2] * dat->size()[3] + i];
+                            if (std::isnan(v)) {
+                                v = cur_nodata;
+                            } else {
+                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            }
                         }
                     }
-                }
-            }  // if packing
+                }  // if packing
 
-            for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-                CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
-                                                                       ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]),
-                                                                       dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
-                if (res != CE_None) {
-                    GCBS_WARN("RasterIO (write) failed for " + name);
-                    break;
+                for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                    CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
+                                                                           ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]),
+                                                                           dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
+                    if (res != CE_None) {
+                        GCBS_WARN("RasterIO (write) failed for " + name);
+                        break;
+                    }
                 }
+
+                GDALClose(gdal_out);
+                mtx[cur_t_index].unlock();
             }
-
-            GDALClose(gdal_out);
-            mtx[cur_t_index].unlock();
         }
+
+
         if (overviews) {
             prg->increment((double)0.5 / (double)this->count_chunks());
         } else {

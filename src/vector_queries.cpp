@@ -1,4 +1,26 @@
+/*
+    MIT License
 
+    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+*/
 
 #include "vector_queries.h"
 #include <gdal_utils.h>
@@ -55,7 +77,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
                     if (count > 0) {
                         if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
                             throw std::string("ERROR: coordinate transformation failed (from " +
-                                                      cube->st_reference()->srs() + " to " + srs + ").");
+                                              cube->st_reference()->srs() + " to " + srs + ").");
                         }
                     }
                     OCTDestroyCoordinateTransformation(coord_transform);
@@ -223,7 +245,7 @@ std::vector<std::vector<std::vector<double>>> vector_queries::query_timeseries(s
                     if (count > 0) {
                         if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
                             throw std::string("ERROR: coordinate transformation failed (from " +
-                                                      cube->st_reference()->srs() + " to " + srs + ").");
+                                              cube->st_reference()->srs() + " to " + srs + ").");
                         }
                     }
                     OCTDestroyCoordinateTransformation(coord_transform);
@@ -308,9 +330,9 @@ std::vector<std::vector<std::vector<double>>> vector_queries::query_timeseries(s
                                     double iyc = y[chunk_index[chunks[ic]][i]];
 
                                     int iix = (ixc - cube->bounds_from_chunk(cur_chunk).s.left) /
-                                            cube->st_reference()->dx();
+                                              cube->st_reference()->dx();
                                     int iiy = (cube->bounds_from_chunk(cur_chunk).s.top - iyc) /
-                                            cube->st_reference()->dy();
+                                              cube->st_reference()->dy();
 
                                     // check to prevent out of bounds faults
                                     if (iix < 0 || uint32_t(iix) >= dat->size()[3]) continue;
@@ -863,9 +885,11 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                 feature->GetGeometryRef()->getEnvelope(&feature_bbox);
 
                                 int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) /
-                                                                                       cube->st_reference()->dx()), 0);
+                                                                               cube->st_reference()->dx()),
+                                                           0);
                                 int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) /
-                                                                                    cube->st_reference()->dx()), (int32_t)chunk->size()[3] - 1);
+                                                                            cube->st_reference()->dx()),
+                                                         (int32_t)chunk->size()[3] - 1);
 
                                 bool outside = false;
                                 if (x_end < 0 || x_start > int32_t(chunk->size()[3] - 1)) {
@@ -873,9 +897,11 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                 }
 
                                 int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) /
-                                                                                       cube->st_reference()->dy()), 0);
+                                                                               cube->st_reference()->dy()),
+                                                           0);
                                 int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) /
-                                                                                    cube->st_reference()->dy()), (int32_t)chunk->size()[2] - 1);
+                                                                            cube->st_reference()->dy()),
+                                                         (int32_t)chunk->size()[2] - 1);
 
                                 if (y_end < 0 || y_start > int32_t(chunk->size()[2] - 1)) {
                                     outside = true;
@@ -883,7 +909,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
                                 if (!outside) {
                                     // rasterize
-                                    int err = 0;
+
                                     CPLStringList rasterize_args;
                                     rasterize_args.AddString("-burn");
                                     rasterize_args.AddString("1");
@@ -898,13 +924,17 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                     rasterize_args.AddString(std::to_string(cube->st_reference()->dy()).c_str());
                                     rasterize_args.AddString("-te");
                                     rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start *
-                                                                                                          cube->st_reference()->dx()).c_str());      // xmin
+                                                                                                      cube->st_reference()->dx())
+                                                                 .c_str());  // xmin
                                     rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end + 1) *
-                                                                                                         cube->st_reference()->dy()).c_str());   // ymin
+                                                                                                     cube->st_reference()->dy())
+                                                                 .c_str());  // ymin
                                     rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) *
-                                                                                                          cube->st_reference()->dx()).c_str());  // xmax
+                                                                                                      cube->st_reference()->dx())
+                                                                 .c_str());  // xmax
                                     rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start *
-                                                                                                         cube->st_reference()->dy()).c_str());       // ymax
+                                                                                                     cube->st_reference()->dy())
+                                                                 .c_str());  // ymax
                                     rasterize_args.AddString("-where");
                                     std::string where = fid_column + "=" + std::to_string(fid);
                                     rasterize_args.AddString(where.c_str());
@@ -926,6 +956,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                         throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create gdal_rasterize options.");
                                     }
 
+                                    int err = 0;
                                     GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);
                                     if (gdal_rasterized == NULL) {
                                         GCBS_ERROR("gdal_rasterize failed for feature with FID " + std::to_string(fid));
@@ -970,7 +1001,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
                 // write output layers
                 for (uint32_t it = 0; it < nt; ++it) {
-                    std::string layer_name = "attr_" +   cube->st_reference()->datetime_at_index((it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
+                    std::string layer_name = "attr_" + cube->st_reference()->datetime_at_index((it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
 
                     OGRLayer *cur_attr_layer_out = gpkg_out->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
                     if (cur_attr_layer_out == NULL) {

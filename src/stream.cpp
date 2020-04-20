@@ -106,13 +106,11 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         process.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
 
-
     if (!_in_cube->st_reference()->has_regular_space()) {
         throw std::string("ERROR: chunk streaming currently does not support irregular spatial dimensions");
     }
     // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
     std::shared_ptr<cube_stref_regular> stref_in = std::dynamic_pointer_cast<cube_stref_regular>(_in_cube->st_reference());
-
 
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
     for (int i = 0; i < size[1]; ++i) {
@@ -175,7 +173,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
     int i = 0;
     for (int it = 0; it < size[1]; ++it) {
-       dims[i] = (_in_cube->st_reference()->datetime_at_index(it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0])).to_double();
+        dims[i] = (_in_cube->st_reference()->datetime_at_index(it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0])).to_double();
         ++i;
     }
     bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes

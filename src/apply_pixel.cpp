@@ -40,19 +40,7 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     values.resize(_in_cube->bands().count() + 9, NAN);
     // CAUTION: never change size of values from now
 
-    // TODO: add further variables like x, y, t to symbol table
-    // _x = integer cell index
-    // _y = integer cell index
-    // _t = integer cell index
-    // _left = left boundary of a cell in SRS coordinates
-    // _right = ...
-    // _top = ....
-    // _bottom = ...
-    // _t0 = start time (timestamp)
-    // _t1 = end_time (timestamp)
-    // year(_t1) -> year of t1
-    // doy(_t0) -> doy of t0
-
+    // Add further variables like x, y, t to symbol table
     std::vector<te_variable> vars;
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
         char* varname = new char[_in_cube->bands().get(i).name.length() + 1];

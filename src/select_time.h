@@ -26,7 +26,6 @@ class select_time_cube : public cube {
         return out;
     }
 
-
     /**
     * @brief Create a data cube that selects one or more time (irregular) time slices of a data cube
     * @note This static creation method should preferably be used instead of the constructors as
@@ -37,7 +36,7 @@ class select_time_cube : public cube {
     */
     static std::shared_ptr<select_time_cube> create(std::shared_ptr<cube> in, std::vector<std::string> t) {
         std::vector<datetime> dt;
-        for (uint32_t i=0; i<t.size(); ++i) {
+        for (uint32_t i = 0; i < t.size(); ++i) {
             dt.push_back(datetime::from_string(t[i]));
         }
         std::shared_ptr<select_time_cube> out = std::make_shared<select_time_cube>(in, dt);
@@ -57,11 +56,10 @@ class select_time_cube : public cube {
             throw std::string("ERROR: missing time slices in select_time()");
         }
 
-        for (uint16_t i=0; i<_in_cube->bands().count(); ++i) {
+        for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
             band b = in->bands().get(i);
             _bands.add(b);
         }
-
 
         std::shared_ptr<cube_stref_labeled_time> stref = std::make_shared<cube_stref_labeled_time>();
 
@@ -79,7 +77,7 @@ class select_time_cube : public cube {
         stref->dt(stref_orig->dt());
 
         std::vector<datetime> dt;
-        for (uint32_t i=0; i<t.size(); ++i) {
+        for (uint32_t i = 0; i < t.size(); ++i) {
             if (t[i] >= stref_orig->t0() && t[i] <= stref_orig->t1()) {
                 dt.push_back(t[i]);
             }
@@ -97,14 +95,13 @@ class select_time_cube : public cube {
         // TODO: what if t is not sorted
     }
 
-
     ~select_time_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     json11::Json make_constructible_json() override {
         std::vector<std::string> dt;
-        for (uint32_t i=0; i<_t.size(); ++i) {
+        for (uint32_t i = 0; i < _t.size(); ++i) {
             dt.push_back(_t[i].to_string());
         }
         json11::Json::object out;
@@ -117,7 +114,6 @@ class select_time_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::vector<datetime> _t;
-
 };
 
 }  // namespace gdalcubes

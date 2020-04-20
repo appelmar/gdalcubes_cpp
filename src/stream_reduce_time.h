@@ -40,9 +40,8 @@ class stream_reduce_time_cube : public cube {
         if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
             stref->dt((stref->t1() - stref->t0()) + 1);
-            stref->t1(stref->t0()) ;  // set nt=1
-        }
-        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+            stref->t1(stref->t0());  // set nt=1
+        } else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
             std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
             stref->dt((stref->t1() - stref->t0()) + 1);
             //stref->t1(stref->t0()) ;  // set nt=1
@@ -90,7 +89,6 @@ class stream_reduce_time_cube : public cube {
     std::string _cmd;
     uint16_t _nbands;
     std::vector<std::string> _names;
-
 };
 
 }  // namespace gdalcubes

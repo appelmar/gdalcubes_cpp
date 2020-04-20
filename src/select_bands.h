@@ -133,8 +133,6 @@ class select_bands_cube : public cube {
     std::shared_ptr<cube> _in_cube;
     std::vector<std::string> _band_sel;
     bool _input_is_image_collection_cube;
-
-
 };
 
 }  // namespace gdalcubes

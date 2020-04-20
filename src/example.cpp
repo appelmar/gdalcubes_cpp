@@ -143,8 +143,6 @@ int main(int argc, char* argv[]) {
         //            cb->write_netcdf_file("mask.nc");
         //        }
 
-
-
         // v = cube_view::read_json("view.json");
 
         /**************************************************************************/
@@ -188,17 +186,17 @@ int main(int argc, char* argv[]) {
         /**************************************************************************/
         // Test apply_pixel
         //                {
-//                                        auto c = image_collection_cube::create("test.db", v);
-//                                        //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
-//                                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
-//                                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
-//                                        // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
-//
-//                                        auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
-//
-//                                        auto cr = reduce_cube::create(capply, "median");
-//                                        // cr->write_gdal_image("test_apply_reduce.tif");
-//                                        cr->write_netcdf_file("test_apply_reduce.nc");
+        //                                        auto c = image_collection_cube::create("test.db", v);
+        //                                        //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
+        //                                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
+        //                                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
+        //                                        // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
+        //
+        //                                        auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
+        //
+        //                                        auto cr = reduce_cube::create(capply, "median");
+        //                                        // cr->write_gdal_image("test_apply_reduce.tif");
+        //                                        cr->write_netcdf_file("test_apply_reduce.nc");
         //                }
 
         // Test apply_pixel
@@ -365,15 +363,15 @@ int main(int argc, char* argv[]) {
         }
 
         setenv("GDAL_DISABLE_READDIR_ON_OPEN", "TRUE", 1);
-        setenv("CPL_DEBUG", "ON", 1);
-        setenv("CPL_LOG_ERRORS", "ON", 1);
-        setenv("CPL_LOG", "/tmp/gdal.log", 1);
+        //        setenv("CPL_DEBUG", "ON", 1);
+        //        setenv("CPL_LOG_ERRORS", "ON", 1);
+        //        setenv("CPL_LOG", "/tmp/gdal.log", 1);
 
         //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_netcdf_file("/tmp/cube.nc");
         //test_multiprocess::write_chunks_netcdf(cube_factory::instance()->create_from_json_file("/tmp/cube.json"),"/tmp", "test");
-       auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
-       c->write_netcdf_file("/tmp/xxx.nc");
-
+        auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
+        //c->write_netcdf_file("/tmp/xxx.nc");
+        c->write_tif_collection("/tmp/TESTTIF", "xxx");
 
         /******************************************/
 

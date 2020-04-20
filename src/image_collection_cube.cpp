@@ -22,20 +22,19 @@
     SOFTWARE.
 */
 #include "image_collection_cube.h"
-#include "error.h"
-#include "utils.h"
-#include "warp.h"
 #include <gdal_utils.h>
 #include <map>
 #include <unordered_map>
-
+#include "error.h"
+#include "utils.h"
+#include "warp.h"
 
 namespace gdalcubes {
 
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""){ load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""){ load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
 image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") {
     st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
     load_bands();
@@ -540,7 +539,6 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                     GDALTranslateOptionsFree(trans_options);
                 }
 
-
                 GDALDataset *gdal_out = nullptr;
                 if (create_band_subset_vrt && bandsel_vrt != nullptr) {
                     //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&bandsel_vrt), warp_opts, NULL);
@@ -572,7 +570,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     std::free(img_buf);
     if (mask_buf) std::free(mask_buf);
 
-//    CPLFree(srs_out_str);
+    //    CPLFree(srs_out_str);
 
     return out;
 }
@@ -621,8 +619,8 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
 
     uint32_t ncells_space = 512 * 512;
     double asp_ratio = (out.right() - out.left()) / (out.top() - out.bottom());
-    out.nx((uint32_t) std::fmax((uint32_t) sqrt(ncells_space * asp_ratio), 1.0));
-    out.ny((uint32_t) std::fmax((uint32_t) sqrt(ncells_space * 1 / asp_ratio), 1.0));
+    out.nx((uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0));
+    out.ny((uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0));
 
     out.t0(extent.t0);
     out.t1(extent.t1);
@@ -630,7 +628,7 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
     duration d = out.t1() - out.t0();
 
     if (out.t0() == out.t1()) {
-        out.dt_unit(datetime_unit::DAY) ;
+        out.dt_unit(datetime_unit::DAY);
         out.dt_interval(1);
     } else {
         if (d.convert(datetime_unit::YEAR).dt_interval > 4) {

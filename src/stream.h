@@ -98,8 +98,7 @@ class stream_cube : public cube {
                 stref->nt(in_cube->size()[1]);
             } else
                 throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
-        }
-        else {
+        } else {
             if (c0->size()[1] == 1) {
                 // The "best" we can do is to use starting date/time from chunks as labels...
                 std::vector<datetime> labels;
@@ -113,12 +112,11 @@ class stream_cube : public cube {
                 throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
         }
 
-
         if (c0->size()[2] == 1) {
-            stref->ny(in_cube->count_chunks_y()) ;
+            stref->ny(in_cube->count_chunks_y());
         } else if (c0->size()[2] == csize_in[2]) {
             _keep_input_ny = true;
-            stref->ny(in_cube->size()[2]) ;
+            stref->ny(in_cube->size()[2]);
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
 
@@ -156,8 +154,6 @@ class stream_cube : public cube {
     std::shared_ptr<chunk_data> stream_chunk_stdin(std::shared_ptr<chunk_data> data, chunkid_t id);
 
     std::shared_ptr<chunk_data> stream_chunk_file(std::shared_ptr<chunk_data> data, chunkid_t id);
-
-
 };
 
 }  // namespace gdalcubes

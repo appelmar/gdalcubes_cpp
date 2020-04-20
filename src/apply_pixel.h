@@ -165,7 +165,6 @@ class apply_pixel_cube : public cube {
 
     bool _keep_bands;
 
-
     bool parse_expressions();
 };
 

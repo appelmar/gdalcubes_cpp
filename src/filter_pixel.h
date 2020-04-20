@@ -95,7 +95,6 @@ class filter_pixel_cube : public cube {
     std::shared_ptr<cube> _in_cube;
     std::string _pred;
 
-
     bool parse_predicate();
 };
 

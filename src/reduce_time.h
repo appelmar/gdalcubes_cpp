@@ -56,9 +56,8 @@ class reduce_time_cube : public cube {
         if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
             stref->dt((stref->t1() - stref->t0()) + 1);
-            stref->t1(stref->t0()) ;  // set nt=1
-        }
-        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+            stref->t1(stref->t0());  // set nt=1
+        } else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
             std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
             stref->dt((stref->t1() - stref->t0()) + 1);
             //stref->t1(stref->t0()) ;  // set nt=1
@@ -118,7 +117,7 @@ class reduce_time_cube : public cube {
         json11::Json::object out;
         out["cube_type"] = "reduce_time";
         json11::Json::array rb;
-        for (uint16_t i=0; i<_reducer_bands.size(); ++i) {
+        for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
             rb.push_back(json11::Json::array({_reducer_bands[i].first, _reducer_bands[i].second}));
         }
         out["reducer_bands"] = rb;
@@ -129,7 +128,6 @@ class reduce_time_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::vector<std::pair<std::string, std::string>> _reducer_bands;
-
 };
 }  // namespace gdalcubes
 

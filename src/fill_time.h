@@ -64,7 +64,6 @@ class fill_time_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::string _method;
-
 };
 
 }  // namespace gdalcubes

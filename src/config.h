@@ -130,7 +130,6 @@ class config {
     inline bool get_gdal_use_overviews() { return _gdal_use_overviews; }
     inline void set_gdal_use_overviews(bool use_overviews) { _gdal_use_overviews = use_overviews; }
 
-
     inline bool get_swarm_curl_verbose() { return _swarm_curl_verbose; }
     inline void set_swarm_curl_verbose(bool verbose) { _swarm_curl_verbose = verbose; }
 

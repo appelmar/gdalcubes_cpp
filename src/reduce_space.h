@@ -51,12 +51,11 @@ class reduce_space_cube : public cube {
 
    public:
     reduce_space_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
-        if (cube_stref::type_string(_st_ref) == "cube_stref_regular" ) {
+        if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
             stref->nx(1);
             stref->ny(1);
-        }
-        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+        } else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
             std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
             stref->nx(1);
             stref->ny(1);
@@ -112,7 +111,7 @@ class reduce_space_cube : public cube {
         json11::Json::object out;
         out["cube_type"] = "reduce_space";
         json11::Json::array rb;
-        for (uint16_t i=0; i<_reducer_bands.size(); ++i) {
+        for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
             rb.push_back(json11::Json::array({_reducer_bands[i].first, _reducer_bands[i].second}));
         }
         out["reducer_bands"] = rb;
@@ -123,7 +122,6 @@ class reduce_space_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::vector<std::pair<std::string, std::string>> _reducer_bands;
-
 };
 
 }  // namespace gdalcubes

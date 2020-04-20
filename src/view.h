@@ -226,15 +226,12 @@ struct resampling {
     }
 };
 
-
- // Forwartds declarations of all spacetime reference classes
+// Forwartds declarations of all spacetime reference classes
 class cube_stref_regular;
 class cube_stref_labeled_time;
 
-
 class cube_stref {
-public:
-
+   public:
     virtual uint32_t nx() = 0;
     virtual uint32_t ny() = 0;
     virtual uint32_t nt() = 0;
@@ -252,10 +249,9 @@ public:
     virtual double dx() = 0;
     virtual double dy() = 0;
 
-
-    virtual coords_st map_coords(coords_nd<uint32_t, 3> p)  = 0;
-    virtual coords_nd<uint32_t, 3> cube_coords(coords_st p)  = 0;
-    virtual datetime datetime_at_index(uint32_t index)  = 0;
+    virtual coords_st map_coords(coords_nd<uint32_t, 3> p) = 0;
+    virtual coords_nd<uint32_t, 3> cube_coords(coords_st p) = 0;
+    virtual datetime datetime_at_index(uint32_t index) = 0;
     virtual uint32_t index_at_datetime(datetime t) = 0;
 
     virtual std::shared_ptr<cube_stref> copy() = 0;
@@ -263,22 +259,19 @@ public:
     virtual bool has_regular_space() = 0;
     virtual bool has_regular_time() = 0;
 
-
     // TODO: add x_at_index, y_at_index, index_at_x, index_at_y
 
     // TODO: add dimension label functions x_labels
-//    virtual std::vector<double> x_labels();
-//    virtual std::vector<double> y_labels();
-//    virtual std::vector<datetime> t_labels();
+    //    virtual std::vector<double> x_labels();
+    //    virtual std::vector<double> y_labels();
+    //    virtual std::vector<datetime> t_labels();
 
     // TODO: add subset function?
     //virtual std::unique_ptr<cube_stref> subset_t() ... // TODO
 
-
     //virtual std::unique_ptr<cube_stref> copy() = 0;
 
     static std::string type_string(std::shared_ptr<cube_stref> obj) {
-
         if (std::dynamic_pointer_cast<cube_stref_regular>(obj) != nullptr) {
             return "cube_stref_regular";
         }
@@ -287,13 +280,7 @@ public:
         }
         return "";
     }
-
-
-
-
-
 };
-
 
 /**
  * @brief Spatial and temporal reference for data cubes
@@ -302,15 +289,13 @@ class cube_stref_regular : public cube_stref {
    public:
     virtual ~cube_stref_regular() {}
 
+    virtual uint32_t nx() override { return _nx; }
+    virtual void nx(uint32_t nx) { _nx = nx; }
 
-    virtual uint32_t nx() override {return _nx;}
-    virtual void nx(uint32_t nx) { _nx = nx;}
+    virtual uint32_t ny() override { return _ny; }
+    virtual void ny(uint32_t ny) { _ny = ny; }
 
-
-    virtual uint32_t ny() override {return _ny;}
-    virtual void ny(uint32_t ny) { _ny = ny;}
-
-    virtual double dx() override { return (_win.right - _win.left) / _nx;}
+    virtual double dx() override { return (_win.right - _win.left) / _nx; }
 
     virtual bool has_regular_space() override {
         return true;
@@ -336,8 +321,6 @@ class cube_stref_regular : public cube_stref {
         }
     }
 
-
-
     virtual double dy() override { return (_win.top - _win.bottom) / _ny; }
     virtual void dy(double dy) {
         _ny = (uint32_t)std::ceil((_win.top - _win.bottom) / dy);
@@ -349,7 +332,6 @@ class cube_stref_regular : public cube_stref {
                       std::to_string(exp_y / 2) + " at both sides.");
         }
     }
-
 
     virtual double left() override { return _win.left; }
     virtual void left(double left) { _win.left = left; }
@@ -383,17 +365,14 @@ class cube_stref_regular : public cube_stref {
     virtual datetime t0() { return _t0; }
     virtual void t0(datetime t0) { _t0 = t0; }
 
-
     virtual datetime t1() { return _t1; }
     virtual void t1(datetime t1) { _t1 = t1; }
-
 
     virtual uint32_t nt() override {
         if (_t1 == _t0) return 1;
         duration d = (_t1 - _t0) + 1;
         return (d % _dt == 0) ? d / _dt : (1 + (d / _dt));
     }
-
 
     virtual void nt(uint32_t n) {
         duration d = (_t1 - _t0) + 1;
@@ -407,8 +386,8 @@ class cube_stref_regular : public cube_stref {
         if (d.dt_interval % n != 0) {
             _t1 = _t0 + _dt * (n - 1);
             GCBS_INFO(
-                    "Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " +
-                    _t1.to_string() + ".");
+                "Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " +
+                _t1.to_string() + ".");
         }
         //
         //        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
@@ -419,8 +398,7 @@ class cube_stref_regular : public cube_stref {
     }
 
     virtual bounds_2d<double> win() { return _win; }
-    virtual void win(bounds_2d<double>  win) { _win = win; }
-
+    virtual void win(bounds_2d<double> win) { _win = win; }
 
     virtual duration dt() override { return _dt; }
     virtual datetime_unit dt_unit() override { return _dt.dt_unit; }
@@ -441,8 +419,8 @@ class cube_stref_regular : public cube_stref {
             end_duration.dt_unit = dt.dt_unit;
             _t1 = (_t0 + dt * (dtotal / dt)) + end_duration;
             GCBS_INFO(
-                    "Temporal size of the cube does not align with dt, end date/time of the cube will be extended to " +
-                    _t1.to_string());
+                "Temporal size of the cube does not align with dt, end date/time of the cube will be extended to " +
+                _t1.to_string());
         }
         _dt = dt;
     }
@@ -504,7 +482,6 @@ class cube_stref_regular : public cube_stref {
         return s;
     }
 
-
     /**
          * Convert spacetime coordinates to integer cube-based coordinates
          * @note cube-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
@@ -522,15 +499,13 @@ class cube_stref_regular : public cube_stref {
         return s;
     }
 
-
     virtual datetime datetime_at_index(uint32_t index) override {
         return _t0 + _dt * index;
     }
 
-    virtual uint32_t index_at_datetime(datetime t)  override{
+    virtual uint32_t index_at_datetime(datetime t) override {
         return (uint32_t)((t - _t0) / _dt);
     }
-
 
     virtual std::shared_ptr<cube_stref> copy() override {
         std::shared_ptr<cube_stref_regular> x = std::make_shared<cube_stref_regular>();
@@ -546,7 +521,6 @@ class cube_stref_regular : public cube_stref {
         x->_srs = _srs;
         return x;
     }
-
 
     friend bool operator==(const cube_stref_regular &l, const cube_stref_regular &r) {
         if (!(l._win.left == r._win.left &&
@@ -649,11 +623,8 @@ class cube_view : public cube_stref_regular {
     aggregation::aggregation_type _aggregation;
 };
 
-
 class cube_stref_labeled_time : public cube_stref_regular {
-
-public:
-
+   public:
     virtual bool has_regular_space() override {
         return true;
     }
@@ -675,9 +646,8 @@ public:
     }
 
     virtual datetime t1() override {
-        return _t_values[_t_values.size()-1];
+        return _t_values[_t_values.size() - 1];
     }
-
 
     virtual void nt(uint32_t n) override {
         // DO NOTHING, nt is derived from labels
@@ -697,24 +667,20 @@ public:
         return _dt;
     }
 
-
-
-
-    void set_time_labels (std::vector<datetime> t) {
+    void set_time_labels(std::vector<datetime> t) {
         // TODO: if t.empty()
-       _t_values = t;
+        _t_values = t;
 
-       // TODO: what if not sorted?
-       for (uint32_t i=0; i<_t_values.size(); ++i) {
-           _t_index.insert(std::make_pair(t[i],i));
-       }
-
+        // TODO: what if not sorted?
+        for (uint32_t i = 0; i < _t_values.size(); ++i) {
+            _t_index.insert(std::make_pair(t[i], i));
+        }
     }
 
-    void set_time_labels (std::vector<std::string> t) {
+    void set_time_labels(std::vector<std::string> t) {
         // TODO: what if not sorted?
-        for (uint32_t i=0; i<_t_values.size(); ++i) {
-            _t_index.insert(std::make_pair(datetime::from_string(t[i]),i));
+        for (uint32_t i = 0; i < _t_values.size(); ++i) {
+            _t_index.insert(std::make_pair(datetime::from_string(t[i]), i));
         }
     }
 
@@ -724,14 +690,11 @@ public:
 
     std::vector<std::string> get_time_labels_as_string() {
         std::vector<std::string> out;
-        for (uint32_t i=0; i<_t_values.size(); ++i) {
+        for (uint32_t i = 0; i < _t_values.size(); ++i) {
             out.push_back(_t_values[i].to_string());
         }
         return out;
     }
-
-
-
 
     virtual coords_st map_coords(coords_nd<uint32_t, 3> p) override {
         coords_st s;
@@ -741,7 +704,6 @@ public:
         return s;
     }
 
-
     virtual coords_nd<uint32_t, 3> cube_coords(coords_st p) override {
         coords_nd<uint32_t, 3> s;
         s[2] = (uint32_t)((p.s.x - _win.left) / dx());
@@ -750,20 +712,18 @@ public:
         return s;
     }
 
-
     virtual datetime datetime_at_index(uint32_t index) override {
         return _t_values[index];
     }
 
     virtual uint32_t index_at_datetime(datetime t) override {
-        auto res =_t_index.find(t);
+        auto res = _t_index.find(t);
         if (res == _t_index.end()) {
             GCBS_ERROR("Data cubes does not contain time slice for requested datetime");
             throw std::string("Data cubes does not contain time slice for requested datetime");
         }
         return res->second;
     }
-
 
     friend bool operator==(const cube_stref_labeled_time &l, const cube_stref_labeled_time &r) {
         if (!(l._win.left == r._win.left &&
@@ -788,7 +748,6 @@ public:
 
     inline friend bool operator!=(const cube_stref_labeled_time &l, const cube_stref_labeled_time &r) { return !(l == r); }
 
-
     virtual std::shared_ptr<cube_stref> copy() override {
         std::shared_ptr<cube_stref_labeled_time> x = std::make_shared<cube_stref_labeled_time>();
         x->_win.left = _win.left;
@@ -807,15 +766,10 @@ public:
         return x;
     }
 
-
-protected:
-
+   protected:
     std::vector<datetime> _t_values;
     std::map<datetime, uint32_t> _t_index;
-
 };
-
-
 
 }  // namespace gdalcubes
 

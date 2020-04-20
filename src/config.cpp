@@ -72,8 +72,7 @@ void config::set_gdal_debug(bool debug) {
 void config::set_gdal_log(std::string logfile) {
     if (logfile.empty()) {
         CPLSetConfigOption("CPL_LOG_ERRORS", "OFF");
-    }
-    else {
+    } else {
         CPLSetConfigOption("CPL_LOG", logfile.c_str());
         CPLSetConfigOption("CPL_LOG_ERRORS", "ON");
     }

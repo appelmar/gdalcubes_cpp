@@ -85,7 +85,6 @@ struct bounds_2d {
 
         OGRCoordinateTransformation* coord_transform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
 
-
         Ta x[4] = {left, left, right, right};
         Ta y[4] = {top, bottom, top, bottom};
 

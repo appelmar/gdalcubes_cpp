@@ -277,7 +277,6 @@ class image_collection_cube : public cube {
         GCBS_ERROR("Band '" + band + "' does not exist in image collection, image mask will not be modified.");
     }
 
-
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     // image_collection_cube is the only class that supports changing chunk sizes from outside!
@@ -304,8 +303,6 @@ class image_collection_cube : public cube {
     }
 
     static cube_view default_view(std::shared_ptr<image_collection> ic);
-
-
 
    private:
     const std::shared_ptr<image_collection> _collection;

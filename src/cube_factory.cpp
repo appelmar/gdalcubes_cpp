@@ -29,6 +29,7 @@
 #include "external/json11/json11.hpp"
 #include "filesystem.h"
 #include "fill_time.h"
+#include "filter_geom.h"
 #include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
@@ -124,6 +125,11 @@ void cube_factory::register_default() {
             auto x = filter_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["predicate"].string_value());
             return x;
         }));
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "filter_geom", [](json11::Json& j) {
+            auto x = filter_geom_cube::create(instance()->create_from_json(j["in_cube"]), j["wkt"].string_value(), j["srs"].string_value());
+            return x;
+        }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "fill_time", [](json11::Json& j) {
@@ -163,14 +169,14 @@ void cube_factory::register_default() {
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
-            "select_time", [](json11::Json& j) {
-                std::vector<std::string> t;
-                for (uint16_t i = 0; i < j["t"].array_items().size(); ++i) {
-                    t.push_back(j["t"][i].string_value());
-                }
-                auto x = select_time_cube::create(instance()->create_from_json(j["in_cube"]),t);
-                return x;
-            }));
+        "select_time", [](json11::Json& j) {
+            std::vector<std::string> t;
+            for (uint16_t i = 0; i < j["t"].array_items().size(); ++i) {
+                t.push_back(j["t"][i].string_value());
+            }
+            auto x = select_time_cube::create(instance()->create_from_json(j["in_cube"]), t);
+            return x;
+        }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "image_collection", [](json11::Json& j) {

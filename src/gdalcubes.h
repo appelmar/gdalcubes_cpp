@@ -33,6 +33,7 @@
 #include "cube.h"
 #include "dummy.h"
 #include "fill_time.h"
+#include "filter_geom.h"
 #include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"

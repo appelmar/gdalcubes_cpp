@@ -90,8 +90,6 @@ class stream_apply_pixel_cube : public cube {
     uint16_t _nbands;
     std::vector<std::string> _names;
     bool _keep_bands;
-
-
 };
 
 }  // namespace gdalcubes

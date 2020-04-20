@@ -65,8 +65,7 @@ class join_bands_cube : public cube {
             if (*(stref_A) != *(stref_B)) {
                 throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cubes have different shape");
             }
-        }
-        else if (cube_stref::type_string(_in_A->st_reference()) == "cube_stref_labeled_time") {
+        } else if (cube_stref::type_string(_in_A->st_reference()) == "cube_stref_labeled_time") {
             std::shared_ptr<cube_stref_labeled_time> stref_A = std::dynamic_pointer_cast<cube_stref_labeled_time>(_in_A->st_reference());
             std::shared_ptr<cube_stref_labeled_time> stref_B = std::dynamic_pointer_cast<cube_stref_labeled_time>(_in_B->st_reference());
             // Check that A and B have identical shape
@@ -95,7 +94,6 @@ class join_bands_cube : public cube {
                 throw std::string("ERROR in join_bands_cube::join_bands_cube(): Cannot join cubes with identical prefix");
             }
         }
-
 
         _st_ref = _in_A->st_reference();
 
@@ -135,8 +133,6 @@ class join_bands_cube : public cube {
     std::shared_ptr<cube> _in_B;
     std::string _prefix_A;
     std::string _prefix_B;
-
-
 };
 
 }  // namespace gdalcubes

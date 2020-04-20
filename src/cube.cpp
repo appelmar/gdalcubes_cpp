@@ -182,7 +182,6 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
     // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
     std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
 
-
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
@@ -215,8 +214,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix +
-                st_reference()->datetime_at_index(it).to_string() + ".tif");
+        std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + ".tif");
 
         GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), ot, out_co.List());
         char *wkt_out;
@@ -339,7 +337,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     if (overviews) {
         for (uint32_t it = 0; it < size_t(); ++it) {
-            std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string()  + ".tif");
+            std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + ".tif");
 
             GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
             if (!gdal_out) {
@@ -406,7 +404,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                     GCBS_ERROR("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                     throw std::string("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                 }
-                std::string cogname = filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string()  + ".tif");
+                std::string cogname = filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + ".tif");
                 GDALDatasetH gdal_cog = GDALTranslate(cogname.c_str(), (GDALDatasetH)gdal_out, trans_options, NULL);
 
                 GDALClose((GDALDatasetH)gdal_out);
@@ -512,8 +510,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         for (uint32_t i = 0; i < size_t(); ++i) {
             dim_t[i] = (i * stref->dt().dt_interval);
         }
-    }
-    else {
+    } else {
         for (uint32_t i = 0; i < size_t(); ++i) {
             dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
         }
@@ -532,16 +529,15 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
                 dim_t_bnds[2 * i] = (i * stref->dt().dt_interval);
                 dim_t_bnds[2 * i + 1] = ((i + 1) * stref->dt().dt_interval);
             }
-        }
-        else {
+        } else {
             for (uint32_t i = 0; i < size_t(); ++i) {
                 dim_t_bnds[2 * i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
-                dim_t_bnds[2 * i + 1] =  dim_t_bnds[2 * i] + stref->dt_interval();
+                dim_t_bnds[2 * i + 1] = dim_t_bnds[2 * i] + stref->dt_interval();
             }
         }
 
         for (uint32_t i = 0; i < size_y(); ++i) {
-            dim_y_bnds[2 * i] = stref->win().bottom + size_y() * stref->dy() - (i) * stref->dy();
+            dim_y_bnds[2 * i] = stref->win().bottom + size_y() * stref->dy() - (i)*stref->dy();
             dim_y_bnds[2 * i + 1] = stref->win().bottom + size_y() * stref->dy() - (i + 1) * stref->dy();
         }
         for (uint32_t i = 0; i < size_x(); ++i) {
@@ -869,13 +865,12 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     if (with_VRT) {
         for (uint32_t it = 0; it < size_t(); ++it) {
             std::string dir = filesystem::directory(path);
-            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + st_reference()->datetime_at_index(it).to_string()  + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" +st_reference()->datetime_at_index(it).to_string()  + ".vrt");
+            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + st_reference()->datetime_at_index(it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + st_reference()->datetime_at_index(it).to_string() + ".vrt");
 
             std::ofstream fout(outfile);
             fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
             fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
-            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(
-                    stref->dx()) << ", "
+            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(stref->dx()) << ", "
                  << "0.0"
                  << ", " << utils::dbl_to_string(stref->top()) << ", "
                  << "0.0"
@@ -908,14 +903,12 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, uint8_t compression_level) {
     std::string fname = path;  // TODO: check for existence etc.
 
-
     if (!_st_ref->has_regular_space()) {
         throw std::string("ERROR: netCDF export does not supported irregular spatial dimensions");
     }
 
     // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
     std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-
 
     std::shared_ptr<chunk_data> dat = this->read_chunk(id);
 
@@ -933,8 +926,7 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
         for (uint32_t i = 0; i < size_t(); ++i) {
             dim_t[i] = (i * stref->dt().dt_interval);
         }
-    }
-    else {
+    } else {
         for (uint32_t i = 0; i < size_t(); ++i) {
             dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
         }
@@ -1134,8 +1126,7 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
             for (uint32_t i = 0; i < size_t(); ++i) {
                 dim_t[i] = (i * stref->dt().dt_interval);
             }
-        }
-        else {
+        } else {
             for (uint32_t i = 0; i < size_t(); ++i) {
                 dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
             }

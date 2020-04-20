@@ -22,74 +22,63 @@
     SOFTWARE.
 */
 
-
 #ifndef WARP_H
 #define WARP_H
 
-
-#include "coord_types.h"
 #include <gdal_alg.h>
 #include <map>
+#include "coord_types.h"
 
 namespace gdalcubes {
 
-
-    /**
+/**
      * Minimal interface to the GDAL Warp API to reduce computational overhead of repeated / parallel gdalwarp calls
      */
-    class gdalwarp_client {
+class gdalwarp_client {
+    typedef struct {  // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALGenImgProjTransformInfo
+        double adfSrcGeoTransform[6];
+        double adfSrcInvGeoTransform[6];
 
-        typedef struct { // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALGenImgProjTransformInfo
-            double   adfSrcGeoTransform[6];
-            double   adfSrcInvGeoTransform[6];
+        void *pReprojectArg;
+        GDALTransformerFunc pReproject;
 
+        double adfDstGeoTransform[6];
+        double adfDstInvGeoTransform[6];
 
-            void     *pReprojectArg;
-            GDALTransformerFunc pReproject;
+    } gdalcubes_transform_info;
 
-            double   adfDstGeoTransform[6];
-            double   adfDstInvGeoTransform[6];
+    typedef struct {  // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALReprojectionTransformInfo
+        OGRCoordinateTransformation *poForwardTransform = nullptr;
+        OGRCoordinateTransformation *poReverseTransform = nullptr;
+    } gdalcubes_reprojection_info;
 
-        } gdalcubes_transform_info;
-
-        typedef struct { // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALReprojectionTransformInfo
-            OGRCoordinateTransformation *poForwardTransform = nullptr;
-            OGRCoordinateTransformation *poReverseTransform = nullptr;
-        } gdalcubes_reprojection_info;
-
-
-    public:
-
-        /**
+   public:
+    /**
          * Cache for reprojection transformations given a pair of source and destination coordinate reference systems
          */
-        class gdal_transformation_cache {
-        public:
+    class gdal_transformation_cache {
+       public:
+        static gdal_transformation_cache *instance() {
+            static gdal_transformation_cache instance;
+            return &instance;
+        }
 
-            static gdal_transformation_cache* instance() {
-                static gdal_transformation_cache instance;
-                return &instance;
-            }
+        gdalcubes_reprojection_info *get(GDALDataset *in, GDALDataset *out);
 
-            gdalcubes_reprojection_info* get(GDALDataset *in, GDALDataset *out);
+       private:
+        gdal_transformation_cache(const gdal_transformation_cache &) = delete;
+        gdal_transformation_cache(gdal_transformation_cache &&) = delete;
+        gdal_transformation_cache &operator=(const gdal_transformation_cache &) = delete;
+        gdal_transformation_cache &operator=(gdal_transformation_cache &&) = delete;
+        gdal_transformation_cache() {}
+        ~gdal_transformation_cache();
 
+        std::map<std::pair<std::string, std::string>, gdalcubes_reprojection_info *> _cache;
+        std::mutex _mutex;
+    };
 
-        private:
-            gdal_transformation_cache(const gdal_transformation_cache&) = delete;
-            gdal_transformation_cache(gdal_transformation_cache&&) = delete;
-            gdal_transformation_cache& operator=(const gdal_transformation_cache&) = delete;
-            gdal_transformation_cache& operator=(gdal_transformation_cache&&) = delete;
-            gdal_transformation_cache () { }
-            ~gdal_transformation_cache();
-
-            std::map<std::pair<std::string,std::string>, gdalcubes_reprojection_info*> _cache;
-            std::mutex _mutex;
-        };
-
-
-    public:
-
-        /**
+   public:
+    /**
          * Warp source GDAL dataset to a target grid
          * @param in source GDAL dataset, will be closed at the end of this function
          * @param s_srs spatial reference system of source image, given as string understandable for OGRSpatialReference::SetFromUserInput()
@@ -104,28 +93,24 @@ namespace gdalcubes {
          * @param srcnodata vector with no data values of the source dataset per band
          * @return A new in-memory GDALDataset object
          */
-        static GDALDataset* warp(GDALDataset* in,  std::string s_srs, std::string t_srs, double te_left, double te_right, double te_top, double te_bottom, uint32_t ts_x, uint32_t ts_y, std::string resampling, std::vector<double> srcnodata);
+    static GDALDataset *warp(GDALDataset *in, std::string s_srs, std::string t_srs, double te_left, double te_right, double te_top, double te_bottom, uint32_t ts_x, uint32_t ts_y, std::string resampling, std::vector<double> srcnodata);
 
-        static gdalcubes_transform_info* create_transform(GDALDataset* in, GDALDataset* out);
-        static void destroy_transform(gdalcubes_transform_info* transform);
+    static gdalcubes_transform_info *create_transform(GDALDataset *in, GDALDataset *out);
+    static void destroy_transform(gdalcubes_transform_info *transform);
 
-        // implements GDALTransformerFunc signature
-        static int transform(void *pTransformerArg,
-                             int bDstToSrc, int nPointCount,
-                             double *x, double *y, double *z = nullptr, int *panSuccess = nullptr);
+    // implements GDALTransformerFunc signature
+    static int transform(void *pTransformerArg,
+                         int bDstToSrc, int nPointCount,
+                         double *x, double *y, double *z = nullptr, int *panSuccess = nullptr);
 
-        static gdalcubes_reprojection_info* create_reprojection(GDALDataset* in, GDALDataset* out);
-        static void destroy_reprojection(gdalcubes_reprojection_info* reprojection);
+    static gdalcubes_reprojection_info *create_reprojection(GDALDataset *in, GDALDataset *out);
+    static void destroy_reprojection(gdalcubes_reprojection_info *reprojection);
 
-        // implements GDALTransformerFunc signature
-        static int reproject(void *pTransformerArg,
-                             int bDstToSrc, int nPointCount,
-                             double *x, double *y, double *z = nullptr, int *panSuccess = nullptr);
+    // implements GDALTransformerFunc signature
+    static int reproject(void *pTransformerArg,
+                         int bDstToSrc, int nPointCount,
+                         double *x, double *y, double *z = nullptr, int *panSuccess = nullptr);
+};
 
-    };
-
-
-} // namespace gdalcubes
-#endif // WARP_H
-
-
+}  // namespace gdalcubes
+#endif  // WARP_H

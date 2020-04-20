@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -22,65 +22,58 @@
     SOFTWARE.
 */
 
-#ifndef DUMMY_H
-#define DUMMY_H
+#ifndef GDALCUBES_FILTER_GEOM_H
+#define GDALCUBES_FILTER_GEOM_H
 
 #include "cube.h"
 
 namespace gdalcubes {
 
 /**
-     * @brief A dummy data cube with n bands and a simple fill value
+     * @brief A data cube where space is cropped by a polygon
      */
-class dummy_cube : public cube {
+class filter_geom_cube : public cube {
    public:
     /**
-         * @brief Create a dummy data cube with a simple fill value
+         * @brief Create a data cube from another cube where space is cropped by a polygon
          * @note This static creation method should preferably be used instead of the constructors as
          * the constructors will not set connections between cubes properly.
-         * @param v shape of the cube
-         * @param nbands number of bands
-         * @param fill fill value
+         * @param in source data cube
+         * @param wkt WKT of the crop polygon
+         * @param srs spatial reference system in any form that is readable by GDAL
          * @return a shared pointer to the created data cube instance
          */
-    static std::shared_ptr<dummy_cube> create(cube_view v, uint16_t nbands = 1, double fill = 1.0) {
-        std::shared_ptr<dummy_cube> out = std::make_shared<dummy_cube>(v, nbands, fill);
+    static std::shared_ptr<filter_geom_cube> create(std::shared_ptr<cube> in, std::string wkt, std::string srs) {
+        std::shared_ptr<filter_geom_cube> out = std::make_shared<filter_geom_cube>(in, wkt, srs);
         return out;
     }
 
    public:
-    dummy_cube(cube_view v, uint16_t nbands = 1, double fill = 1.0) : cube(std::make_shared<cube_view>(v)),
-                                                                      _fill(fill) {
-        for (uint16_t ib = 0; ib < nbands; ++ib) {
-            band b("band" + std::to_string(ib + 1));
-            b.scale = 1.0;
-            b.offset = 0.0;
-            _bands.add(b);
-        }
-    }
-
-    void set_chunk_size(uint32_t t, uint32_t y, uint32_t x) {
-        _chunk_size = {t, y, x};
-    }
-
-   public:
-    ~dummy_cube() {}
+    filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, std::string srs);
+    ~filter_geom_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     json11::Json make_constructible_json() override {
         json11::Json::object out;
-        out["cube_type"] = "dummy";
-        std::string err;  // TODO: do something with err
-        out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
-        out["fill"] = _fill;
-        out["chunk_size"] = json11::Json::array{(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]};
+        out["cube_type"] = "filter_geom";
+        out["in_cube"] = _in_cube->make_constructible_json();
+        out["wkt"] = _wkt;
+        out["srs"] = _srs;
         return out;
     }
 
    private:
-    double _fill;
+    std::shared_ptr<cube> _in_cube;
+    std::string _wkt;
+    std::string _srs;
+
+    std::string _ogr_dataset;  // filename of transformed input polygon
+    uint32_t _min_chunk_x;
+    uint32_t _max_chunk_x;
+    uint32_t _min_chunk_y;
+    uint32_t _max_chunk_y;
 };
 }  // namespace gdalcubes
 
-#endif  //DUMMY_H
+#endif  //GDALCUBES_FILTER_GEOM_H

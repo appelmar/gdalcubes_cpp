@@ -56,7 +56,14 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
 
     // 1. get bounding box of polygon
     OGRGeometry *p = nullptr;
+#if GDAL_VERSION_MAJOR < 2 || (GDAL_VERSION_MAJOR == 2 && GDAL_VERSION_MINOR < 3)
+    char * srsstr = (char*)std::malloc(sizeof(char) * _wkt.length());
+    _wkt.copy(srsstr,_wkt.length() );
+    OGRErr res = OGRGeometryFactory::createFromWkt(srsstr, &srsogr, &p);
+    std::free(srsstr);
+#else
     OGRErr res = OGRGeometryFactory::createFromWkt(_wkt.c_str(), &srsogr, &p);
+#endif
     if (res != OGRERR_NONE) {
         //            if (res == OGRERR_NOT_ENOUGH_DATA) {}
         //            if (res == OGRERR_UNSUPPORTED_GEOMETRY_TYPE) {}
@@ -65,10 +72,12 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
         throw std::string("Geometry creation from WKT failed");
     }
 
-    if (p->getSpatialReference()->IsEmpty()) {
-        GCBS_ERROR("Missing spatial reference for polygon");
-        throw std::string("Missing spatial reference for polygon");
-    }
+
+    // This seems to cause trouble with old GDAL versions on Travis
+//    if (p->getSpatialReference()->IsEmpty()) {
+//        GCBS_ERROR("Missing spatial reference for polygon");
+//        throw std::string("Missing spatial reference for polygon");
+//    }
     OGRwkbGeometryType geom_type = p->getGeometryType();
     if (geom_type != wkbPolygon && geom_type != wkbPolygonM && geom_type != wkbPolygon25D &&
         geom_type != wkbPolygonZM && geom_type != wkbMultiPolygon) {
@@ -79,7 +88,7 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
     // 2. If needed transform to data cube reference system
     OGRSpatialReference srs_in = _in_cube->st_reference()->srs_ogr();
     if (!srs_in.IsSame(p->getSpatialReference())) {
-        p->transformTo(&srs_in);  // TODO: Error check
+        p->transformTo(&srs_in);  // TODO: Error checking if transformation fails
     }
 
     // 3. Derive new extent, and store x and y offsets

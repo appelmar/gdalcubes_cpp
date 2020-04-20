@@ -59,7 +59,7 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
 #if GDAL_VERSION_MAJOR < 2 || (GDAL_VERSION_MAJOR == 2 && GDAL_VERSION_MINOR < 3)
     char * srsstr = (char*)std::malloc(sizeof(char) * _wkt.length());
     _wkt.copy(srsstr,_wkt.length() );
-    OGRErr res = OGRGeometryFactory::createFromWkt(srsstr, &srsogr, &p);
+    OGRErr res = OGRGeometryFactory::createFromWkt(&srsstr, &srsogr, &p);
     std::free(srsstr);
 #else
     OGRErr res = OGRGeometryFactory::createFromWkt(_wkt.c_str(), &srsogr, &p);

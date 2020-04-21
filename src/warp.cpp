@@ -188,30 +188,43 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
     psWarpOptions->panDstBands = (int *)CPLMalloc(sizeof(int) * psWarpOptions->nBandCount);
     double *dst_nodata = (double *)CPLMalloc(sizeof(double) * psWarpOptions->nBandCount);
 
+    // Due to issues on Windows with GDAL 2.2.3 if imag no data values are not set,
+    // we explicitly set then to 0 in the following. This might be removed in the future.
+    double *dst_nodata_img = (double *)CPLMalloc(sizeof(double) * psWarpOptions->nBandCount);
     for (uint16_t i = 0; i < psWarpOptions->nBandCount; ++i) {
         dst_nodata[i] = NAN;
+        dst_nodata_img[i] = 0.0;
         psWarpOptions->panSrcBands[i] = i + 1;
         psWarpOptions->panDstBands[i] = i + 1;
     }
     double *src_nodata = nullptr;
+    double *src_nodata_img = nullptr;
+
     if (!srcnodata.empty()) {
         src_nodata = (double *)CPLMalloc(sizeof(double) * psWarpOptions->nBandCount);
+        src_nodata_img = (double *)CPLMalloc(sizeof(double) * psWarpOptions->nBandCount);
         if (srcnodata.size() == 1) {
             for (uint16_t i = 0; i < psWarpOptions->nBandCount; ++i) {
                 src_nodata[i] = srcnodata[0];
+                src_nodata_img[i] = 0.0;
             }
             psWarpOptions->padfSrcNoDataReal = src_nodata;
+            psWarpOptions->padfSrcNoDataImag = src_nodata_img;
         } else if (srcnodata.size() == (uint16_t)psWarpOptions->nBandCount) {
             for (uint16_t i = 0; i < psWarpOptions->nBandCount; ++i) {
                 src_nodata[i] = srcnodata[i];
+                src_nodata_img[i] = 0.0;
             }
             psWarpOptions->padfSrcNoDataReal = src_nodata;
+            psWarpOptions->padfSrcNoDataImag = src_nodata_img;
         } else {
             GCBS_DEBUG("Number of no data values does not match number of bands of source dataset, no data values will be ignored");
             std::free(src_nodata);
+            std::free(src_nodata_img);
         }
     }
     psWarpOptions->padfDstNoDataReal = dst_nodata;
+    psWarpOptions->padfDstNoDataImag = dst_nodata_img;
 
     char **wo = nullptr;
     wo = CSLAddString(wo, "INIT_DEST=nan");

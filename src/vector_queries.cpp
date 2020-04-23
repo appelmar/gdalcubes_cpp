@@ -58,8 +58,8 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
     if (cube->st_reference()->srs() != srs) {
         OGRSpatialReference srs_in;
         OGRSpatialReference srs_out;
-        srs_in.SetFromUserInput(cube->st_reference()->srs().c_str());
-        srs_out.SetFromUserInput(srs.c_str());
+        srs_in.SetFromUserInput(srs.c_str());
+        srs_out.SetFromUserInput(cube->st_reference()->srs().c_str());
 
         if (!srs_in.IsSame(&srs_out)) {
             std::vector<std::thread> workers_transform;

@@ -120,12 +120,11 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
 
         double minx = std::min(std::min(x[0], x[1]), std::min(x[2], x[3]));
         double maxx = std::max(std::max(x[0], x[1]), std::max(x[2], x[3]));
-
         double target_ratio = (maxx - minx) / double(ts_x);
 
-        uint16_t ilevel = 0;
+        int16_t ilevel = 0;
         while (ilevel < n_ov) {
-            double ov_ratio = in->GetRasterBand(1)->GetXSize() / in->GetRasterBand(1)->GetOverview(ilevel)->GetXSize();
+            double ov_ratio = double(in->GetRasterBand(1)->GetXSize()) / double(in->GetRasterBand(1)->GetOverview(ilevel)->GetXSize());
             if (ov_ratio > target_ratio) {
                 --ilevel;
                 break;

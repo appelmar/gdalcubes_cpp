@@ -10135,7 +10135,7 @@ o->write_character('0');
 return;
 }
 
-const bool is_negative = (x <= 0) and (x != 0);  // see issue #755
+const bool is_negative = (int64_t(x) <= 0) and (int64_t(x) != 0);  // see issue #755
 std::size_t i = 0;
 
 while (x != 0)

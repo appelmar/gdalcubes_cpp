@@ -148,7 +148,7 @@ void cube_factory::register_default() {
             if (!j["band_names"].is_null()) {
                 std::vector<std::string> bandnames;
                 for (uint16_t i = 0; i < j["band_names"].array_items().size(); ++i) {
-                    bandnames.push_back(j["bandnames"][i].string_value());
+                    bandnames.push_back(j["band_names"][i].string_value());
                 }
                 auto x = apply_pixel_cube::create(instance()->create_from_json(j["in_cube"]), expr, bandnames, j["keep_bands"].bool_value());
                 return x;

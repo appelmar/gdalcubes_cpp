@@ -45,6 +45,7 @@
 #include "stream.h"
 #include "stream_apply_pixel.h"
 #include "stream_reduce_time.h"
+#include "stream_reduce_space.h"
 #include "swarm.h"
 #include "utils.h"
 #include "vector_queries.h"

@@ -1,20 +1,20 @@
 
 
-#ifndef STREAM_REDUCE_TIME_H
-#define STREAM_REDUCE_TIME_H
+#ifndef STREAM_REDUCE_SPACE_H
+#define STREAM_REDUCE_SPACE_H
 
 #include "cube.h"
 
 namespace gdalcubes {
 
 /**
-* @brief A data cube that applies a user-defined function over pixel time-series
+* @brief A data cube that applies a user-defined function over data cube time slices
 */
 
-class stream_reduce_time_cube : public cube {
+class stream_reduce_space_cube : public cube {
    public:
     /**
-        * @brief Create a data cube that applies a user-defined function on a given input data cube over time
+        * @brief Create a data cube that applies a user-defined function on a given input data cube over space
         * @note This static creation method should preferably be used instead of the constructors as
         * the constructors will not set connections between cubes properly.
         * @param in input data cube
@@ -24,10 +24,10 @@ class stream_reduce_time_cube : public cube {
         * output bands will be named "band1", "band2", ...
         * @return a shared pointer to the created data cube instance
         */
-    static std::shared_ptr<stream_reduce_time_cube>
+    static std::shared_ptr<stream_reduce_space_cube>
     create(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
            std::vector<std::string> names = std::vector<std::string>()) {
-        std::shared_ptr<stream_reduce_time_cube> out = std::make_shared<stream_reduce_time_cube>(in, cmd, nbands,
+        std::shared_ptr<stream_reduce_space_cube> out = std::make_shared<stream_reduce_space_cube>(in, cmd, nbands,
                                                                                                  names);
         in->add_child_cube(out);
         out->add_parent_cube(in);
@@ -35,27 +35,26 @@ class stream_reduce_time_cube : public cube {
     }
 
    public:
-    stream_reduce_time_cube(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
+    stream_reduce_space_cube(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
                             std::vector<std::string> names = std::vector<std::string>()) : cube(in->st_reference()->copy()), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-            stref->dt((stref->t1() - stref->t0()) + 1);
-            stref->t1(stref->t0());  // set nt=1
+            stref->nx(1);
+            stref->ny(1);
         } else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
             std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
-            stref->dt((stref->t1() - stref->t0()) + 1);
-            //stref->t1(stref->t0()) ;  // set nt=1
-            stref->set_time_labels({stref->t0()});
+            stref->nx(1);
+            stref->ny(1);
         }
-        _chunk_size[0] = 1;
-        _chunk_size[1] = _in_cube->chunk_size()[1];
-        _chunk_size[2] = _in_cube->chunk_size()[2];
+        _chunk_size[0] = _in_cube->chunk_size()[0];
+        _chunk_size[1] = 1;
+        _chunk_size[2] = 1;
 
         if (!names.empty()) {
             if (names.size() != nbands) {
                 GCBS_ERROR("size of names is different to nbands");
                 throw std::string(
-                    "ERROR in stream_reduce_time_cube::reduce_time_stream_cube(): size of names is different to nbands");
+                    "ERROR in stream_reduce_space_cube::reduce_time_stream_cube(): size of names is different to nbands");
             }
         }
 
@@ -70,13 +69,13 @@ class stream_reduce_time_cube : public cube {
     }
 
    public:
-    ~stream_reduce_time_cube() {}
+    ~stream_reduce_space_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     json11::Json make_constructible_json() override {
         json11::Json::object out;
-        out["cube_type"] = "stream_reduce_time";
+        out["cube_type"] = "stream_reduce_space";
         out["cmd"] = _cmd;
         out["nbands"] = _nbands;
         out["names"] = _names;
@@ -93,4 +92,4 @@ class stream_reduce_time_cube : public cube {
 
 }  // namespace gdalcubes
 
-#endif  //STREAM_REDUCE_TIME_H
+#endif  //STREAM_REDUCE_SPACE_H

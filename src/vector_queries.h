@@ -46,15 +46,29 @@ class vector_queries {
     static std::vector<std::vector<double>> query_points(std::shared_ptr<cube> cube, std::vector<double> x, std::vector<double> y, std::vector<std::string> t, std::string srs);
 
     /**
+    * Query complete time series of a datacube at irregular spatial points
+    *
+    * @brief This function extracts time series of data cube cells at provided spatial points.
+    * The result will contain data from all bands of the data cube, but will not contain the input point coordinates.
+    *
+    * @param cube data cube
+    * @param x x coordinates of query points
+    * @param y y coordinates of query points
+    * @param t date/time of query points
+    * @param srs spatial reference system of spatial point coordinates
+    * @return vector of data frames (vector of double vectors) where first vector represents bands, second vector represents
+     * data frame columns (time) and the third vector represents the points (data frame rows)
+    */
+    static std::vector<std::vector<std::vector<double>>> query_timeseries(std::shared_ptr<cube> cube, std::vector<double> x, std::vector<double> y, std::string srs);
+
+    /**
      * Query summary statistics of a data cube over spatial polygons
      *
      * The function produces a single geopackage file with one layer "geom" containing the geometries and feature IDs, and other layers containing resulting summary statistics
      * per time slice of the data cube. These layers are named "attr_%DATETIME%" and contain only attribute values and feature IDs. Additional layers with names "map_%DATETIME%"
      * are spatial views of these time slices by joining attribute layers with the geometry layer in a SQLite database view.
      *
-     * Available aggregation functions currently include "min", "max", "mean", "median", "sum", "prod", and "count". "var" and "sd" are currently NOT implemented.
-     *
-     * @note THIS FUNCTION CURRENTLY RUNS IN A SINGLE THREAD ONLY
+     * Available aggregation functions currently include "min", "max", "mean", "median", "sum", "prod", "count", "var" and "sd".
      *
      *
      * @param cube input data cube

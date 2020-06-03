@@ -68,28 +68,18 @@ class dummy_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "dummy";
-        out["view"] = nlohmann::json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string());
+        std::string err;  // TODO: do something with err
+        out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
         out["fill"] = _fill;
-        out["chunk_size"] = _chunk_size;
+        out["chunk_size"] = json11::Json::array{(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]};
         return out;
     }
 
    private:
     double _fill;
-
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        // copy fields from st_reference type
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
-        _st_ref->dt(stref->dt());
-    }
 };
 }  // namespace gdalcubes
 

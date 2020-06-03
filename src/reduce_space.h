@@ -50,9 +50,16 @@ class reduce_space_cube : public cube {
     }
 
    public:
-    reduce_space_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
-        _st_ref->nx() = 1;
-        _st_ref->ny() = 1;
+    reduce_space_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+        if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
+            std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+            stref->nx(1);
+            stref->ny(1);
+        } else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+            std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
+            stref->nx(1);
+            stref->ny(1);
+        }
         assert(_st_ref->nx() == 1 && _st_ref->ny() == 1);
 
         _chunk_size[0] = _in_cube->chunk_size()[0];
@@ -100,10 +107,14 @@ class reduce_space_cube : public cube {
      * @param p chunk processor instance, defaults to the current global configuration in config::instance()->get_default_chunk_processor()
  */
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "reduce_space";
-        out["reducer_bands"] = _reducer_bands;
+        json11::Json::array rb;
+        for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
+            rb.push_back(json11::Json::array({_reducer_bands[i].first, _reducer_bands[i].second}));
+        }
+        out["reducer_bands"] = rb;
         out["in_cube"] = _in_cube->make_constructible_json();
         return out;
     }
@@ -111,19 +122,6 @@ class reduce_space_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::vector<std::pair<std::string, std::string>> _reducer_bands;
-
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        // copy fields from st_reference type
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-
-        _st_ref->nx() = 1;
-        _st_ref->ny() = 1;
-
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
-        _st_ref->dt(stref->dt());
-    }
 };
 
 }  // namespace gdalcubes

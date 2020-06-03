@@ -1,9 +1,32 @@
+/*
+    MIT License
 
+    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+*/
 
 #include "vector_queries.h"
 #include <gdal_utils.h>
 #include <ogrsf_frmts.h>
 #include <thread>
+#include <unordered_map>
 
 namespace gdalcubes {
 
@@ -35,8 +58,8 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
     if (cube->st_reference()->srs() != srs) {
         OGRSpatialReference srs_in;
         OGRSpatialReference srs_out;
-        srs_in.SetFromUserInput(cube->st_reference()->srs().c_str());
-        srs_out.SetFromUserInput(srs.c_str());
+        srs_in.SetFromUserInput(srs.c_str());
+        srs_out.SetFromUserInput(cube->st_reference()->srs().c_str());
 
         if (!srs_in.IsSame(&srs_out)) {
             std::vector<std::thread> workers_transform;
@@ -53,7 +76,8 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
                     // change coordinates in place, should be safe because vectors don't change their sizes
                     if (count > 0) {
                         if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
-                            throw std::string("ERROR: coordinate transformation failed (from " + cube->st_reference()->srs() + " to " + srs + ").");
+                            throw std::string("ERROR: coordinate transformation failed (from " +
+                                              cube->st_reference()->srs() + " to " + srs + ").");
                         }
                     }
                     OCTDestroyCoordinateTransformation(coord_transform);
@@ -67,8 +91,8 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
 
     // TODO: possible without additional copy?
     std::vector<double> it;  // array indexes
-                             //    ix.resize(x.size());
-                             //    iy.resize(x.size());
+    //    ix.resize(x.size());
+    //    iy.resize(x.size());
     it.resize(x.size());
 
     std::map<chunkid_t, std::vector<uint32_t>> chunk_index;
@@ -95,8 +119,7 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
                 } else {
                     dt.unit() = cube->st_reference()->dt().dt_unit;
                 }
-                duration delta = cube->st_reference()->dt();
-                it[i] = (dt - cube->st_reference()->t0()) / delta;
+                it[i] = cube->st_reference()->index_at_datetime(dt);
 
                 if (it[i] < 0 || it[i] >= cube->size_t() ||
                     x[i] < 0 || x[i] >= cube->size_x() ||
@@ -157,6 +180,174 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
                         }
                     }
                     prg->increment((double)1 / (double)chunks.size());
+                } catch (std::string s) {
+                    GCBS_ERROR(s);
+                    continue;
+                } catch (...) {
+                    GCBS_ERROR("unexpected exception while processing chunk " + std::to_string(chunks[ic]));
+                    continue;
+                }
+            }
+        }));
+    }
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers[ithread].join();
+    }
+    prg->finalize();
+
+    return out;
+}
+
+std::vector<std::vector<std::vector<double>>> vector_queries::query_timeseries(std::shared_ptr<cube> cube,
+                                                                               std::vector<double> x,
+                                                                               std::vector<double> y,
+                                                                               std::string srs) {
+    if (x.size() != y.size()) {
+        GCBS_ERROR("Point coordinate vectors x, y must have identical length");
+        throw std::string("Point coordinate vectors x, y must have identical length");
+    }
+
+    if (x.empty()) {
+        GCBS_ERROR("Point coordinate vectors x, y must have length > 0");
+        throw std::string("Point coordinate vectors x, y must have length > 0");
+    }
+
+    if (!cube) {
+        GCBS_ERROR("Invalid data cube pointer");
+        throw std::string("Invalid data cube pointer");
+    }
+
+    uint32_t nthreads = config::instance()->get_default_chunk_processor()->max_threads();
+
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
+    // coordinate transformation
+    if (cube->st_reference()->srs() != srs) {
+        OGRSpatialReference srs_in;
+        OGRSpatialReference srs_out;
+        srs_in.SetFromUserInput(cube->st_reference()->srs().c_str());
+        srs_out.SetFromUserInput(srs.c_str());
+
+        if (!srs_in.IsSame(&srs_out)) {
+            std::vector<std::thread> workers_transform;
+            uint32_t n = (uint32_t)std::ceil(double(x.size()) / double(nthreads));  // points per thread
+
+            for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+                workers_transform.push_back(std::thread([&cube, &srs, &srs_in, &srs_out, &x, &y, ithread, n](void) {
+                    OGRCoordinateTransformation *coord_transform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
+
+                    int begin = ithread * n;
+                    int end = std::min(uint32_t(ithread * n + n), uint32_t(x.size()));
+                    int count = end - begin;
+
+                    // change coordinates in place, should be safe because vectors don't change their sizes
+                    if (count > 0) {
+                        if (coord_transform == nullptr || !coord_transform->Transform(count, x.data() + begin, y.data() + begin)) {
+                            throw std::string("ERROR: coordinate transformation failed (from " +
+                                              cube->st_reference()->srs() + " to " + srs + ").");
+                        }
+                    }
+                    OCTDestroyCoordinateTransformation(coord_transform);
+                }));
+            }
+            for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+                workers_transform[ithread].join();
+            }
+        }
+    }
+
+    // TODO: possible without additional copy?
+    std::vector<double> ipoints;  // array indexes
+    //    ix.resize(x.size());
+    //    iy.resize(x.size());
+    ipoints.resize(x.size());
+
+    std::map<chunkid_t, std::vector<uint32_t>> chunk_index;
+    std::vector<std::thread> workers_preprocess;
+    std::mutex mtx;
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers_preprocess.push_back(std::thread([&mtx, &cube, &x, &y, &chunk_index, ithread, nthreads](void) {
+            for (uint32_t i = ithread; i < x.size(); i += nthreads) {
+                coords_st st;
+
+                st.s.x = x[i];
+                st.s.y = y[i];
+
+                // array coordinates
+                double xarr = (x[i] - cube->st_reference()->left()) / cube->st_reference()->dx();
+                //iy.push_back(cube->st_reference()->ny() - 1 - ((y[i] - cube->st_reference()->bottom()) / cube->st_reference()->dy()));  // top 0
+                double yarr = (y[i] - cube->st_reference()->bottom()) / cube->st_reference()->dy();
+
+                if (xarr < 0 || xarr >= cube->size_x() ||
+                    yarr < 0 || yarr >= cube->size_y()) {  // if point is outside of the cube
+                    continue;
+                }
+                uint32_t cx = xarr / cube->chunk_size()[2];
+                uint32_t cy = yarr / cube->chunk_size()[1];
+                chunkid_t c = cube->chunk_id_from_coords({0, cy, cx});
+                // st.t = cube->st_reference()->t0();
+                // chunkid_t c = cube->find_chunk_that_contains(st);
+                //
+                mtx.lock();
+                chunk_index[c].push_back(i);
+                mtx.unlock();
+            }
+        }));
+    }
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers_preprocess[ithread].join();
+    }
+
+    std::vector<std::vector<std::vector<double>>> out;
+    out.resize(cube->bands().count());
+    for (uint16_t ib = 0; ib < out.size(); ++ib) {
+        out[ib].resize(cube->size_t());
+        for (uint32_t it = 0; it < out[ib].size(); ++it) {
+            out[ib][it].resize(x.size(), NAN);
+        }
+    }
+
+    std::vector<chunkid_t> chunks;  // vector of keys in chunk_index
+    for (auto iter = chunk_index.begin(); iter != chunk_index.end(); ++iter) {
+        chunks.push_back(iter->first);
+    }
+
+    std::vector<std::thread> workers;
+    for (uint32_t ithread = 0; ithread < nthreads; ++ithread) {
+        workers.push_back(std::thread([&prg, &cube, &out, &chunk_index, &chunks, &x, &y, ithread, nthreads](void) {
+            for (uint32_t ic = ithread; ic < chunks.size(); ic += nthreads) {
+                try {
+                    for (uint32_t ct = 0; ct < cube->count_chunks_t(); ct++) {
+                        chunkid_t cur_chunk = chunks[ic] + ct * (cube->count_chunks_x() * cube->count_chunks_y());
+                        if (cur_chunk < cube->count_chunks()) {  // if chunk exists
+                            uint32_t nt_in_chunk = cube->chunk_size(cur_chunk)[0];
+                            std::shared_ptr<chunk_data> dat = cube->read_chunk(cur_chunk);
+                            if (!dat->empty()) {  // if chunk is not empty
+                                // iterate over all query points within the current chunk
+                                for (uint32_t i = 0; i < chunk_index[chunks[ic]].size(); ++i) {
+                                    double ixc = x[chunk_index[chunks[ic]][i]];
+                                    double iyc = y[chunk_index[chunks[ic]][i]];
+
+                                    int iix = (ixc - cube->bounds_from_chunk(cur_chunk).s.left) /
+                                              cube->st_reference()->dx();
+                                    int iiy = (cube->bounds_from_chunk(cur_chunk).s.top - iyc) /
+                                              cube->st_reference()->dy();
+
+                                    // check to prevent out of bounds faults
+                                    if (iix < 0 || uint32_t(iix) >= dat->size()[3]) continue;
+                                    if (iiy < 0 || uint32_t(iiy) >= dat->size()[2]) continue;
+
+                                    for (uint16_t ib = 0; ib < out.size(); ++ib) {
+                                        for (uint32_t it = 0; it < nt_in_chunk; ++it) {
+                                            out[ib][ct * cube->chunk_size()[0] + it][chunk_index[chunks[ic]][i]] = ((double *)dat->buf())[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3] + iiy * dat->size()[3] + iix];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        prg->increment((double)1 / ((double)chunks.size() * (double)cube->count_chunks_t()));
+                    }
                 } catch (std::string s) {
                     GCBS_ERROR(s);
                     continue;
@@ -358,7 +549,54 @@ struct zonal_statistics_median : public zonal_statistics_func {
     std::vector<std::vector<double>> _values;
 };
 
-// TODO: implement var and sd aggregation functions
+struct zonal_statistics_var : public zonal_statistics_func {
+    void init(uint32_t nfeatures, uint32_t nt) override {
+        zonal_statistics_func::init(nfeatures, nt);
+        _n.resize(_nt * _nfeatures, 0);
+        _cur_mean.resize(_nt * _nfeatures, 0);
+        _cur_M2 = std::make_shared<std::vector<double>>();
+        _cur_M2->resize(_nt * _nfeatures, 0);
+    }
+
+    void update(double x, uint32_t ifeature, uint32_t it) override {
+        if (std::isfinite(x)) {
+            _n[ifeature * _nt + it]++;
+            double delta = x - _cur_mean[ifeature * _nt + it];
+            _cur_mean[ifeature * _nt + it] += delta / _n[ifeature * _nt + it];
+            double delta2 = x - _cur_mean[ifeature * _nt + it];
+            (*_cur_M2)[ifeature * _nt + it] += delta * delta2;
+        }
+    }
+
+    std::shared_ptr<std::vector<double>> finalize() override {
+        for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+            if (_n[i] < 2) {
+                (*_cur_M2)[i] = NAN;
+            } else {
+                (*_cur_M2)[i] = (*_cur_M2)[i] / double(_n[i]);
+            }
+        }
+        return _cur_M2;
+    }
+
+    std::vector<uint32_t> _n;
+    std::vector<double> _cur_mean;
+    std::shared_ptr<std::vector<double>> _cur_M2;
+};
+
+struct zonal_statistics_sd : public zonal_statistics_var {
+    std::shared_ptr<std::vector<double>> finalize() override {
+        for (uint32_t i = 0; i < _nfeatures * _nt; ++i) {
+            if (_n[i] < 2) {
+                (*_cur_M2)[i] = NAN;
+            } else {
+                (*_cur_M2)[i] = std::sqrt((*_cur_M2)[i] / double(_n[i]));
+            }
+        }
+        return _cur_M2;
+    }
+};
+
 void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string ogr_dataset,
                                       std::vector<std::pair<std::string, std::string>> agg_band_functions,
                                       std::string out_path, bool overwrite_if_exists, std::string ogr_layer) {
@@ -399,8 +637,11 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_mean()); });
             } else if (agg_band_functions[i].first == "median") {
                 agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_median()); });
-            }  // TODO: Add sd and var
-            else {
+            } else if (agg_band_functions[i].first == "sd") {
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_sd()); });
+            } else if (agg_band_functions[i].first == "var") {
+                agg_func_creators.push_back([]() { return std::unique_ptr<zonal_statistics_func>(new zonal_statistics_var()); });
+            } else {
                 GCBS_WARN("There is no aggregation function '" + agg_band_functions[i].first + "', related summary statistics will be ignored.");
                 continue;
             }
@@ -464,10 +705,10 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     // check that cube and ogr dataset have same spatial reference system.
     OGRSpatialReference srs_cube = cube->st_reference()->srs_ogr();
     srs_cube.AutoIdentifyEPSG();
-    OGRSpatialReference *srs_features = layer->GetSpatialRef();
-    srs_features->AutoIdentifyEPSG();
+    OGRSpatialReference srs_features = *(layer->GetSpatialRef());
+    srs_features.AutoIdentifyEPSG();
 
-    if (!srs_cube.IsSame(srs_features)) {
+    if (!srs_cube.IsSame(&srs_features)) {
         GCBS_ERROR("Data cube and input features have different SRSes");
         GDALClose(in_ogr_dataset);
         // TODO: do we have to clean up more things here?
@@ -554,7 +795,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
 
     // Copy geometries from input dataset
-    OGRLayer *geom_layer_out = gpkg_out->CreateLayer("geom", srs_features, geom_type, NULL);
+    OGRLayer *geom_layer_out = gpkg_out->CreateLayer("geom", &srs_features, geom_type, NULL);
     if (geom_layer_out == NULL) {
         GCBS_ERROR("Failed to create output layer in  '" + output_file + "'");
         throw std::string("Failed to create output layer in  '" + output_file + "'");
@@ -574,6 +815,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         OGRFeature::DestroyFeature(in_feature);
     }
     GDALClose(gpkg_out);
+    GDALClose(in_ogr_dataset);
 
     uint16_t nthreads = config::instance()->get_default_chunk_processor()->max_threads();
 
@@ -642,16 +884,24 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                 OGREnvelope feature_bbox;
                                 feature->GetGeometryRef()->getEnvelope(&feature_bbox);
 
-                                int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) / cube->st_reference()->dx()), 0);
-                                int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) / cube->st_reference()->dx()), (int32_t)chunk->size()[3] - 1);
+                                int32_t x_start = std::max((int32_t)std::floor((feature_bbox.MinX - chunk_bounds.s.left) /
+                                                                               cube->st_reference()->dx()),
+                                                           0);
+                                int32_t x_end = std::min((int32_t)std::ceil((feature_bbox.MaxX - chunk_bounds.s.left) /
+                                                                            cube->st_reference()->dx()),
+                                                         (int32_t)chunk->size()[3] - 1);
 
                                 bool outside = false;
                                 if (x_end < 0 || x_start > int32_t(chunk->size()[3] - 1)) {
                                     outside = true;
                                 }
 
-                                int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) / cube->st_reference()->dy()), 0);
-                                int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) / cube->st_reference()->dy()), (int32_t)chunk->size()[2] - 1);
+                                int32_t y_start = std::max((int32_t)std::floor((chunk_bounds.s.top - feature_bbox.MaxY) /
+                                                                               cube->st_reference()->dy()),
+                                                           0);
+                                int32_t y_end = std::min((int32_t)std::ceil((chunk_bounds.s.top - feature_bbox.MinY) /
+                                                                            cube->st_reference()->dy()),
+                                                         (int32_t)chunk->size()[2] - 1);
 
                                 if (y_end < 0 || y_start > int32_t(chunk->size()[2] - 1)) {
                                     outside = true;
@@ -659,7 +909,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
                                 if (!outside) {
                                     // rasterize
-                                    int err = 0;
+
                                     CPLStringList rasterize_args;
                                     rasterize_args.AddString("-burn");
                                     rasterize_args.AddString("1");
@@ -673,10 +923,18 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                     rasterize_args.AddString(std::to_string(cube->st_reference()->dx()).c_str());
                                     rasterize_args.AddString(std::to_string(cube->st_reference()->dy()).c_str());
                                     rasterize_args.AddString("-te");
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start * cube->st_reference()->dx()).c_str());      // xmin
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end + 1) * cube->st_reference()->dy()).c_str());   // ymin
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) * cube->st_reference()->dx()).c_str());  // xmax
-                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start * cube->st_reference()->dy()).c_str());       // ymax
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + x_start *
+                                                                                                      cube->st_reference()->dx())
+                                                                 .c_str());  // xmin
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - (y_end + 1) *
+                                                                                                     cube->st_reference()->dy())
+                                                                 .c_str());  // ymin
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.left + (x_end + 1) *
+                                                                                                      cube->st_reference()->dx())
+                                                                 .c_str());  // xmax
+                                    rasterize_args.AddString(std::to_string(chunk_bounds.s.top - y_start *
+                                                                                                     cube->st_reference()->dy())
+                                                                 .c_str());  // ymax
                                     rasterize_args.AddString("-where");
                                     std::string where = fid_column + "=" + std::to_string(fid);
                                     rasterize_args.AddString(where.c_str());
@@ -698,6 +956,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                                         throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create gdal_rasterize options.");
                                     }
 
+                                    int err = 0;
                                     GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);
                                     if (gdal_rasterized == NULL) {
                                         GCBS_ERROR("gdal_rasterize failed for feature with FID " + std::to_string(fid));
@@ -742,7 +1001,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
 
                 // write output layers
                 for (uint32_t it = 0; it < nt; ++it) {
-                    std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * (it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
+                    std::string layer_name = "attr_" + cube->st_reference()->datetime_at_index((it + cube->chunk_limits({ct, 0, 0}).low[0])).to_string();
 
                     OGRLayer *cur_attr_layer_out = gpkg_out->CreateLayer(layer_name.c_str(), NULL, wkbNone, NULL);
                     if (cur_attr_layer_out == NULL) {
@@ -788,6 +1047,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
                 mutex.unlock();
                 GDALClose(gpkg_out);
             }
+            GDALClose(in_ogr_dataset);
         }));
     }
     for (uint16_t ithread = 0; ithread < nthreads; ++ithread) {
@@ -813,6 +1073,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
             GCBS_ERROR("ogr2ogr failed");
         }
         GDALClose(gpkg_out);
+        GDALClose(temp_in);
 
         filesystem::remove(out_temp_files[i]);
     }
@@ -828,8 +1089,13 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     const char *gpkg_has_column_md = gpkg_driver->GetMetadataItem("SQLITE_HAS_COLUMN_METADATA", NULL);
 
     int32_t srs_auth_code = 0;
-    if (srs_features->GetAuthorityCode(NULL) != NULL) {
-        srs_auth_code = std::atoi(srs_features->GetAuthorityCode(NULL));
+    const char *authcode_char = srs_features.GetAuthorityCode(NULL);
+    std::string authcode_str;
+    if (std::strlen(authcode_char) > 0) {
+        authcode_str = authcode_char;
+    }
+    if (!authcode_str.empty()) {
+        srs_auth_code = std::atoi(authcode_str.c_str());
     }
 
     if (gpkg_has_column_md == NULL || std::strcmp(gpkg_has_column_md, "YES") != 0) {
@@ -846,8 +1112,8 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         field_names_str += (cube->bands().get(band_index[agg_func_names.size() - 1]).name + "_" + agg_func_names[agg_func_names.size() - 1]);
 
         for (uint32_t it = 0; it < cube->size_t(); ++it) {
-            std::string layer_name = "attr_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * it).to_string();
-            std::string view_name = "map_" + (cube->st_reference()->t0() + cube->st_reference()->dt() * it).to_string();
+            std::string layer_name = "attr_" + cube->st_reference()->datetime_at_index(it).to_string();
+            std::string view_name = "map_" + cube->st_reference()->datetime_at_index(it).to_string();
 
             std::string query;
             query = "CREATE VIEW '" + view_name + "' AS SELECT geom.fid AS OGC_FID, geom.geom, " + field_names_str + " FROM geom JOIN '" + layer_name +
@@ -870,7 +1136,6 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
 
     GDALClose(gpkg_out);
-    GDALClose(in_ogr_dataset);
     prg->finalize();
 }
 

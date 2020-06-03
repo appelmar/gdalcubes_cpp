@@ -37,7 +37,7 @@ class stream_apply_pixel_cube : public cube {
 
    public:
     stream_apply_pixel_cube(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
-                            std::vector<std::string> names = std::vector<std::string>(), bool keep_bands = false) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names), _keep_bands(keep_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+                            std::vector<std::string> names = std::vector<std::string>(), bool keep_bands = false) : cube(in->st_reference()->copy()), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names), _keep_bands(keep_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
 
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
@@ -73,8 +73,8 @@ class stream_apply_pixel_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "stream_apply_pixel_cube";
         out["cmd"] = _cmd;
         out["nbands"] = _nbands;
@@ -90,17 +90,6 @@ class stream_apply_pixel_cube : public cube {
     uint16_t _nbands;
     std::vector<std::string> _names;
     bool _keep_bands;
-
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        // copy fields from st_reference type
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
-        _st_ref->dt(stref->dt());
-    }
 };
 
 }  // namespace gdalcubes

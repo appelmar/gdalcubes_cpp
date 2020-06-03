@@ -20,6 +20,8 @@
 #include <unordered_set>
 #include "cube.h"
 
+#include <sqlite3.h>
+
 namespace gdalcubes {
 
 void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads, bool force) {

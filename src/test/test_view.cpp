@@ -30,24 +30,24 @@ using namespace gdalcubes;
 
 TEST_CASE("Create", "[view]") {
     cube_view v;
-    v.srs() = "EPSG:4326";
-    v.left() = -110;
-    v.right() = 110;
+    v.srs("EPSG:4326");
+    v.left(-110);
+    v.right(110);
 
     v.dx(0.5);
     REQUIRE(v.nx() == 2 * 110 / 0.5);
     REQUIRE(v.left() == -110);
     REQUIRE(v.right() == 110);
 
-    v.nx() = 440;
+    v.nx(440);
     REQUIRE(v.dx() == 0.5);
     REQUIRE(v.left() == -110);
     REQUIRE(v.right() == 110);
 
-    v.bottom() = -50;
-    v.top() = 50;
+    v.bottom(-50);
+    v.top(50);
 
-    v.ny() = 200;
+    v.ny(200);
     REQUIRE(v.dy() == 0.5);
     REQUIRE(v.bottom() == -50);
     REQUIRE(v.top() == 50);
@@ -57,8 +57,8 @@ TEST_CASE("Create", "[view]") {
     REQUIRE(v.bottom() == -50);
     REQUIRE(v.top() == 50);
 
-    v.t0() = datetime::from_string("2018-01-01");
-    v.t1() = datetime::from_string("2018-01-10");
+    v.t0(datetime::from_string("2018-01-01"));
+    v.t1(datetime::from_string("2018-01-10"));
 
     v.nt(10);
     REQUIRE(v.t0() == datetime::from_string("2018-01-01"));
@@ -73,15 +73,15 @@ TEST_CASE("Create", "[view]") {
     REQUIRE(v.dt() == duration::from_string("P3D"));
 
     cube_view v1;
-    v1.srs() = "EPSG:3857";
-    v1.win().bottom = 6831918;
-    v1.win().top = 7027881;
-    v1.win().left = 2500790;
-    v1.win().right = 2858522;
-    v1.t0() = datetime::from_string("2018-03-26T09:40:29");
-    v1.t1() = datetime::from_string("2018-11-08T09:32:09");
-    v1.nx() = 700;
-    v1.ny() = 700;
+    v1.srs("EPSG:3857");
+    v1.bottom(6831918);
+    v1.top(7027881);
+    v1.left(2500790);
+    v1.right(2858522);
+    v1.t0(datetime::from_string("2018-03-26T09:40:29"));
+    v1.t1(datetime::from_string("2018-11-08T09:32:09"));
+    v1.nx(700);
+    v1.ny(700);
     v1.nt(4);
 
     datetime t0 = v1.t0();

@@ -34,10 +34,11 @@
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "image_collection_ops.h"
-#include "reduce.h"
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"
+
+#include <fstream>
 
 using namespace gdalcubes;
 
@@ -81,6 +82,7 @@ void print_usage(std::string command = "") {
         std::cout << "Options:" << std::endl;
         std::cout << "    , --deflate            Deflate compression level for output NetCDF file (0=no compression, 9=max compression), defaults to 1" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
+        std::cout << "  -c, --chunk              Compute only one specific chunk, specified by its integer identifier" << std::endl;
         std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
@@ -275,6 +277,7 @@ int main(int argc, char* argv[]) {
             po::options_description exec_desc("exec arguments");
             exec_desc.add_options()("input", po::value<std::string>(), "");
             exec_desc.add_options()("output", po::value<std::string>(), "");
+            exec_desc.add_options()("chunk,c", po::value<uint32_t>(), "");
             exec_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
             exec_desc.add_options()("swarm", po::value<std::string>(), "");
             exec_desc.add_options()("deflate", po::value<uint8_t>()->default_value(1), "");
@@ -308,13 +311,12 @@ int main(int argc, char* argv[]) {
                     config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
                 }
             }
-
-            std::ifstream i(input);
-            nlohmann::json j;
-            i >> j;
-
-            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(j);
-            c->write_netcdf_file(output, deflate);
+            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json_file(input);
+            if (vm.count("chunk")) {
+                c->write_single_chunk_netcdf(vm["chunk"].as<chunkid_t>(), output, deflate);
+            } else {
+                c->write_netcdf_file(output, deflate);
+            }
 
         } else if (cmd == "addo") {
             po::options_description addo_desc("addo arguments");

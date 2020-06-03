@@ -32,6 +32,8 @@
 #include "filesystem.h"
 #include "utils.h"
 
+#include <sqlite3.h>
+
 namespace gdalcubes {
 
 image_collection::image_collection() : _format(), _filename(""), _db(nullptr) {
@@ -92,11 +94,11 @@ image_collection::image_collection() : _format(), _filename(""), _db(nullptr) {
 
 image_collection::image_collection(collection_format format) : image_collection() {
     _format = format;
-    if (!_format.json().count("bands")) {
+    if (format.json()["bands"].is_null()) {
         throw std::string("ERROR in image_collection::create(): image collection format does not contain any bands.");
     }
 
-    if (_format.json()["bands"].size() == 0) {
+    if (_format.json()["bands"].object_items().size() == 0) {
         throw std::string("ERROR in image_collection::create(): image collection format does not contain any bands.");
     }
 
@@ -106,18 +108,18 @@ image_collection::image_collection(collection_format format) : image_collection(
     }
 
     uint16_t band_id = 0;
-    for (auto it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
+    for (auto it = _format.json()["bands"].object_items().begin(); it != _format.json()["bands"].object_items().end(); ++it) {
         std::string sql_insert_band;
         sql_insert_band = "INSERT INTO bands(id, name";
-        if (it.value().count("nodata")) sql_insert_band += ",nodata";
-        if (it.value().count("offset")) sql_insert_band += ",offset";
-        if (it.value().count("scale")) sql_insert_band += ",scale";
-        if (it.value().count("unit")) sql_insert_band += ",unit";
-        sql_insert_band += ") VALUES(" + std::to_string(band_id) + ",'" + it.key() + "'";
-        if (it.value().count("nodata")) sql_insert_band += ",'" + std::to_string(it.value()["nodata"].get<double>()) + "'";
-        if (it.value().count("offset")) sql_insert_band += "," + std::to_string(it.value()["offset"].get<double>()) + "";
-        if (it.value().count("scale")) sql_insert_band += "," + std::to_string(it.value()["scale"].get<double>()) + "";
-        if (it.value().count("unit")) sql_insert_band += ",'" + it.value()["unit"].get<std::string>() + "'";
+        if (!it->second["nodata"].is_null()) sql_insert_band += ",nodata";
+        if (!it->second["offset"].is_null()) sql_insert_band += ",offset";
+        if (!it->second["scale"].is_null()) sql_insert_band += ",scale";
+        if (!it->second["unit"].is_null()) sql_insert_band += ",unit";
+        sql_insert_band += ") VALUES(" + std::to_string(band_id) + ",'" + it->first + "'";
+        if (!it->second["nodata"].is_null()) sql_insert_band += ",'" + std::to_string(it->second["nodata"].number_value()) + "'";
+        if (!it->second["offset"].is_null()) sql_insert_band += "," + std::to_string(it->second["offset"].number_value()) + "";
+        if (!it->second["scale"].is_null()) sql_insert_band += "," + std::to_string(it->second["scale"].number_value()) + "";
+        if (!it->second["unit"].is_null()) sql_insert_band += ",'" + it->second["unit"].string_value() + "'";
         sql_insert_band += ");";
 
         ++band_id;
@@ -153,6 +155,13 @@ image_collection::image_collection(std::string filename) : _format(), _filename(
         _format.load_string(sqlite_as_string(stmt, 0));
     }
     sqlite3_finalize(stmt);
+}
+
+image_collection::~image_collection() {
+    if (_db) {
+        sqlite3_close(_db);
+        _db = nullptr;
+    }
 }
 
 std::shared_ptr<image_collection> image_collection::create(collection_format format, std::vector<std::string> descriptors, bool strict) {
@@ -409,11 +418,11 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
     std::vector<bool> band_complete;
 
     uint16_t band_id = 0;
-    for (nlohmann::json::iterator it = _format.json()["bands"].begin(); it != _format.json()["bands"].end(); ++it) {
-        band_name.push_back(it.key());
-        regex_band_pattern.push_back(std::regex(it.value()["pattern"].get<std::string>()));
-        if (it.value().count("band")) {
-            band_num.push_back(it.value()["band"].get<int>());
+    for (auto it = _format.json()["bands"].object_items().begin(); it != _format.json()["bands"].object_items().end(); ++it) {
+        band_name.push_back(it->first);
+        regex_band_pattern.push_back(std::regex(it->second["pattern"].string_value()));
+        if (!it->second["band"].is_null()) {
+            band_num.push_back(it->second["band"].int_value());
         } else {
             band_num.push_back(1);
         }
@@ -423,28 +432,28 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
     }
 
     std::string global_pattern = "";
-    if (_format.json().count("pattern")) global_pattern = _format.json()["pattern"].get<std::string>();
+    if (!_format.json()["pattern"].is_null()) global_pattern = _format.json()["pattern"].string_value();
     std::regex regex_global_pattern(global_pattern);
 
-    if (!_format.json()["images"].count("pattern"))
+    if (_format.json()["images"]["pattern"].is_null())
         throw std::string("ERROR in image_collection::add(): image collection format does not contain a composition rule for images.");
-    std::regex regex_images(_format.json()["images"]["pattern"].get<std::string>());
+    std::regex regex_images(_format.json()["images"]["pattern"].string_value());
 
     // @TODO: Make datetime optional, e.g., for DEMs
 
     std::string datetime_format = "%Y-%m-%d";
-    if (!_format.json().count("datetime") || !_format.json()["datetime"].count("pattern")) {
+    if (_format.json()["datetime"].is_null() || _format.json()["datetime"]["pattern"].is_null()) {
         throw std::string("ERROR in image_collection::add(): image collection format does not contain a rule to derive date/time.");
     }
 
-    std::regex regex_datetime(_format.json()["datetime"]["pattern"].get<std::string>());
-    if (_format.json()["datetime"].count("format")) {
-        datetime_format = _format.json()["datetime"]["format"].get<std::string>();
+    std::regex regex_datetime(_format.json()["datetime"]["pattern"].string_value());
+    if (!_format.json()["datetime"]["format"].is_null()) {
+        datetime_format = _format.json()["datetime"]["format"].string_value();
     }
 
     bool time_as_bands = false;  // time is stored as bands in the datasets
     duration band_time_delta;
-    if (_format.json()["datetime"].count("bands")) {
+    if (!_format.json()["datetime"]["bands"].is_null()) {
         // check if any band has band_num != 1
         for (uint32_t ib = 0; ib < band_num.size(); ++ib) {
             if (band_num[ib] != 1) {
@@ -453,17 +462,17 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
             }
         }
 
-        if (_format.json()["datetime"]["bands"].count("dt")) {
+        if (!_format.json()["datetime"]["bands"]["dt"].is_null()) {
             time_as_bands = true;
-            band_time_delta = duration::from_string(_format.json()["datetime"]["bands"]["dt"].get<std::string>());
+            band_time_delta = duration::from_string(_format.json()["datetime"]["bands"]["dt"].string_value());
         } else {
             GCBS_WARN("Collection format seems to have time information in dataset bands, bot does not define how to relate bands to time; time extraction might be incorrect");
         }
     }
 
     bool use_subdatasets = false;
-    if (_format.json().count("subdatasets")) {
-        use_subdatasets = _format.json()["subdatasets"].get<bool>();
+    if (!_format.json()["subdatasets"].is_null()) {
+        use_subdatasets = _format.json()["subdatasets"].bool_value();
     }
 
     if (use_subdatasets) {
@@ -503,8 +512,8 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
 
     std::string global_srs_str = "";
     OGRSpatialReference global_srs;
-    if (_format.json().count("srs")) {
-        global_srs_str = _format.json()["srs"].get<std::string>();
+    if (!_format.json()["srs"].is_null()) {
+        global_srs_str = _format.json()["srs"].string_value();
         if (global_srs.SetFromUserInput(global_srs_str.c_str()) != OGRERR_NONE) {
             GCBS_WARN("Cannot read global SRS definition in collection format, trying to extract from individual datasets.");
             global_srs_str = "";
@@ -731,11 +740,11 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                     if (!band_complete[i]) {
                         std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(bands[band_num[i] - 1].type) + "'";
 
-                        if (!_format.json()["bands"][band_name[i]].count("scale"))
+                        if (_format.json()["bands"][band_name[i]]["scale"].is_null())
                             sql_band_update += ",scale=" + std::to_string(bands[band_num[i] - 1].scale);
-                        if (!_format.json()["bands"][band_name[i]].count("offset"))
+                        if (_format.json()["bands"][band_name[i]]["offset"].is_null())
                             sql_band_update += ",offset=" + std::to_string(bands[band_num[i] - 1].offset);
-                        if (!_format.json()["bands"][band_name[i]].count("unit"))
+                        if (_format.json()["bands"][band_name[i]]["unit"].is_null())
                             sql_band_update += ",unit='" + bands[band_num[i] - 1].unit + "'";
 
                         // TODO: also add no data if not defined in image collection?
@@ -761,8 +770,10 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
             // Read image metadata from GDALDataset
             std::unordered_set<std::string> image_md_fields;
 
-            if (_format.json().count("image_md_fields")) {
-                image_md_fields = _format.json()["image_md_fields"].get<std::unordered_set<std::string>>();
+            if (!_format.json()["image_md_fields"].is_null()) {
+                for (uint16_t imd_fields = 0; imd_fields < _format.json()["image_md_fields"].array_items().size(); ++imd_fields) {
+                    image_md_fields.insert(_format.json()["image_md_fields"][imd_fields].string_value());
+                }
             }
 
             if (image_md_fields.size() > 0) {
@@ -840,11 +851,11 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                     b.nodata = std::to_string(nd);
                 std::string sql_band_update = "UPDATE bands SET type='" + utils::string_from_gdal_type(b.type) + "'";
 
-                if (!_format.json()["bands"][band_name[band_index]].count("scale"))
+                if (_format.json()["bands"][band_name[band_index]]["scale"].is_null())
                     sql_band_update += ",scale=" + std::to_string(b.scale);
-                if (!_format.json()["bands"][band_name[band_index]].count("offset"))
+                if (_format.json()["bands"][band_name[band_index]]["offset"].is_null())
                     sql_band_update += ",offset=" + std::to_string(b.offset);
-                if (!_format.json()["bands"][band_name[band_index]].count("unit"))
+                if (_format.json()["bands"][band_name[band_index]]["unit"].is_null())
                     sql_band_update += ",unit='" + b.unit + "'";
 
                 // TODO: also add no data if not defined in image collection?

@@ -28,7 +28,7 @@ class fill_time_cube : public cube {
     }
 
    public:
-    fill_time_cube(std::shared_ptr<cube> in, std::string method = "near") : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _method(method) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    fill_time_cube(std::shared_ptr<cube> in, std::string method = "near") : cube(in->st_reference()->copy()), _in_cube(in), _method(method) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -36,6 +36,10 @@ class fill_time_cube : public cube {
         for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {
             band b = in->bands().get(i);
             _bands.add(b);
+        }
+
+        if (!_st_ref->has_regular_time()) {
+            GCBS_WARN("Cube has irregular time dimension, interpolation currently uses index-based time distances");
         }
 
         if (method != "near" && method != "linear" && method != "locf" && method != "nocb") {
@@ -49,8 +53,8 @@ class fill_time_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "fill_time";
         out["method"] = _method;
         out["in_cube"] = _in_cube->make_constructible_json();
@@ -60,17 +64,6 @@ class fill_time_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::string _method;
-
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        // copy fields from st_reference type
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
-        _st_ref->dt(stref->dt());
-    }
 };
 
 }  // namespace gdalcubes

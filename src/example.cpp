@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -27,10 +27,13 @@
  * IT WILL NOT RUN ON YOUR MACHINE:
  */
 
+#include <fstream>
 #include <iostream>
 #include "cube_factory.h"
 #include "gdalcubes.h"
 #include "image_collection_ops.h"
+
+#include "test_multiprocess.h"
 
 using namespace gdalcubes;
 
@@ -77,7 +80,7 @@ int main(int argc, char* argv[]) {
         }
         /**************************************************************************/
 
-        cube_view v = cube_view::read_json("view.json");
+        //cube_view v = cube_view::read_json("view.json");
 
         /**************************************************************************/
         // test fill_time
@@ -140,7 +143,7 @@ int main(int argc, char* argv[]) {
         //            cb->write_netcdf_file("mask.nc");
         //        }
 
-        v = cube_view::read_json("view.json");
+        // v = cube_view::read_json("view.json");
 
         /**************************************************************************/
 
@@ -183,25 +186,25 @@ int main(int argc, char* argv[]) {
         /**************************************************************************/
         // Test apply_pixel
         //                {
-        //                                auto c = image_collection_cube::create("test.db", v);
-        //                                //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
-        //                                //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
-        //                                //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
-        //                                // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
+        //                                        auto c = image_collection_cube::create("test.db", v);
+        //                                        //auto capply_err = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04 -c Bsss)"});
+        //                                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B04", "B08"})), {"(B08 - B04)/(B08 + B04)"});
+        //                                        //auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"sqrt((B02+B03+B04)^2)"});
+        //                                        // auto capply = apply_pixel_cube::create(select_bands_cube::create(c, std::vector<std::string>({"B02", "B03", "B04"})), {"B02/B03"});
         //
-        //                                auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
+        //                                        auto capply = apply_pixel_cube::create(c, {"(B08 - B04)/(B08 + B04)"});
         //
-        //                                auto cr = reduce_cube::create(capply, "median");
-        //                                // cr->write_gdal_image("test_apply_reduce.tif");
-        //                                cr->write_netcdf_file("test_apply_reduce.nc");
+        //                                        auto cr = reduce_cube::create(capply, "median");
+        //                                        // cr->write_gdal_image("test_apply_reduce.tif");
+        //                                        cr->write_netcdf_file("test_apply_reduce.nc");
         //                }
 
         // Test apply_pixel
         //        {
-        //            auto c = dummy_cube::create(v, 1, 1.0);
-        //            auto capply = apply_pixel_cube::create(c, {"day(t0)"});
-        //            auto cr = reduce_cube::create(capply, "median");
-        //            cr->write_netcdf_file("test_apply_reduce.nc");
+        //                    auto c = dummy_cube::create(v, 1, 1.0);
+        //                    auto capply = apply_pixel_cube::create(c, {"day(t0)"});
+        //                    auto cr = reduce_cube::create(capply, "median");
+        //                    cr->write_netcdf_file("test_apply_reduce.nc");
         //        }
 
         // Test query_points
@@ -252,61 +255,55 @@ int main(int argc, char* argv[]) {
         //        }
 
         // test zonal statistics
-        //        {
-        //            cube_view w;
-        //            w.left() = -180;
-        //            w.top() = 50;
-        //            w.bottom() = -50;
-        //            w.right() = 180;
-        //            w.srs() = "EPSG:4326";
-        //            w.dx(0.2);
-        //            w.dy(0.2);
-        //            w.t0() = datetime::from_string("2019-01-01");
-        //            w.t1() = datetime::from_string("2019-01-01");
-        //            w.dt(duration::from_string("P1D"));
-        //            w.resampling_method() = resampling::resampling_type::RSMPL_AVERAGE;
+        //                {
+        //                    cube_view w;
+        //                    w.left() = -180;
+        //                    w.top() = 50;
+        //                    w.bottom() = -50;
+        //                    w.right() = 180;
+        //                    w.srs() = "EPSG:4326";
+        //                    w.dx(0.2);
+        //                    w.dy(0.2);
+        //                    w.t0() = datetime::from_string("2019-01-01");
+        //                    w.t1() = datetime::from_string("2019-01-01");
+        //                    w.dt(duration::from_string("P1D"));
+        //                    w.resampling_method() = resampling::resampling_type::RSMPL_AVERAGE;
         //
-        //            //            auto ch = _helper_cube::create(w);
-        //            //            ch->set_chunk_size(1,100,100);
-        //            //            ch->write_netcdf_file("/home/marius/Desktop/gdalcubes_model.nc");
+        //                    //            auto ch = _helper_cube::create(w);
+        //                    //            ch->set_chunk_size(1,100,100);
+        //                    //            ch->write_netcdf_file("/home/marius/Desktop/gdalcubes_model.nc");
         //
-        //            auto c = dummy_cube::create(w, 1, 1.0);
+        //                    auto c = dummy_cube::create(w, 1, 1.0);
         //
-        //            //vector_queries::zonal_statistics(c, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"count", "band1"}}, "/tmp/zonal_stats", true);
+        //                    //vector_queries::zonal_statistics(c, "/home/marius/sciebo/global_grid_5deg.gpkg", {{"count", "band1"}}, "/tmp/zonal_stats", true);
         //
-        //            auto c1 = dummy_cube::create(w, 1, 1.0);
-        //            auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);
+        //                    auto c1 = dummy_cube::create(w, 1, 1.0);
+        //                    auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);
         //
-        //            //vector_queries::zonal_statistics(c2,"/home/marius/sciebo/test_features.gpkg",{{"min","left"},{"max","left"},{"mean","left"},{"min","top"},{"max","top"},{"mean","top"}}, "/tmp/zonal_stats_coords_");
+        //                    //vector_queries::zonal_statistics(c2,"/home/marius/sciebo/test_features.gpkg",{{"min","left"},{"max","left"},{"mean","left"},{"min","top"},{"max","top"},{"mean","top"}}, "/tmp/zonal_stats_coords_");
         //
-        //            // Real world data (CHIRPS)
-        //            collection_format f("/home/marius/github/collection_formats/formats/CHIRPS_v2_0_daily_p05_tif.json");
-        //            std::vector<std::string> files;
-        //            filesystem::iterate_directory("/home/marius/eodata/CHIRPS/", [&files](const std::string& s) {
-        //                if (s.find(".tif") != s.npos) {
-        //                    files.push_back(s);
+        //                    // Real world data (CHIRPS)
+        //                    collection_format f("/home/marius/github/collection_formats/formats/CHIRPS_v2_0_daily_p05_tif.json");
+        //                    std::vector<std::string> files;
+        //                    filesystem::iterate_directory("/home/marius/eodata/CHIRPS/", [&files](const std::string& s) {
+        //                        if (s.find(".tif") != s.npos) {
+        //                            files.push_back(s);
+        //                        }
+        //                    });
+        //                    auto ic = image_collection::create(f, files, false);
+        //                    //ic->write("CHIRPS.db");
+        //
+        //                    w.t0() = datetime::from_string("2018-01-01");
+        //                    w.t1() = datetime::from_string("2018-01-04");
+        //
+        //                    auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
+        //                    chirps_cube->set_chunk_size(10, 256, 256);
+        //
+        //                    // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
+        //
+        //                    vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", {{"mean", "precipitation"}}, "/tmp/zonal_stats_chirps2.gpkg", true);
+        //
         //                }
-        //            });
-        //            auto ic = image_collection::create(f, files, false);
-        //            //ic->write("CHIRPS.db");
-        //
-        //            w.t0() = datetime::from_string("2018-01-01");
-        //            w.t1() = datetime::from_string("2018-01-04");
-        //
-        //            auto chirps_cube = image_collection_cube::create("CHIRPS.db", w);
-        //            chirps_cube->set_chunk_size(10, 256, 256);
-        //
-        //            // chirps_cube->write_netcdf_file("/home/marius/sciebo/chirps.nc");
-        //
-        //            //vector_queries::zonal_statistics(chirps_cube, "/home/marius/sciebo/world_polygons.gpkg", {{"mean", "precipitation"}}, "/tmp/zonal_stats_chirps2.gpkg", true);
-        //
-        //            std::ifstream i("/tmp/cube.json");
-        //            nlohmann::json j;
-        //            i >> j;
-        //            auto cube = cube_factory::instance()->create_from_json(j);
-        //
-        //            vector_queries::zonal_statistics(cube, "/home/marius/sciebo/ms_flurstuecke_filtered_larger_1ha.gpkg", {{"mean", "NDVI_median"}}, "/tmp/zonal_stats_NDVI.gpkg", true);
-        //        }
 
         // test collection format for spacetime GDAL datasets
         {
@@ -318,11 +315,13 @@ int main(int argc, char* argv[]) {
             //            auto ic = image_collection::create(f, files, false);
             //            ic->write("/home/marius/Desktop/test.db");
 
-            std::ifstream i("/tmp/cube.json");
-            nlohmann::json j;
-            i >> j;
-            auto cube = cube_factory::instance()->create_from_json(j);
-            cube->write_netcdf_file("/tmp/cube.nc");
+            //            std::ifstream i("/tmp/cube.json");
+            //            std::stringstream buf;
+            //            buf << i.rdbuf();
+            //            std::string err;
+            //            json11::Json j = json11::Json::parse(buf.str(),err);
+            //            auto cube = cube_factory::instance()->create_from_json(j);
+            //            cube->write_netcdf_file("/tmp/cube.nc");
         }
 
         /**************************************************************************/
@@ -362,6 +361,17 @@ int main(int argc, char* argv[]) {
             //            cc->view()->aggregation_method() = aggregation::aggregation_type::AGG_MEDIAN;
             //            cc->write_netcdf_file("full.nc");
         }
+
+        setenv("GDAL_DISABLE_READDIR_ON_OPEN", "TRUE", 1);
+        //        setenv("CPL_DEBUG", "ON", 1);
+        //        setenv("CPL_LOG_ERRORS", "ON", 1);
+        //        setenv("CPL_LOG", "/tmp/gdal.log", 1);
+
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_netcdf_file("/tmp/cube.nc");
+        //test_multiprocess::write_chunks_netcdf(cube_factory::instance()->create_from_json_file("/tmp/cube.json"),"/tmp", "test");
+        auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
+        //c->write_netcdf_file("/tmp/xxx.nc");
+        c->write_tif_collection("/tmp/TESTTIF", "xxx");
 
         /******************************************/
 

@@ -43,13 +43,15 @@ std::shared_ptr<chunk_data> select_time_cube::read_chunk(chunkid_t id) {
             }
 
             // for all bands
-            for (uint16_t ib = 0; ib < size_btyx[0]; ++ib) {
-                //                assert(size_btyx[0] == in_chunk->size()[0]);
-                //                assert(size_btyx[2] == in_chunk->size()[2]);
-                //                assert(size_btyx[3] == in_chunk->size()[3]);
-                std::memcpy(&(((double*)out->buf())[ib * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]]),
-                            &(((double*)in_chunk->buf())[ib * in_chunk->size()[1] * in_chunk->size()[2] * in_chunk->size()[3] + (iin % _in_cube->chunk_size()[0]) * in_chunk->size()[2] * in_chunk->size()[3]]),
-                            size_btyx[2] * size_btyx[3] * sizeof(double));
+            if (!in_chunk->empty()) {
+                for (uint16_t ib = 0; ib < size_btyx[0]; ++ib) {
+                    //                assert(size_btyx[0] == in_chunk->size()[0]);
+                    //                assert(size_btyx[2] == in_chunk->size()[2]);
+                    //                assert(size_btyx[3] == in_chunk->size()[3]);
+                    std::memcpy(&(((double*)out->buf())[ib * size_btyx[1] * size_btyx[2] * size_btyx[3] + it * size_btyx[2] * size_btyx[3]]),
+                                &(((double*)in_chunk->buf())[ib * in_chunk->size()[1] * in_chunk->size()[2] * in_chunk->size()[3] + (iin % _in_cube->chunk_size()[0]) * in_chunk->size()[2] * in_chunk->size()[3]]),
+                                size_btyx[2] * size_btyx[3] * sizeof(double));
+                }
             }
         } else {
             GCBS_WARN("Cube does not contain date/time " + t.to_string());

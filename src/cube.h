@@ -789,8 +789,6 @@ class cube : public std::enable_shared_from_this<cube> {
                            bool drop_empty_slices = false,
                            std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
-    void write_chunks_netcdf(std::string dir, std::string name = "", uint8_t compression_level = 0,
-                             std::shared_ptr<chunk_processor> p = config::instance()->get_default_chunk_processor());
 
     void write_single_chunk_netcdf(chunkid_t id, std::string path, uint8_t compression_level = 0);
 

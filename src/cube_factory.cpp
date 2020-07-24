@@ -38,6 +38,7 @@
 #include "select_time.h"
 #include "stream.h"
 #include "stream_apply_pixel.h"
+#include "stream_apply_time.h"
 #include "stream_reduce_time.h"
 #include "stream_reduce_space.h"
 #include "window_time.h"
@@ -249,6 +250,15 @@ void cube_factory::register_default() {
             }
             auto x = stream_apply_pixel_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].string_value(), j["nbands"].int_value(), names, j["keep_bands"].bool_value());
             return x;
+        }));
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "stream_apply_time", [](json11::Json& j) {
+          std::vector<std::string> names;
+          for (uint16_t i = 0; i < j["names"].array_items().size(); ++i) {
+              names.push_back(j["names"][i].string_value());
+          }
+          auto x = stream_apply_time_cube::create(instance()->create_from_json(j["in_cube"]), j["cmd"].string_value(), j["nbands"].int_value(), names, j["keep_bands"].bool_value());
+          return x;
         }));
 }
 

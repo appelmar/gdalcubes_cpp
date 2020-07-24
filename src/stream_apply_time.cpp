@@ -11,7 +11,7 @@ std::shared_ptr<chunk_data> stream_apply_time_cube::read_chunk(chunkid_t id) {
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
-    coords_nd<uint32_t, 4> size_btyx = {_nbands, 1, size_tyx[1], size_tyx[2]};
+    coords_nd<uint32_t, 4> size_btyx = { _bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
     // Fill buffers accordingly

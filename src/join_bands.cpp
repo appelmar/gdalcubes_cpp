@@ -45,8 +45,12 @@ std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
 
-    memcpy(((double *)out->buf()), ((double *)dat_A->buf()), dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3] * sizeof(double));
-    memcpy(((double *)out->buf()) + dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3], ((double *)dat_B->buf()), dat_B->size()[0] * dat_B->size()[1] * dat_B->size()[2] * dat_B->size()[3] * sizeof(double));
+    if (!dat_A->empty()) {
+        memcpy(((double *)out->buf()), ((double *)dat_A->buf()), dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3] * sizeof(double));
+    }
+    if (!dat_B->empty()) {
+        memcpy(((double *)out->buf()) + dat_A->size()[0] * dat_A->size()[1] * dat_A->size()[2] * dat_A->size()[3], ((double *)dat_B->buf()), dat_B->size()[0] * dat_B->size()[1] * dat_B->size()[2] * dat_B->size()[3] * sizeof(double));
+    }
 
     return out;
 }

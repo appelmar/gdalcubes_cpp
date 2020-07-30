@@ -96,6 +96,9 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
 
     // Setup warp options.
     GDALWarpOptions *psWarpOptions = GDALCreateWarpOptions();
+    if (std::string(in->GetProjectionRef()).empty()) {
+        in->SetProjection(s_srs.c_str());
+    }
     psWarpOptions->hSrcDS = in;
     psWarpOptions->hDstDS = out;
     psWarpOptions->pfnProgress = GDALDummyProgress;

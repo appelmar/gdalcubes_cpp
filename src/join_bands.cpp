@@ -41,7 +41,7 @@ std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
     if (dat_A->empty() && dat_B->empty()) {
         return out;
     }
-    
+
     // Fill buffers accordingly
     out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
     double *begin = (double *)out->buf();

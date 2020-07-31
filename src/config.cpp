@@ -69,6 +69,11 @@ void config::set_gdal_debug(bool debug) {
         CPLSetConfigOption("CPL_DEBUG", "OFF");
 }
 
+
+void config::set_gdal_option(std::string key, std::string value) {
+    CPLSetConfigOption(key.c_str(), value.c_str());
+}
+
 void config::set_gdal_log(std::string logfile) {
     if (logfile.empty()) {
         CPLSetConfigOption("CPL_LOG_ERRORS", "OFF");
@@ -97,9 +102,9 @@ void config::gdalcubes_init() {
 #if GDAL_VERSION_MAJOR > 2
     CPLSetConfigOption("OGR_CT_FORCE_TRADITIONAL_GIS_ORDER", "YES");
 #endif
+    CPLSetConfigOption("GDAL_DISABLE_READDIR_ON_OPEN", "TRUE");  // avoid directory scans for every opened GDAL dataset
 
     // Add default locations where to look for collection format presets
-
     if (std::getenv("GDALCUBES_DATA_DIR") != NULL) {
         if (filesystem::exists(std::getenv("GDALCUBES_DATA_DIR"))) {
             config::instance()->add_collection_format_preset_dir(std::getenv("GDALCUBES_DATA_DIR"));

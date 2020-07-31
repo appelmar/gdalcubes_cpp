@@ -175,6 +175,8 @@ class config {
 
     void add_collection_format_preset_dir(std::string dir);
 
+    void set_gdal_option(std::string key, std::string value);
+
     std::string gdal_version_info();
     std::vector<std::string> gdal_formats();
 

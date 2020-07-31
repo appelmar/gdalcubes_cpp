@@ -24,7 +24,7 @@
 
 namespace gdalcubes {
 
-void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads, bool force) {
+void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads, bool force, std::vector<std::string> creation_options) {
     if (!filesystem::exists(out_dir)) {
         filesystem::mkdir_recursive(out_dir);
     }
@@ -43,24 +43,44 @@ void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_coll
     std::mutex mutex;
     std::vector<image_collection::gdalrefs_row> gdalrefs = in->get_gdalrefs();
 
+    bool has_COG = GetGDALDriverManager()->GetDriverByName("COG") != NULL;
+
+
     for (uint16_t it = 0; it < nthreads; ++it) {
-        thrds.push_back(std::thread([it, nthreads, &out_dir, &gdalrefs, &prg, in, &mutex, force]() {
+        thrds.push_back(std::thread([it, nthreads, &out_dir, &gdalrefs, &prg, in, &mutex, force, has_COG, &creation_options]() {
             for (uint32_t i = it; i < gdalrefs.size(); i += nthreads) {
                 prg->increment((double)1 / (double)gdalrefs.size());
                 std::string descr = gdalrefs[i].descriptor;
 
                 CPLStringList translate_args;
-                translate_args.AddString("-of");
-                translate_args.AddString("GTiff");
 
-                translate_args.AddString("-co");
-                translate_args.AddString("TILED=YES");
+                if (has_COG) {
+                    translate_args.AddString("-of");
+                    translate_args.AddString("COG");
+                }
+                else {
+                    translate_args.AddString("-of");
+                    translate_args.AddString("GTiff");
 
-                translate_args.AddString("-co");
-                translate_args.AddString("COPY_SRC_OVERVIEWS=YES");
+                    translate_args.AddString("-co");
+                    translate_args.AddString("TILED=YES");
 
-                translate_args.AddString("-co");
-                translate_args.AddString("COMPRESS=LZW");
+                    translate_args.AddString("-co");
+                    translate_args.AddString("COPY_SRC_OVERVIEWS=YES");
+
+                    translate_args.AddString("-co");
+                    translate_args.AddString("COMPRESS=DEFLATE");
+
+                    translate_args.AddString("-co");
+                    translate_args.AddString("ZLEVEL=2");
+                }
+
+
+                for (auto it = creation_options.begin(); it != creation_options.end(); ++it) {
+                    translate_args.AddString("-co");
+                    translate_args.AddString(it->c_str());
+                }
+
 
                 translate_args.AddString("-b");
                 translate_args.AddString(std::to_string(gdalrefs[i].band_num).c_str());  // band_num is 1 based
@@ -80,7 +100,11 @@ void image_collection_ops::translate_gtiff(std::shared_ptr<gdalcubes::image_coll
                     GDALTranslateOptionsFree(trans_options);
                     continue;
                 }
-                std::string outfile = filesystem::join(out_dir, std::to_string(gdalrefs[i].image_id) + "_" + std::to_string(gdalrefs[i].band_id) + ".tif");
+                std::string outimgdir = filesystem::join(out_dir, std::to_string(gdalrefs[i].image_id));
+                if (!filesystem::exists(outimgdir)) {
+                    filesystem::mkdir(outimgdir);
+                }
+                std::string outfile = filesystem::join(outimgdir, std::to_string(gdalrefs[i].band_id) + ".tif");
                 if (filesystem::exists(outfile) && !force) {
                     GCBS_DEBUG(outfile + " already exists; set force=true to force recreation of existing files.");
                 } else {

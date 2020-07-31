@@ -160,8 +160,17 @@ void cube_factory::register_default() {
         }));
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "join_bands", [](json11::Json& j) {
-            auto x = join_bands_cube::create(instance()->create_from_json(j["A"]), instance()->create_from_json(j["B"]), j["prefix_A"].string_value(), j["prefix_B"].string_value());
-            return x;
+
+          std::vector<std::shared_ptr<cube>> cubes;
+          for (uint16_t i = 0; i < j["in_cubes"].array_items().size(); ++i) {
+              cubes.push_back(instance()->create_from_json(j["in_cubes"][i]));
+          }
+          std::vector<std::string> prefixes;
+          for (uint16_t i = 0; i < j["prefixes"].array_items().size(); ++i) {
+              prefixes.push_back(j["prefixes"][i].string_value());
+          }
+          auto x = join_bands_cube::create(cubes, prefixes);
+          return x;
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(

@@ -29,21 +29,9 @@
 
 namespace gdalcubes {
 
-gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::gdal_transformation_cache::get(GDALDataset *in, GDALDataset *out) {
-    char *wkt_in = NULL;
-    char *wkt_out = NULL;
+gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::gdal_transformation_cache::get(std::string srs_in_str, std::string srs_out_str) {
 
-    OGRSpatialReference srs_in;
-    OGRSpatialReference srs_out;
-    srs_in.SetFromUserInput(in->GetProjectionRef());
-    srs_out.SetFromUserInput(out->GetProjectionRef());
-    srs_in.exportToWkt(&wkt_in);
-    srs_out.exportToWkt(&wkt_out);
-
-    auto q = std::pair<std::string, std::string>(wkt_in, wkt_out);
-
-    CPLFree(wkt_in);
-    CPLFree(wkt_out);
+    auto q = std::pair<std::string, std::string>(srs_in_str, srs_out_str);
 
     _mutex.lock();
     auto x = _cache.find(q);
@@ -52,7 +40,7 @@ gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::gdal_transformati
         return x->second;
     }
 
-    gdalwarp_client::gdalcubes_reprojection_info *pt = create_reprojection(in, out);
+    gdalwarp_client::gdalcubes_reprojection_info *pt = create_reprojection(srs_in_str, srs_out_str);
     _cache.insert(std::make_pair(q, pt));
 
     _mutex.unlock();
@@ -96,13 +84,17 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
 
     // Setup warp options.
     GDALWarpOptions *psWarpOptions = GDALCreateWarpOptions();
-    if (std::string(in->GetProjectionRef()).empty()) {
-        in->SetProjection(s_srs.c_str());
-    }
+//    if (std::string(in->GetProjectionRef()).empty()) {
+//        if (in->SetProjection(s_srs.c_str()) != CE_None) {
+//            GCBS_DEBUG("Failed to overwrite projection for dataset.");
+//        }
+//    }
+//    std::string s = (in->GetProjectionRef());
+//    GCBS_DEBUG(s);
     psWarpOptions->hSrcDS = in;
     psWarpOptions->hDstDS = out;
     psWarpOptions->pfnProgress = GDALDummyProgress;
-    psWarpOptions->pTransformerArg = create_transform(in, out);
+    psWarpOptions->pTransformerArg = create_transform(in, out, s_srs, t_srs);
     psWarpOptions->pfnTransformer = transform;
 
     // Derive best overview level to use
@@ -147,7 +139,7 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
             in = (GDALDataset *)GDALOpenEx(descr.c_str(), GDAL_OF_RASTER | GDAL_OF_READONLY, NULL, oo, NULL);
             if (in != NULL) {
                 destroy_transform((gdalwarp_client::gdalcubes_transform_info *)psWarpOptions->pTransformerArg);
-                psWarpOptions->pTransformerArg = create_transform(in, out);
+                psWarpOptions->pTransformerArg = create_transform(in, out, s_srs, t_srs);
                 psWarpOptions->hSrcDS = in;  // TODO: close in_ov
             } else {
                 GCBS_WARN("Failed to open GDAL overview dataset for " + std::string(in->GetDescription()) + ", using original full resolution image.");
@@ -257,7 +249,7 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
      * Source code of this function has been adapted from original GDAL code starting at
      * https://github.com/OSGeo/gdal/blob/0bfd1bcb38b3fe321fd15f3c485cfb91537faf0e/gdal/alg/gdaltransformer.cpp#L1355
      */
-gdalwarp_client::gdalcubes_transform_info *gdalwarp_client::create_transform(GDALDataset *in, GDALDataset *out) {
+gdalwarp_client::gdalcubes_transform_info *gdalwarp_client::create_transform(GDALDataset *in, GDALDataset *out, std::string srs_in_str, std::string  srs_out_str) {
     gdalcubes_transform_info *res = new gdalcubes_transform_info();
     res->pReprojectArg = nullptr;
     in->GetGeoTransform(res->adfSrcGeoTransform);
@@ -277,10 +269,10 @@ gdalwarp_client::gdalcubes_transform_info *gdalwarp_client::create_transform(GDA
     // Set reprojection transform if needed
     OGRSpatialReference srs_in;
     OGRSpatialReference srs_out;
-    srs_in.SetFromUserInput(in->GetProjectionRef());
-    srs_out.SetFromUserInput(out->GetProjectionRef());
+    srs_in.SetFromUserInput(srs_in_str.c_str());
+    srs_out.SetFromUserInput(srs_out_str.c_str());
     if (!srs_in.IsSame(&srs_out)) {
-        res->pReprojectArg = gdal_transformation_cache::instance()->get(in, out);
+        res->pReprojectArg = gdal_transformation_cache::instance()->get(srs_in_str, srs_out_str);
         res->pReproject = reproject;
     }
     return res;
@@ -356,14 +348,15 @@ void gdalwarp_client::destroy_transform(gdalcubes_transform_info *transform) {
     }
 }
 
-gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::create_reprojection(GDALDataset *in, GDALDataset *out) {
+gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::create_reprojection(std::string srs_in_str,  std::string srs_out_str) {
     // TODO: add area of interest for GDAL >= 3.0
     // TODO: add further options, e.g. from global config options
 
     OGRSpatialReference srs_in;
     OGRSpatialReference srs_out;
-    srs_in.SetFromUserInput(in->GetProjectionRef());
-    srs_out.SetFromUserInput(out->GetProjectionRef());
+
+    srs_in.SetFromUserInput(srs_in_str.c_str());
+    srs_out.SetFromUserInput(srs_out_str.c_str());
     OGRCoordinateTransformation *poForwardTransform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
     if (poForwardTransform == nullptr)
         return nullptr;

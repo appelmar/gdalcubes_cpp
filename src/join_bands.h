@@ -144,7 +144,7 @@ class join_bands_cube : public cube {
         _chunk_size[1] = _in[0]->chunk_size()[1];
         _chunk_size[2] = _in[0]->chunk_size()[2];
 
-        for (uint16_t i=1; i<in_cubes.size(); ++i) {
+        for (uint16_t i=0; i<in_cubes.size(); ++i) {
             for (uint16_t ib = 0; ib < _in[i]->bands().count(); ++ib) {
                 band b = _in[i]->bands().get(ib);
                 b.name = _prefix.empty() ? (b.name) : (_prefix[i] + "." + b.name);

@@ -23,6 +23,7 @@
 */
 
 #include "filter_geom.h"
+
 #include <gdal_utils.h>
 #include <ogrsf_frmts.h>
 
@@ -57,7 +58,7 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
     // 1. get bounding box of polygon
     OGRGeometry *p = nullptr;
 #if GDAL_VERSION_MAJOR < 2 || (GDAL_VERSION_MAJOR == 2 && GDAL_VERSION_MINOR < 3)
-    char*  wktstr = (char*)std::malloc(sizeof(char) * (_wkt.length() + 1));
+    char *wktstr = (char *)std::malloc(sizeof(char) * (_wkt.length() + 1));
     _wkt.copy(wktstr, _wkt.length());
     _wkt[_wkt.length()] = '\0';
     OGRErr res = OGRGeometryFactory::createFromWkt(&wktstr, &srsogr, &p);
@@ -73,12 +74,11 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
         throw std::string("Geometry creation from WKT failed");
     }
 
-
     // This seems to cause trouble with old GDAL versions on Travis
-//    if (p->getSpatialReference()->IsEmpty()) {
-//        GCBS_ERROR("Missing spatial reference for polygon");
-//        throw std::string("Missing spatial reference for polygon");
-//    }
+    //    if (p->getSpatialReference()->IsEmpty()) {
+    //        GCBS_ERROR("Missing spatial reference for polygon");
+    //        throw std::string("Missing spatial reference for polygon");
+    //    }
     OGRwkbGeometryType geom_type = p->getGeometryType();
     if (geom_type != wkbPolygon && geom_type != wkbPolygonM && geom_type != wkbPolygon25D &&
         geom_type != wkbPolygonZM && geom_type != wkbMultiPolygon) {
@@ -236,14 +236,14 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
         rasterize_args.AddString("-l");
         rasterize_args.AddString("temp");
 
-//        //log gdal_rasterize call
-//        std::stringstream ss;
-//        ss << "Running gdal_rasterize ";
-//        for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
-//            ss << rasterize_args[iws] << " ";
-//        }
-//        ss << _ogr_dataset;
-//        GCBS_DEBUG(ss.str());
+        //        //log gdal_rasterize call
+        //        std::stringstream ss;
+        //        ss << "Running gdal_rasterize ";
+        //        for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
+        //            ss << rasterize_args[iws] << " ";
+        //        }
+        //        ss << _ogr_dataset;
+        //        GCBS_DEBUG(ss.str());
 
         GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
         if (rasterize_opts == NULL) {

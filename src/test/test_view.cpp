@@ -23,6 +23,7 @@
 */
 
 #include <string>
+
 #include "../external/catch.hpp"
 #include "../view.h"
 

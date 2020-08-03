@@ -28,6 +28,8 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
+#include <fstream>
+
 #include "build_info.h"
 #include "cube_factory.h"
 #include "filesystem.h"
@@ -37,8 +39,6 @@
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"
-
-#include <fstream>
 
 using namespace gdalcubes;
 

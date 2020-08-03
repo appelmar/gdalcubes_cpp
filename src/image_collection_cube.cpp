@@ -22,9 +22,12 @@
     SOFTWARE.
 */
 #include "image_collection_cube.h"
+
 #include <gdal_utils.h>
+
 #include <map>
 #include <unordered_map>
+
 #include "error.h"
 #include "utils.h"
 #include "warp.h"

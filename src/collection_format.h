@@ -25,10 +25,10 @@
 #ifndef COLLECTION_FORMAT_H
 #define COLLECTION_FORMAT_H
 
+#include <string>
+
 #include "config.h"
 #include "external/json11/json11.hpp"
-
-#include <string>
 
 namespace gdalcubes {
 

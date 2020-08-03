@@ -1,5 +1,7 @@
 #include "stream_reduce_space.h"
+
 #include <fstream>
+
 #include "external/tiny-process-library/process.hpp"
 
 namespace gdalcubes {
@@ -22,7 +24,7 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
 
     // 1. read everything to input buffer (for first version, can be memory-intensive, same as rechunk_merge_time)
     std::shared_ptr<chunk_data> inbuf = std::make_shared<chunk_data>();
-    coords_nd<uint32_t, 4> in_size_btyx = {uint32_t(_in_cube->size_bands()),size_tyx[0] , _in_cube->size_y(),
+    coords_nd<uint32_t, 4> in_size_btyx = {uint32_t(_in_cube->size_bands()), size_tyx[0], _in_cube->size_y(),
                                            _in_cube->size_x()};
     inbuf->size(in_size_btyx);
     inbuf->buf(std::calloc(in_size_btyx[0] * in_size_btyx[1] * in_size_btyx[2] * in_size_btyx[3], sizeof(double)));
@@ -30,7 +32,6 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
     double *inend =
         ((double *)inbuf->buf()) + in_size_btyx[0] * in_size_btyx[1] * in_size_btyx[2] * in_size_btyx[3];
     std::fill(inbegin, inend, NAN);
-
 
     uint32_t nchunks_in_space = _in_cube->count_chunks_x() * _in_cube->count_chunks_x();
     for (chunkid_t i = 0; i < nchunks_in_space; ++i) {
@@ -42,10 +43,10 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
             for (uint32_t it = 0; it < x->size()[1]; ++it) {
                 for (uint32_t iy = 0; iy < x->size()[2]; ++iy) {
                     for (uint32_t ix = 0; ix < x->size()[3]; ++ix) {
-                        ((double *)inbuf->buf())[ib * x->size()[1]  * _in_cube->size_y() * _in_cube->size_x() +
-                                                 (it * _in_cube->size_y()  * _in_cube->size_x()) +
-                                                 (iy + in_chunk_coords[1]*_in_cube->chunk_size()[1]) * _in_cube->size_x() +
-                                                 (ix + in_chunk_coords[2]*_in_cube->chunk_size()[2])] =
+                        ((double *)inbuf->buf())[ib * x->size()[1] * _in_cube->size_y() * _in_cube->size_x() +
+                                                 (it * _in_cube->size_y() * _in_cube->size_x()) +
+                                                 (iy + in_chunk_coords[1] * _in_cube->chunk_size()[1]) * _in_cube->size_x() +
+                                                 (ix + in_chunk_coords[2] * _in_cube->chunk_size()[2])] =
                             ((double *)x->buf())[ib * x->size()[1] * x->size()[2] * x->size()[3] +
                                                  it * x->size()[2] * x->size()[3] +
                                                  iy * x->size()[3] + ix];
@@ -126,12 +127,13 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
 #endif
 
     // start process
-    TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {},
-                                    [&errstr](const char *bytes, std::size_t n) {
-                                        errstr = std::string(bytes, n);
-                                        GCBS_DEBUG(errstr);
-                                    },
-                                    false);
+    TinyProcessLib::Process process(
+        _cmd, "", [](const char *bytes, std::size_t n) {},
+        [&errstr](const char *bytes, std::size_t n) {
+            errstr = std::string(bytes, n);
+            GCBS_DEBUG(errstr);
+        },
+        false);
     mtx.unlock();
     auto exit_status = process.get_exit_status();
     filesystem::remove(f_in);

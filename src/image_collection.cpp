@@ -25,14 +25,15 @@
 #include "image_collection.h"
 
 #include <gdalwarper.h>
+#include <sqlite3.h>
+
 #include <regex>
 #include <unordered_set>
+
 #include "config.h"
 #include "external/date.h"
 #include "filesystem.h"
 #include "utils.h"
-
-#include <sqlite3.h>
 
 namespace gdalcubes {
 

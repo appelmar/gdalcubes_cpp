@@ -28,7 +28,7 @@ class stream_reduce_space_cube : public cube {
     create(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
            std::vector<std::string> names = std::vector<std::string>()) {
         std::shared_ptr<stream_reduce_space_cube> out = std::make_shared<stream_reduce_space_cube>(in, cmd, nbands,
-                                                                                                 names);
+                                                                                                   names);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
@@ -36,7 +36,7 @@ class stream_reduce_space_cube : public cube {
 
    public:
     stream_reduce_space_cube(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
-                            std::vector<std::string> names = std::vector<std::string>()) : cube(in->st_reference()->copy()), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+                             std::vector<std::string> names = std::vector<std::string>()) : cube(in->st_reference()->copy()), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
             stref->nx(1);

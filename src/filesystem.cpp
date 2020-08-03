@@ -27,6 +27,7 @@
 #include <cpl_conv.h>
 #include <cpl_string.h>
 #include <cpl_vsi.h>
+
 #include <vector>
 
 namespace gdalcubes {

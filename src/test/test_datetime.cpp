@@ -22,6 +22,7 @@
     SOFTWARE.
 */
 #include <string>
+
 #include "../datetime.h"
 #include "../external/catch.hpp"
 

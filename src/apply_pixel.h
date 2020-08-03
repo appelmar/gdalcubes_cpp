@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <string>
 #include <unordered_set>
+
 #include "cube.h"
 
 namespace gdalcubes {

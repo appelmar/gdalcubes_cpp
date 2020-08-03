@@ -23,10 +23,13 @@
 */
 
 #include "server.h"
+
 #include <cpprest/filestream.h>
 #include <cpprest/rawptrstream.h>
+
 #include <boost/program_options.hpp>
 #include <condition_variable>
+
 #include "build_info.h"
 #include "cube_factory.h"
 #include "image_collection.h"

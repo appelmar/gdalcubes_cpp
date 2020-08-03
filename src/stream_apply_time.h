@@ -32,7 +32,7 @@ class stream_apply_time_cube : public cube {
     create(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
            std::vector<std::string> names = std::vector<std::string>(), bool keep_bands = false) {
         std::shared_ptr<stream_apply_time_cube> out = std::make_shared<stream_apply_time_cube>(in, cmd, nbands,
-                                                                                                 names, keep_bands);
+                                                                                               names, keep_bands);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
@@ -40,7 +40,7 @@ class stream_apply_time_cube : public cube {
 
    public:
     stream_apply_time_cube(std::shared_ptr<cube> in, std::string cmd, uint16_t nbands,
-                            std::vector<std::string> names = std::vector<std::string>(), bool keep_bands = false) : cube(in->st_reference()->copy()), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names), _keep_bands(keep_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+                           std::vector<std::string> names = std::vector<std::string>(), bool keep_bands = false) : cube(in->st_reference()->copy()), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names), _keep_bands(keep_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
 
         _chunk_size[0] = _in_cube->size_t();
         _chunk_size[1] = _in_cube->chunk_size()[1];

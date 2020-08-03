@@ -26,6 +26,7 @@
 #define CONFIG_H
 
 #include <memory>
+
 #include "build_info.h"
 #include "error.h"
 #include "filesystem.h"

@@ -25,6 +25,7 @@
 #define IMAGE_COLLECTION_CUBE_H
 
 #include <unordered_set>
+
 #include "cube.h"
 #include "image_collection.h"
 

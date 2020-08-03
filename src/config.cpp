@@ -23,10 +23,11 @@
 */
 
 #include "config.h"
-#include "cube.h"
 
 #include <curl/curl.h>
 #include <gdal_priv.h>
+
+#include "cube.h"
 
 namespace gdalcubes {
 
@@ -68,7 +69,6 @@ void config::set_gdal_debug(bool debug) {
     else
         CPLSetConfigOption("CPL_DEBUG", "OFF");
 }
-
 
 void config::set_gdal_option(std::string key, std::string value) {
     CPLSetConfigOption(key.c_str(), value.c_str());

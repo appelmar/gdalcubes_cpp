@@ -26,6 +26,7 @@
 #define IMAGE_COLLECTION_H
 
 #include <ogr_spatialref.h>
+
 #include "collection_format.h"
 #include "coord_types.h"
 #include "datetime.h"

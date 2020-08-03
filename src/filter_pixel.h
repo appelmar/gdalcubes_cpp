@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <string>
+
 #include "cube.h"
 
 struct te_variable;  // forward declaration for add_default_functions

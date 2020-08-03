@@ -23,10 +23,12 @@
 */
 
 #include "stream.h"
+
 #include <stdlib.h>
-#include "external/tiny-process-library/process.hpp"
 
 #include <fstream>
+
+#include "external/tiny-process-library/process.hpp"
 
 namespace gdalcubes {
 
@@ -71,7 +73,8 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     setenv("GDALCUBES_STREAMING_CHUNK_ID", std::to_string(id).c_str(), 1);
 #endif
 
-    TinyProcessLib::Process process(_cmd, "", [out, &databytes_read](const char *bytes, std::size_t n) {
+    TinyProcessLib::Process process(
+        _cmd, "", [out, &databytes_read](const char *bytes, std::size_t n) {
 
         if (databytes_read == 0) {
             // Assumption is that at least 4 integers with chunk size area always contained in the first call of this function
@@ -213,7 +216,8 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
 #endif
 
     // start process
-    TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {}, [&errstr](const char *bytes, std::size_t n) {
+    TinyProcessLib::Process process(
+        _cmd, "", [](const char *bytes, std::size_t n) {}, [&errstr](const char *bytes, std::size_t n) {
         errstr = std::string(bytes, n);
         GCBS_DEBUG(errstr); }, false);
     mtx.unlock();

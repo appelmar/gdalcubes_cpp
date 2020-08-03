@@ -23,8 +23,10 @@
 */
 
 #include "collection_format.h"
+
 #include <fstream>
 #include <sstream>
+
 #include "filesystem.h"
 
 namespace gdalcubes {

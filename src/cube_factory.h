@@ -27,6 +27,7 @@
 
 #include <map>
 #include <memory>
+
 #include "cube.h"
 
 namespace gdalcubes {

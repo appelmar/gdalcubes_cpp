@@ -1,7 +1,8 @@
 #include "stream_apply_pixel.h"
-#include "external/tiny-process-library/process.hpp"
 
 #include <fstream>
+
+#include "external/tiny-process-library/process.hpp"
 
 namespace gdalcubes {
 
@@ -97,12 +98,13 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
 #endif
 
     // start process
-    TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {},
-                                    [&errstr](const char *bytes, std::size_t n) {
-                                        errstr = std::string(bytes, n);
-                                        GCBS_DEBUG(errstr);
-                                    },
-                                    false);
+    TinyProcessLib::Process process(
+        _cmd, "", [](const char *bytes, std::size_t n) {},
+        [&errstr](const char *bytes, std::size_t n) {
+            errstr = std::string(bytes, n);
+            GCBS_DEBUG(errstr);
+        },
+        false);
     mtx.unlock();
     auto exit_status = process.get_exit_status();
     filesystem::remove(f_in);

@@ -26,7 +26,9 @@
 #define WARP_H
 
 #include <gdal_alg.h>
+
 #include <map>
+
 #include "coord_types.h"
 
 namespace gdalcubes {
@@ -95,7 +97,7 @@ class gdalwarp_client {
          */
     static GDALDataset *warp(GDALDataset *in, std::string s_srs, std::string t_srs, double te_left, double te_right, double te_top, double te_bottom, uint32_t ts_x, uint32_t ts_y, std::string resampling, std::vector<double> srcnodata);
 
-    static gdalcubes_transform_info *create_transform(GDALDataset *in, GDALDataset *out, std::string srs_in_str, std::string  srs_out_str);
+    static gdalcubes_transform_info *create_transform(GDALDataset *in, GDALDataset *out, std::string srs_in_str, std::string srs_out_str);
     static void destroy_transform(gdalcubes_transform_info *transform);
 
     // implements GDALTransformerFunc signature
@@ -103,7 +105,7 @@ class gdalwarp_client {
                          int bDstToSrc, int nPointCount,
                          double *x, double *y, double *z = nullptr, int *panSuccess = nullptr);
 
-    static gdalcubes_reprojection_info *create_reprojection(std::string srs_in_str,  std::string srs_out_str);
+    static gdalcubes_reprojection_info *create_reprojection(std::string srs_in_str, std::string srs_out_str);
     static void destroy_reprojection(gdalcubes_reprojection_info *reprojection);
 
     // implements GDALTransformerFunc signature

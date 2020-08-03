@@ -23,14 +23,14 @@
 */
 
 #include "warp.h"
-#include "config.h"
 
 #include <gdalwarper.h>
+
+#include "config.h"
 
 namespace gdalcubes {
 
 gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::gdal_transformation_cache::get(std::string srs_in_str, std::string srs_out_str) {
-
     auto q = std::pair<std::string, std::string>(srs_in_str, srs_out_str);
 
     _mutex.lock();
@@ -84,13 +84,13 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
 
     // Setup warp options.
     GDALWarpOptions *psWarpOptions = GDALCreateWarpOptions();
-//    if (std::string(in->GetProjectionRef()).empty()) {
-//        if (in->SetProjection(s_srs.c_str()) != CE_None) {
-//            GCBS_DEBUG("Failed to overwrite projection for dataset.");
-//        }
-//    }
-//    std::string s = (in->GetProjectionRef());
-//    GCBS_DEBUG(s);
+    //    if (std::string(in->GetProjectionRef()).empty()) {
+    //        if (in->SetProjection(s_srs.c_str()) != CE_None) {
+    //            GCBS_DEBUG("Failed to overwrite projection for dataset.");
+    //        }
+    //    }
+    //    std::string s = (in->GetProjectionRef());
+    //    GCBS_DEBUG(s);
     psWarpOptions->hSrcDS = in;
     psWarpOptions->hDstDS = out;
     psWarpOptions->pfnProgress = GDALDummyProgress;
@@ -249,7 +249,7 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
      * Source code of this function has been adapted from original GDAL code starting at
      * https://github.com/OSGeo/gdal/blob/0bfd1bcb38b3fe321fd15f3c485cfb91537faf0e/gdal/alg/gdaltransformer.cpp#L1355
      */
-gdalwarp_client::gdalcubes_transform_info *gdalwarp_client::create_transform(GDALDataset *in, GDALDataset *out, std::string srs_in_str, std::string  srs_out_str) {
+gdalwarp_client::gdalcubes_transform_info *gdalwarp_client::create_transform(GDALDataset *in, GDALDataset *out, std::string srs_in_str, std::string srs_out_str) {
     gdalcubes_transform_info *res = new gdalcubes_transform_info();
     res->pReprojectArg = nullptr;
     in->GetGeoTransform(res->adfSrcGeoTransform);
@@ -348,7 +348,7 @@ void gdalwarp_client::destroy_transform(gdalcubes_transform_info *transform) {
     }
 }
 
-gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::create_reprojection(std::string srs_in_str,  std::string srs_out_str) {
+gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::create_reprojection(std::string srs_in_str, std::string srs_out_str) {
     // TODO: add area of interest for GDAL >= 3.0
     // TODO: add further options, e.g. from global config options
 

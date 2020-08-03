@@ -36,12 +36,12 @@ std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
     coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
-//
-//    std::shared_ptr<chunk_data> dat_A = _in_A->read_chunk(id);
-//    std::shared_ptr<chunk_data> dat_B = _in_B->read_chunk(id);
-//    if (dat_A->empty() && dat_B->empty()) {
-//        return out;
-//    }
+    //
+    //    std::shared_ptr<chunk_data> dat_A = _in_A->read_chunk(id);
+    //    std::shared_ptr<chunk_data> dat_B = _in_B->read_chunk(id);
+    //    if (dat_A->empty() && dat_B->empty()) {
+    //        return out;
+    //    }
 
     // Fill buffers accordingly
     out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
@@ -51,7 +51,7 @@ std::shared_ptr<chunk_data> join_bands_cube::read_chunk(chunkid_t id) {
 
     uint32_t offset = 0;
     bool allempty = true;
-    for (uint16_t i=0; i<_in.size(); ++i) {
+    for (uint16_t i = 0; i < _in.size(); ++i) {
         std::shared_ptr<chunk_data> dat = _in[i]->read_chunk(id);
         if (!dat->empty()) {
             allempty = false;

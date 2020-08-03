@@ -26,8 +26,10 @@
 #define COORD_TYPES_H
 
 #include <ogr_spatialref.h>
+
 #include <array>
 #include <limits>
+
 #include "datetime.h"
 
 namespace gdalcubes {

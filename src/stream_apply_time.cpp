@@ -1,5 +1,7 @@
 #include "stream_apply_time.h"
+
 #include <fstream>
+
 #include "external/tiny-process-library/process.hpp"
 
 namespace gdalcubes {
@@ -11,7 +13,7 @@ std::shared_ptr<chunk_data> stream_apply_time_cube::read_chunk(chunkid_t id) {
         return out;  // chunk is outside of the view, we don't need to read anything.
 
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
-    coords_nd<uint32_t, 4> size_btyx = { _bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
+    coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
     // Fill buffers accordingly
@@ -121,12 +123,13 @@ std::shared_ptr<chunk_data> stream_apply_time_cube::read_chunk(chunkid_t id) {
 #endif
 
     // start process
-    TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {},
-                                    [&errstr](const char *bytes, std::size_t n) {
-                                        errstr = std::string(bytes, n);
-                                        GCBS_DEBUG(errstr);
-                                    },
-                                    false);
+    TinyProcessLib::Process process(
+        _cmd, "", [](const char *bytes, std::size_t n) {},
+        [&errstr](const char *bytes, std::size_t n) {
+            errstr = std::string(bytes, n);
+            GCBS_DEBUG(errstr);
+        },
+        false);
     mtx.unlock();
     auto exit_status = process.get_exit_status();
     filesystem::remove(f_in);

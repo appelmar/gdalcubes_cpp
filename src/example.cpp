@@ -29,10 +29,10 @@
 
 #include <fstream>
 #include <iostream>
+
 #include "cube_factory.h"
 #include "gdalcubes.h"
 #include "image_collection_ops.h"
-
 #include "test_multiprocess.h"
 
 using namespace gdalcubes;
@@ -370,8 +370,8 @@ int main(int argc, char* argv[]) {
         //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_netcdf_file("/tmp/cube.nc");
         //test_multiprocess::write_chunks_netcdf(cube_factory::instance()->create_from_json_file("/tmp/cube.json"),"/tmp", "test");
         auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
-        //c->write_netcdf_file("/tmp/xxx.nc");
-        c->write_tif_collection("/tmp/TESTTIF", "xxx");
+        c->write_netcdf_file("/tmp/xxx12.nc");
+        //c->write_tif_collection("/tmp/TESTTIF", "xxx");
 
         /******************************************/
 

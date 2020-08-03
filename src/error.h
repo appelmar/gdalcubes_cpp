@@ -28,6 +28,7 @@
 #include <iostream>
 #include <mutex>
 #include <string>
+
 #include "utils.h"
 
 namespace gdalcubes {

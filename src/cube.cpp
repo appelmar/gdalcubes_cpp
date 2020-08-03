@@ -23,15 +23,16 @@ SOFTWARE.
 */
 
 #include "cube.h"
-#include <thread>
 
 #include <gdal_utils.h>  // for GDAL translate
 #include <netcdf.h>
+
 #include <algorithm>  // std::transform
+#include <fstream>
+#include <thread>
+
 #include "build_info.h"
 #include "filesystem.h"
-
-#include <fstream>
 
 #if defined(R_PACKAGE) && defined(__sun) && defined(__SVR4)
 #define USE_NCDF4 0
@@ -251,20 +252,17 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                     gdal_out->GetRasterBand(ib + 1)->Fill(packing.nodata[0]);
                 }
             }
-        }
-        else {
+        } else {
             // Fill nodata value
-            for (uint16_t ib=0; ib < size_bands(); ++ib) {
-                gdal_out->GetRasterBand(ib+1)->Fill(NAN);
+            for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                gdal_out->GetRasterBand(ib + 1)->Fill(NAN);
             }
-
         }
 
         GDALClose((GDALDatasetH)gdal_out);
     }
 
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, cog, overviews](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
-
         if (!dat->empty()) {
             for (uint32_t it = 0; it < dat->size()[1]; ++it) {
                 uint32_t cur_t_index = chunk_limits(id).low[0] + it;
@@ -335,7 +333,6 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                 mtx[cur_t_index].unlock();
             }
         }
-
 
         if (overviews) {
             prg->increment((double)0.5 / (double)this->count_chunks());
@@ -526,7 +523,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         }
     } else {
         for (uint32_t i = 0; i < size_t(); ++i) {
-            dim_t[i] =  (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+            dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
         }
     }
 
@@ -540,13 +537,13 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     if (write_bounds) {
         if (stref->has_regular_time()) {
             for (uint32_t i = 0; i < size_t(); ++i) {
-                dim_t_bnds[2 * i] =  (i * stref->dt().dt_interval);
-                dim_t_bnds[2 * i + 1] =  ((i + 1) * stref->dt().dt_interval);
+                dim_t_bnds[2 * i] = (i * stref->dt().dt_interval);
+                dim_t_bnds[2 * i + 1] = ((i + 1) * stref->dt().dt_interval);
             }
         } else {
             for (uint32_t i = 0; i < size_t(); ++i) {
-                dim_t_bnds[2 * i] =  (stref->datetime_at_index(i) - stref->t0()).dt_interval;
-                dim_t_bnds[2 * i + 1] =  dim_t_bnds[2 * i] + stref->dt_interval();
+                dim_t_bnds[2 * i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+                dim_t_bnds[2 * i + 1] = dim_t_bnds[2 * i] + stref->dt_interval();
             }
         }
 
@@ -610,7 +607,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     srs.exportToWkt(&wkt);
 
     //double geoloc_array[6] = {stref->left(), stref->dx(), 0.0, stref->top(), 0.0, stref->dy()};
-    std::string geoloc_array_str = utils::dbl_to_string(stref->left()) + " " +  utils::dbl_to_string(stref->dx()) + " 0 " +  utils::dbl_to_string(stref->top()) + " 0 " +  utils::dbl_to_string(-stref->dy());
+    std::string geoloc_array_str = utils::dbl_to_string(stref->left()) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(stref->top()) + " 0 " + utils::dbl_to_string(-stref->dy());
     //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
     //nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
@@ -635,7 +632,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
     nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
     nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T"); // this avoids GDAL warnings
+    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
 
     if (srs.IsProjected()) {
         // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
@@ -646,8 +643,6 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 #endif
         srs.GetLinearUnits(&unit);
 
-
-
         nc_put_att_text(ncout, v_y, "standard_name", strlen("projection_y_coordinate"), "projection_y_coordinate");
         nc_put_att_text(ncout, v_y, "long_name", strlen("y coordinate of projection"), "y coordinate of projection");
         nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
@@ -656,7 +651,6 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         nc_put_att_text(ncout, v_x, "long_name", strlen("x coordinate of projection"), "x coordinate of projection");
         nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
         nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
-
 
         int v_crs;
         nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
@@ -763,33 +757,33 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     }
 
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, op, prg, &v_bands, ncout, &packing](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
-      chunk_size_btyx csize = dat->size();
-      bounds_nd<uint32_t, 3> climits = chunk_limits(id);
-      std::size_t startp[] = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
-      std::size_t countp[] = {csize[1], csize[2], csize[3]};
+        chunk_size_btyx csize = dat->size();
+        bounds_nd<uint32_t, 3> climits = chunk_limits(id);
+        std::size_t startp[] = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
+        std::size_t countp[] = {csize[1], csize[2], csize[3]};
 
-      for (uint16_t i = 0; i < bands().count(); ++i) {
-          if (packing.type != packed_export::packing_type::PACK_NONE) {
-              double cur_scale;
-              double cur_offset;
-              double cur_nodata;
-              if (packing.scale.size() == size_bands()) {
-                  cur_scale = packing.scale[i];
-                  cur_offset = packing.offset[i];
-                  cur_nodata = packing.nodata[i];
-              } else {
-                  cur_scale = packing.scale[0];
-                  cur_offset = packing.offset[0];
-                  cur_nodata = packing.nodata[0];
-              }
+        for (uint16_t i = 0; i < bands().count(); ++i) {
+            if (packing.type != packed_export::packing_type::PACK_NONE) {
+                double cur_scale;
+                double cur_offset;
+                double cur_nodata;
+                if (packing.scale.size() == size_bands()) {
+                    cur_scale = packing.scale[i];
+                    cur_offset = packing.offset[i];
+                    cur_nodata = packing.nodata[i];
+                } else {
+                    cur_scale = packing.scale[0];
+                    cur_offset = packing.offset[0];
+                    cur_nodata = packing.nodata[0];
+                }
 
-              /*
+                /*
                * If band of cube already has scale + offset, we do not apply this before.
                * As a consequence, provided scale and offset values refer to actual data values
                * but ignore band metadata. The following commented code would apply the
                * unpacking before
                */
-              /*
+                /*
               if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
                   for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
                       double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
@@ -797,96 +791,96 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
                   }
               } */
 
-              uint8_t *packedbuf = nullptr;
+                uint8_t *packedbuf = nullptr;
 
-              if (packing.type == packed_export::packing_type::PACK_UINT8) {
-                  packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint8_t));
-                  for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                      double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                      if (std::isnan(v)) {
-                          v = cur_nodata;
-                      } else {
-                          v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                      }
-                      ((uint8_t *)(packedbuf))[iv] = v;
-                  }
-                  m.lock();
-                  nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                  m.unlock();
-              } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
-                  packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint16_t));
-                  for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                      double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                      if (std::isnan(v)) {
-                          v = cur_nodata;
-                      } else {
-                          v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                      }
-                      ((uint16_t *)(packedbuf))[iv] = v;
-                  }
-                  m.lock();
-                  nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                  m.unlock();
-              } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
-                  packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint32_t));
-                  for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                      double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                      if (std::isnan(v)) {
-                          v = cur_nodata;
-                      } else {
-                          v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                      }
-                      ((uint32_t *)(packedbuf))[iv] = v;
-                  }
-                  m.lock();
-                  nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                  m.unlock();
-              } else if (packing.type == packed_export::packing_type::PACK_INT16) {
-                  packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int16_t));
-                  for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                      double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                      if (std::isnan(v)) {
-                          v = cur_nodata;
-                      } else {
-                          v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                      }
-                      ((int16_t *)(packedbuf))[iv] = v;
-                  }
-                  m.lock();
-                  nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                  m.unlock();
-              } else if (packing.type == packed_export::packing_type::PACK_INT32) {
-                  packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int32_t));
-                  for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                      double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                      if (std::isnan(v)) {
-                          v = cur_nodata;
-                      } else {
-                          v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
-                      }
-                      ((int32_t *)(packedbuf))[iv] = v;
-                  }
-                  m.lock();
-                  nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                  m.unlock();
-              } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
-                  packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(float));
-                  for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
-                      double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
-                      ((float *)(packedbuf))[iv] = v;
-                  }
-                  m.lock();
-                  nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
-                  m.unlock();
-              }
-              if (packedbuf) std::free(packedbuf);
-          } else {
-              m.lock();
-              nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
-              m.unlock();
-          }
-      }
-      prg->increment((double)1 / (double)this->count_chunks());
+                if (packing.type == packed_export::packing_type::PACK_UINT8) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint8_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((uint8_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_UINT16) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint16_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((uint16_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_UINT32) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(uint32_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((uint32_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_INT16) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int16_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((int16_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_INT32) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(int32_t));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        if (std::isnan(v)) {
+                            v = cur_nodata;
+                        } else {
+                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                        }
+                        ((int32_t *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                } else if (packing.type == packed_export::packing_type::PACK_FLOAT32) {
+                    packedbuf = (uint8_t *)std::malloc(dat->size()[1] * dat->size()[2] * dat->size()[3] * sizeof(float));
+                    for (uint32_t iv = 0; iv < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++iv) {
+                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + iv];
+                        ((float *)(packedbuf))[iv] = v;
+                    }
+                    m.lock();
+                    nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(packedbuf));
+                    m.unlock();
+                }
+                if (packedbuf) std::free(packedbuf);
+            } else {
+                m.lock();
+                nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)csize[1] * (int)csize[2] * (int)csize[3]));
+                m.unlock();
+            }
+        }
+        prg->increment((double)1 / (double)this->count_chunks());
     };
 
     p->apply(shared_from_this(), f);
@@ -1007,7 +1001,7 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     srs.exportToWkt(&wkt);
 
     //double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
-    std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " +  utils::dbl_to_string(stref->dx()) + " 0 " +  utils::dbl_to_string(bbox.s.top) + " 0 " +  utils::dbl_to_string(-stref->dy());
+    std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(bbox.s.top) + " 0 " + utils::dbl_to_string(-stref->dy());
 
     //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
     //nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
@@ -1033,8 +1027,7 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
     nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
     nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T"); // this avoids GDAL warnings
-
+    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
 
     if (srs.IsProjected()) {
         // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
@@ -1060,7 +1053,6 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
         nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
         //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
         nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
-
 
     } else {
         // char* unit;
@@ -1226,13 +1218,12 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
         std::string j = make_constructible_json().dump();
         nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
 
-
-       char *wkt;
-       srs.exportToWkt(&wkt);
-       //double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
-       std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " +  utils::dbl_to_string(stref->dx()) + " 0 " +  utils::dbl_to_string(bbox.s.top) + " 0 " +  utils::dbl_to_string(-stref->dy());
-//       nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
-//       nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+        char *wkt;
+        srs.exportToWkt(&wkt);
+        //double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
+        std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(bbox.s.top) + " 0 " + utils::dbl_to_string(-stref->dy());
+        //       nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
+        //       nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
         std::string dtunit_str;
         if (stref->dt().dt_unit == datetime_unit::YEAR) {
@@ -1251,11 +1242,11 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
         dtunit_str += " since ";
         dtunit_str += bbox.t0.to_string(datetime_unit::SECOND);
 
-      nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
-      nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
-      nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
-      nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-      nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T"); // this avoids GDAL warnings
+        nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
+        nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
+        nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
+        nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
+        nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
 
         if (srs.IsProjected()) {
             // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
@@ -1275,14 +1266,12 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
             nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
             nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
 
-
             int v_crs;
             nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
             //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
             nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
             //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
             nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
-
 
         } else {
             // char* unit;

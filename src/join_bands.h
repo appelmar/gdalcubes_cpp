@@ -42,14 +42,14 @@ class join_bands_cube : public cube {
      * @param B input data cube
      * @return a shared pointer to the created data cube instance
      */
-//    static std::shared_ptr<join_bands_cube> create(std::shared_ptr<cube> A, std::shared_ptr<cube> B, std::string prefix_A = "A", std::string prefix_B = "B") {
-//        std::shared_ptr<join_bands_cube> out = std::make_shared<join_bands_cube>(A, B, prefix_A, prefix_B);
-//        A->add_child_cube(out);
-//        B->add_child_cube(out);
-//        out->add_parent_cube(A);
-//        out->add_parent_cube(B);
-//        return out;
-//    }
+    //    static std::shared_ptr<join_bands_cube> create(std::shared_ptr<cube> A, std::shared_ptr<cube> B, std::string prefix_A = "A", std::string prefix_B = "B") {
+    //        std::shared_ptr<join_bands_cube> out = std::make_shared<join_bands_cube>(A, B, prefix_A, prefix_B);
+    //        A->add_child_cube(out);
+    //        B->add_child_cube(out);
+    //        out->add_parent_cube(A);
+    //        out->add_parent_cube(B);
+    //        return out;
+    //    }
 
     /**
    * @brief Create a data cube that combines the bands of two or more identically-shaped data cubes
@@ -61,7 +61,7 @@ class join_bands_cube : public cube {
    */
     static std::shared_ptr<join_bands_cube> create(std::vector<std::shared_ptr<cube>> in_cubes, std::vector<std::string> prefixes = {}) {
         std::shared_ptr<join_bands_cube> out = std::make_shared<join_bands_cube>(in_cubes, prefixes);
-        for (auto it=in_cubes.begin(); it != in_cubes.end(); ++it) {
+        for (auto it = in_cubes.begin(); it != in_cubes.end(); ++it) {
             (*it)->add_child_cube(out);
             out->add_parent_cube(*it);
         }
@@ -72,22 +72,15 @@ class join_bands_cube : public cube {
     join_bands_cube(std::vector<std::shared_ptr<cube>> in_cubes, std::vector<std::string> prefixes = {}) : cube(), _in(in_cubes), _prefix(prefixes) {
         _st_ref = std::make_shared<cube_stref_regular>();
 
-
         if (_in.size() < 2) {
             throw std::string("ERROR in join_bands_cube::join_bands_cube(): Expected at least two input data cubes");
         }
-
-
 
         if (!_prefix.empty() && (in_cubes.size() != prefixes.size())) {
             throw std::string("ERROR in join_bands_cube::join_bands_cube(): The number of name prefixes does not match the number of provided input data cubes");
         }
 
-
-
-
-        for (uint16_t i=1; i<in_cubes.size(); ++i) {
-
+        for (uint16_t i = 1; i < in_cubes.size(); ++i) {
             if (cube_stref::type_string(_in[0]->st_reference()) != cube_stref::type_string(_in[i]->st_reference())) {
                 throw std::string("ERROR in join_bands_cube::join_bands_cube(): Incompatible spatial / temporal reference types");
             }
@@ -125,8 +118,8 @@ class join_bands_cube : public cube {
                 }
                 if (has_name_conflicts) {
                     GCBS_WARN("Input cubes have bands with identical names, default name prefixes will be added.");
-                    for (uint16_t j=0; j<in_cubes.size(); ++j) {
-                        _prefix.push_back("X" + std::to_string(j+1));
+                    for (uint16_t j = 0; j < in_cubes.size(); ++j) {
+                        _prefix.push_back("X" + std::to_string(j + 1));
                     }
                 }
             } else {
@@ -137,21 +130,19 @@ class join_bands_cube : public cube {
             }
         }
 
-
         _st_ref = _in[0]->st_reference();
 
         _chunk_size[0] = _in[0]->chunk_size()[0];
         _chunk_size[1] = _in[0]->chunk_size()[1];
         _chunk_size[2] = _in[0]->chunk_size()[2];
 
-        for (uint16_t i=0; i<in_cubes.size(); ++i) {
+        for (uint16_t i = 0; i < in_cubes.size(); ++i) {
             for (uint16_t ib = 0; ib < _in[i]->bands().count(); ++ib) {
                 band b = _in[i]->bands().get(ib);
                 b.name = _prefix.empty() ? (b.name) : (_prefix[i] + "." + b.name);
                 _bands.add(b);
             }
         }
-
     }
 
    public:

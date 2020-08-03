@@ -39,6 +39,7 @@
 #include <chrono>
 #include <iomanip>
 #include <regex>
+
 #include "error.h"
 #include "external/date.h"
 
@@ -62,56 +63,9 @@ struct duration {
     int32_t dt_interval;
     datetime_unit dt_unit;
 
-    std::string to_string() {
-        switch (dt_unit) {
-            case datetime_unit::NONE:
-                return "";
-            case datetime_unit::SECOND:
-                return "PT" + std::to_string(dt_interval) + "S";
-            case datetime_unit::MINUTE:
-                return "PT" + std::to_string(dt_interval) + "M";
-            case datetime_unit::HOUR:
-                return "PT" + std::to_string(dt_interval) + "H";
-            case datetime_unit::DAY:
-                return "P" + std::to_string(dt_interval) + "D";
-            case datetime_unit::WEEK:
-                return "P" + std::to_string(dt_interval) + "W";
-            case datetime_unit::MONTH:
-                return "P" + std::to_string(dt_interval) + "M";
-            case datetime_unit::YEAR:
-                return "P" + std::to_string(dt_interval) + "Y";
-        }
-        return "";
-    }
+    std::string to_string();
 
-    static duration from_string(std::string s) {
-        std::regex rexp("P(T?)([0-9]+)([YMWDHS])");
-
-        std::cmatch res;
-        if (!std::regex_match(s.c_str(), res, rexp)) {
-            throw std::string("ERROR in duration::from_string(): cannot derive date interval");
-        }
-        duration d;
-        d.dt_interval = std::stoi(res[2]);
-        if (!res[1].str().empty()) {
-            if (res[3] == "H")
-                d.dt_unit = datetime_unit::HOUR;
-            else if (res[3] == "M")
-                d.dt_unit = datetime_unit::MINUTE;
-            else if (res[3] == "S")
-                d.dt_unit = datetime_unit::SECOND;
-        } else {
-            if (res[3] == "Y")
-                d.dt_unit = datetime_unit::YEAR;
-            else if (res[3] == "M")
-                d.dt_unit = datetime_unit::MONTH;
-            else if (res[3] == "W")
-                d.dt_unit = datetime_unit::WEEK;
-            else if (res[3] == "D")
-                d.dt_unit = datetime_unit::DAY;
-        }
-        return d;
-    }
+    static duration from_string(std::string s);
 
     friend duration operator*(duration l, const int& r) {
         duration out;
@@ -169,88 +123,7 @@ struct duration {
 
     inline friend bool operator!=(const duration& l, const duration& r) { return !(l == r); }
 
-    duration convert(datetime_unit u) {
-        duration out;
-        if (u == datetime_unit::NONE || dt_unit == datetime_unit::NONE) {
-            GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
-            return out;
-        }
-        out.dt_unit = dt_unit;
-        out.dt_interval = dt_interval;
-        if (u == dt_unit) {
-            return out;
-        }
-        while (out.dt_unit != u) {
-            if (out.dt_unit < u) {
-                switch (out.dt_unit) {
-                    case datetime_unit::NONE:
-                    case datetime_unit::YEAR:
-                        GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
-                        out.dt_unit = dt_unit;
-                        out.dt_interval = dt_interval;
-                        return out;
-                    case datetime_unit::SECOND:
-                        out.dt_unit = datetime_unit::MINUTE;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 60.0);
-                        break;
-                    case datetime_unit::MINUTE:
-                        out.dt_unit = datetime_unit::HOUR;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 60.0);
-                        break;
-                    case datetime_unit::HOUR:
-                        out.dt_unit = datetime_unit::DAY;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 24.0);
-                        break;
-                    case datetime_unit::DAY:
-                        out.dt_unit = datetime_unit::MONTH;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 30.0);
-                        break;
-                    case datetime_unit::WEEK:
-                        out.dt_unit = datetime_unit::MONTH;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 7 / 30.0);
-                        break;
-                    case datetime_unit::MONTH:
-                        out.dt_unit = datetime_unit::YEAR;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval / 12.0);
-                        break;
-                }
-            } else {
-                switch (out.dt_unit) {
-                    case datetime_unit::NONE:
-                    case datetime_unit::SECOND:
-                        GCBS_ERROR("Failed conversion of datetime duration with undefined unit");
-                        out.dt_unit = dt_unit;
-                        out.dt_interval = dt_interval;
-                        return out;
-                    case datetime_unit::MINUTE:
-                        out.dt_unit = datetime_unit::SECOND;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 60.0);
-                        break;
-                    case datetime_unit::HOUR:
-                        out.dt_unit = datetime_unit::MINUTE;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 60.0);
-                        break;
-                    case datetime_unit::DAY:
-                        out.dt_unit = datetime_unit::HOUR;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 24.0);
-                        break;
-                    case datetime_unit::WEEK:
-                        out.dt_unit = datetime_unit::DAY;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 7.0);
-                        break;
-                    case datetime_unit::MONTH:
-                        out.dt_unit = datetime_unit::DAY;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 30.0);
-                        break;
-                    case datetime_unit::YEAR:
-                        out.dt_unit = datetime_unit::MONTH;
-                        out.dt_interval = (int)std::ceil((double)out.dt_interval * 12.0);
-                        break;
-                }
-            }
-        }
-        return out;
-    }
+    duration convert(datetime_unit u);
 };
 
 /**
@@ -272,34 +145,7 @@ class datetime {
      * This function does **not** convert the datetime to a timestamp or similar
      * @return
      */
-    double to_double() {
-        auto daypoint = date::floor<date::days>(_p);
-        auto ymd = date::year_month_day(daypoint);
-        auto tod = date::make_time(_p - daypoint);
-
-        double out = int(ymd.year());
-        if (_unit <= datetime_unit::MONTH) {
-            out *= 100;
-            out += unsigned(ymd.month());
-        }
-        if (_unit <= datetime_unit::DAY) {
-            out *= 100;
-            out += unsigned(ymd.day());
-        }
-        if (_unit <= datetime_unit::HOUR) {
-            out *= 100;
-            out += tod.hours().count();
-        }
-        if (_unit <= datetime_unit::MINUTE) {
-            out *= 100;
-            out += tod.minutes().count();
-        }
-        if (_unit <= datetime_unit::SECOND) {
-            out *= 100;
-            out += tod.seconds().count();
-        }
-        return out;
-    }
+    double to_double();
 
     long seconds() {
         auto daypoint = date::floor<date::days>(_p);
@@ -380,91 +226,10 @@ class datetime {
 
     // Helper function that tries to parse string datetimes according to a given format
     // tries date::parse first and if this does not work std::get_time
-    static date::sys_seconds tryparse(std::string format, std::string d) {
-        bool success = false;
-        date::sys_seconds out;  // TODO: set to invalid?!
-        if (!success) {
-            std::istringstream is(d);
-            is >> date::parse(format, out);
-            if (bool(is))
-                success = true;
-        }
-
-#if !defined __GNUC__ || __GNUC__ >= 5  // gcc 4.9x misses std::get_time
-        if (!success) {
-            std::tm tp;
-            tp.tm_sec = 0;
-            tp.tm_min = 0;
-            tp.tm_hour = 0;
-            tp.tm_mday = 1;
-            tp.tm_mon = 0;
-            tp.tm_year = 0;
-            tp.tm_wday = -1;
-            tp.tm_yday = -1;
-
-            std::istringstream is(d);
-            is >> std::get_time(&tp, format.c_str());  // works only from GCC > 5
-            if (!is.fail()) {
-                if (tp.tm_yday != -1) {
-                    out = date::sys_days{date::year{tp.tm_year + 1900} / 1 / 1} + date::days{tp.tm_yday} +
-                          std::chrono::hours{tp.tm_hour} + std::chrono::minutes{tp.tm_min} + std::chrono::seconds{tp.tm_sec};
-                } else {
-                    out = date::sys_days{date::year{tp.tm_year + 1900} / (tp.tm_mon + 1) / tp.tm_mday} +
-                          std::chrono::hours{tp.tm_hour} + std::chrono::minutes{tp.tm_min} + std::chrono::seconds{tp.tm_sec};
-                }
-                success = true;
-            }
-        }
-#endif
-
-        if (!success) {
-            GCBS_ERROR("Cannot parse datetime string '" + d + "' with format '" + format + "'");
-            throw std::string("Cannot parse datetime string '" + d + "' with format '" + format + "'");
-        }
-        return out;
-    }
+    static date::sys_seconds tryparse(std::string format, std::string d);
 
     // from standard format with variable precision (
-    static datetime from_string(std::string s) {
-        std::istringstream is(s);
-
-        // TODO: Regex does not support ISO weeks / day of year yet
-        std::regex regex1("([0-9]{4})(?:-?([0-9]{2})(?:-?([0-9]{2})(?:[T\\s]?([0-9]{2})(?::?([0-9]{2})(?::?([0-9]{2}))?)?)?)?)?");
-        datetime out;
-
-        std::cmatch res;
-        if (!std::regex_match(s.c_str(), res, regex1)) {
-            throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
-        } else {
-            if (res.size() != 7) throw std::string("ERROR in datetime::from_string(): cannot derive datetime from string");
-            uint16_t i = 2;
-            while (!res[i].str().empty() && i < 7) ++i;
-            if (i == 2) {
-                //date::sys_days d = date::year(std::stoi(res[1].str()));
-                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(1) / date::day(1)};
-                out._unit = datetime_unit::YEAR;
-            } else if (i == 3) {
-                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(1)};
-                out._unit = datetime_unit::MONTH;
-            } else if (i == 4) {
-                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))};
-                out._unit = datetime_unit::DAY;
-            } else if (i == 5) {
-                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))} +
-                         std::chrono::hours{std::stoi(res[4].str())};
-                out._unit = datetime_unit::HOUR;
-            } else if (i == 6) {
-                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))} +
-                         std::chrono::hours{std::stoi(res[4].str())} + std::chrono::minutes{std::stoi(res[5].str())};
-                out._unit = datetime_unit::MINUTE;
-            } else if (i == 7) {
-                out._p = date::sys_days{date::year(std::stoi(res[1].str())) / date::month(std::stoi(res[2].str())) / date::day(std::stoi(res[3].str()))} +
-                         std::chrono::hours{std::stoi(res[4].str())} + std::chrono::minutes{std::stoi(res[5].str())} + std::chrono::seconds{std::stoi(res[6].str())};
-                out._unit = datetime_unit::SECOND;
-            }
-        }
-        return out;
-    }
+    static datetime from_string(std::string s);
 
     datetime_unit& unit() { return _unit; }
     datetime_unit unit() const { return _unit; }
@@ -515,39 +280,19 @@ class datetime {
     friend bool operator==(const datetime& l, const datetime& r) {
         if (l.unit() != r._unit) return false;  // TODO: warning
         return ((l - r).dt_interval == 0);
-        //        switch (l.unit()) {
-        //            case datetime_unit::NONE:
-        //                return false;
-        //            case datetime_unit::SECOND:
-        //                return ((l - r).dt_interval == 0);
-        //            case datetime_unit::MINUTE:
-        //                return ((l - r).dt_interval == 0);
-        //            case datetime_unit::HOUR:
-        //                return ((l - r).dt_interval == 0);
-        //            case datetime_unit::DAY:
-        //                return ((l - r).dt_interval == 0);
-        //            case datetime_unit::WEEK: {
-        //                return ((l - r).dt_interval == 0);
-        //            }
-        //            case datetime_unit::MONTH:
-        //                return ((l - r).dt_interval == 0);
-        //            case datetime_unit::YEAR:
-        //                return ((l - r).dt_interval == 0);
-        //        }
-        //        return false;
     }
 
     inline friend bool operator!=(const datetime& l, const datetime& r) { return !(l == r); }
 
-    friend bool operator<(datetime& l, datetime& r) {
+    friend bool operator<(const datetime& l, const datetime& r) {
         if (l.unit() != r._unit) return false;
 
         if (l.unit() == datetime_unit::NONE) return false;
         return ((l - r).dt_interval < 0);
     }
-    inline friend bool operator>(datetime& l, datetime& r) { return r < l; }
-    inline friend bool operator<=(datetime& l, datetime& r) { return !(l > r); }
-    inline friend bool operator>=(datetime& l, datetime& r) { return !(l < r); }
+    inline friend bool operator>(const datetime& l, const datetime& r) { return r < l; }
+    inline friend bool operator<=(const datetime& l, const datetime& r) { return !(l > r); }
+    inline friend bool operator>=(const datetime& l, const datetime& r) { return !(l < r); }
 
     friend datetime operator+(datetime l, const duration& r) {
         datetime out(l._p);
@@ -595,26 +340,7 @@ class datetime {
     date::sys_seconds _p;
     datetime_unit _unit;
 
-    static std::string datetime_format_for_unit(datetime_unit u) {
-        switch (u) {
-            case datetime_unit::NONE:
-            case datetime_unit::SECOND:
-                return "%Y-%m-%dT%H:%M:%S";
-            case datetime_unit::MINUTE:
-                return "%Y-%m-%dT%H:%M";
-            case datetime_unit::HOUR:
-                return "%Y-%m-%dT%H";
-            case datetime_unit::DAY:
-                return "%Y-%m-%d";
-            case datetime_unit::WEEK:
-                return "%Y-%m-%dT%H:%M:%S";
-            case datetime_unit::MONTH:
-                return "%Y-%m";
-            case datetime_unit::YEAR:
-                return "%Y";
-        }
-        return "%Y-%m-%dT%H:%M:%S";
-    }
+    static std::string datetime_format_for_unit(datetime_unit u);
 };
 
 }  // namespace gdalcubes

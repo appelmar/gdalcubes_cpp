@@ -57,10 +57,16 @@ class stream_cube : public cube {
         return out;
     }
 
-    stream_cube(std::shared_ptr<cube> in_cube, std::string cmd, bool file_streaming = false) : cube(std::make_shared<cube_st_reference>(*(in_cube->st_reference()))), _in_cube(in_cube), _cmd(cmd), _file_streaming(file_streaming), _keep_input_nt(false), _keep_input_ny(false), _keep_input_nx(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    stream_cube(std::shared_ptr<cube> in_cube, std::string cmd, bool file_streaming = false) : cube(in_cube->st_reference()->copy()), _in_cube(in_cube), _cmd(cmd), _file_streaming(file_streaming), _keep_input_nt(false), _keep_input_ny(false), _keep_input_nx(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         // Test CMD and find out what size comes out.
         cube_size_tyx tmp = _in_cube->chunk_size(0);
         cube_size_btyx csize_in = {_in_cube->bands().count(), tmp[0], tmp[1], tmp[2]};
+
+        if (!_st_ref->has_regular_space()) {
+            throw std::string("ERROR: chunk streaming currently does not support irregular spatial dimensions");
+        }
+        // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+        std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
 
         // do not read original chunk data (which can be expensive) but simply stream a dummy chunk with proper size here
         std::shared_ptr<chunk_data> dummy_chunk = std::make_shared<chunk_data>();
@@ -84,35 +90,49 @@ class stream_cube : public cube {
         _chunk_size = {c0->size()[1], c0->size()[2], c0->size()[3]};
 
         // Make an optimistic guess
-        if (c0->size()[1] == 1) {
-            _st_ref->nt(in_cube->count_chunks_t());
-        } else if (c0->size()[1] == csize_in[1]) {
-            _keep_input_nt = true;
-            _st_ref->nt(in_cube->size()[1]);
-        } else
-            throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
+        if (_st_ref->has_regular_time()) {
+            if (c0->size()[1] == 1) {
+                stref->nt(in_cube->count_chunks_t());
+            } else if (c0->size()[1] == csize_in[1]) {
+                _keep_input_nt = true;
+                stref->nt(in_cube->size()[1]);
+            } else
+                throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
+        } else {
+            if (c0->size()[1] == 1) {
+                // The "best" we can do is to use starting date/time from chunks as labels...
+                std::vector<datetime> labels;
+                for (uint32_t it = 0; it < in_cube->size_t(); it += in_cube->chunk_size()[0]) {
+                    labels.push_back(stref->datetime_at_index(it));
+                }
+                std::dynamic_pointer_cast<cube_stref_labeled_time>(stref)->set_time_labels(labels);
+            } else if (c0->size()[1] == csize_in[1]) {
+                _keep_input_nt = true;
+            } else
+                throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
+        }
 
         if (c0->size()[2] == 1) {
-            _st_ref->ny() = in_cube->count_chunks_y();
+            stref->ny(in_cube->count_chunks_y());
         } else if (c0->size()[2] == csize_in[2]) {
             _keep_input_ny = true;
-            _st_ref->ny() = in_cube->size()[2];
+            stref->ny(in_cube->size()[2]);
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
 
         if (c0->size()[3] == 1) {
-            _st_ref->nx() = in_cube->count_chunks_x();
+            stref->nx(in_cube->count_chunks_x());
         } else if (c0->size()[3] == csize_in[3]) {
             _keep_input_nx = true;
-            _st_ref->nx() = in_cube->size()[3];
+            stref->nx(in_cube->size()[3]);
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
     }
 
     virtual std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    virtual nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    virtual json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "stream";
         out["command"] = _cmd;
         out["in_cube"] = _in_cube->make_constructible_json();
@@ -134,20 +154,6 @@ class stream_cube : public cube {
     std::shared_ptr<chunk_data> stream_chunk_stdin(std::shared_ptr<chunk_data> data, chunkid_t id);
 
     std::shared_ptr<chunk_data> stream_chunk_file(std::shared_ptr<chunk_data> data, chunkid_t id);
-
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
-        _st_ref->dt(stref->dt());
-
-        if (!_keep_input_nt) _st_ref->nt(count_chunks_t());
-        if (!_keep_input_ny) _st_ref->ny() = count_chunks_y();
-        if (!_keep_input_nx) _st_ref->nx() = count_chunks_x();
-    }
 };
 
 }  // namespace gdalcubes

@@ -28,13 +28,14 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
+#include <fstream>
+
 #include "build_info.h"
 #include "cube_factory.h"
 #include "filesystem.h"
 #include "image_collection.h"
 #include "image_collection_cube.h"
 #include "image_collection_ops.h"
-#include "reduce.h"
 #include "stream.h"
 #include "swarm.h"
 #include "utils.h"
@@ -81,6 +82,7 @@ void print_usage(std::string command = "") {
         std::cout << "Options:" << std::endl;
         std::cout << "    , --deflate            Deflate compression level for output NetCDF file (0=no compression, 9=max compression), defaults to 1" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel chunk processing, defaults to 1" << std::endl;
+        std::cout << "  -c, --chunk              Compute only one specific chunk, specified by its integer identifier" << std::endl;
         std::cout << "      --swarm              Filename of a simple text file where each line points to a gdalcubes server API endpoint" << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
@@ -95,13 +97,14 @@ void print_usage(std::string command = "") {
         std::cout << "  -r, --resampling         Resampling algorithm, one of \"AVERAGE\", \"AVERAGE_MAGPHASE\", \"BILINEAR\", \"CUBIC\", \"CUBICSPLINE\", \"GAUSS\", \"LANCZOS\", \"MODE\", \"NEAREST\", or \"NONE\"." << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
-    } else if (command == "translate_cog") {
-        std::cout << "Usage: gdalcubes translate_cog [options] SOURCE DEST" << std::endl;
+    } else if (command == "translate_gtiff") {
+        std::cout << "Usage: gdalcubes translate_gtiff [options] SOURCE DEST" << std::endl;
         std::cout << std::endl;
         std::cout << "Translate all images in a collection (SOURCE) to cloud-optimized GeoTiffs under the DEST directory." << std::endl;
         std::cout << std::endl;
         std::cout << "Options:" << std::endl;
         std::cout << "  -t, --threads            Number of threads used for parallel processing, defaults to 1" << std::endl;
+        std::cout << "  -f, --force              Force translation to GTiff even for already existing files" << std::endl;
         std::cout << "  -d, --debug              Print debug messages" << std::endl;
         std::cout << std::endl;
     } else {
@@ -113,7 +116,7 @@ void print_usage(std::string command = "") {
         std::cout << "  create_collection        Create a new image collection from GDAL datasets" << std::endl;
         std::cout << "  exec                     Evaluate a data cube and store the result as a NetCDF file" << std::endl;
         std::cout << "  addo                     Build overview images for an existing image collection" << std::endl;
-        std::cout << "  translate_cog            Translate all images in a collection to cloud-optimized GeoTiffs" << std::endl;
+        std::cout << "  translate_gtiff          Translate all images in a collection to (tiled) GeoTiff files" << std::endl;
         std::cout << std::endl;
         std::cout << "Please use 'gdalcubes command --help' for further information about command-specific arguments." << std::endl;
     }
@@ -274,6 +277,7 @@ int main(int argc, char* argv[]) {
             po::options_description exec_desc("exec arguments");
             exec_desc.add_options()("input", po::value<std::string>(), "");
             exec_desc.add_options()("output", po::value<std::string>(), "");
+            exec_desc.add_options()("chunk,c", po::value<uint32_t>(), "");
             exec_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
             exec_desc.add_options()("swarm", po::value<std::string>(), "");
             exec_desc.add_options()("deflate", po::value<uint8_t>()->default_value(1), "");
@@ -307,13 +311,12 @@ int main(int argc, char* argv[]) {
                     config::instance()->set_default_chunk_processor(std::dynamic_pointer_cast<chunk_processor>(std::make_shared<chunk_processor_multithread>(nthreads)));
                 }
             }
-
-            std::ifstream i(input);
-            nlohmann::json j;
-            i >> j;
-
-            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(j);
-            c->write_netcdf_file(output, deflate);
+            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json_file(input);
+            if (vm.count("chunk")) {
+                c->write_single_chunk_netcdf(vm["chunk"].as<chunkid_t>(), output, deflate);
+            } else {
+                c->write_netcdf_file(output, deflate);
+            }
 
         } else if (cmd == "addo") {
             po::options_description addo_desc("addo arguments");
@@ -343,11 +346,12 @@ int main(int argc, char* argv[]) {
 
             image_collection_ops::create_overviews(ic, levels, resampling, nthreads);
 
-        } else if (cmd == "translate_cog") {
-            po::options_description cog_desc("exec arguments");
-            cog_desc.add_options()("input", po::value<std::string>(), "");
-            cog_desc.add_options()("output", po::value<std::string>(), "");
-            cog_desc.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
+        } else if (cmd == "translate_gtiff") {
+            po::options_description gtiff_description("exec arguments");
+            gtiff_description.add_options()("input", po::value<std::string>(), "");
+            gtiff_description.add_options()("output", po::value<std::string>(), "");
+            gtiff_description.add_options()("force,f", "");
+            gtiff_description.add_options()("threads,t", po::value<uint16_t>()->default_value(1), "");
 
             po::positional_options_description cog_pos;
             cog_pos.add("input", 1);
@@ -356,7 +360,7 @@ int main(int argc, char* argv[]) {
             try {
                 std::vector<std::string> opts = po::collect_unrecognized(parsed.options, po::include_positional);
                 opts.erase(opts.begin());
-                po::store(po::command_line_parser(opts).options(cog_desc).positional(cog_pos).run(), vm);
+                po::store(po::command_line_parser(opts).options(gtiff_description).positional(cog_pos).run(), vm);
             } catch (...) {
                 std::cout << "ERROR in gdalcubes translate_cog: invalid arguments." << std::endl;
                 print_usage("exec");
@@ -367,10 +371,13 @@ int main(int argc, char* argv[]) {
             std::string output = vm["output"].as<std::string>();
 
             uint16_t nthreads = vm["threads"].as<uint16_t>();
-
+            bool force = false;
+            if (vm.count("force")) {
+                force = true;
+            }
             std::shared_ptr<image_collection> ic = std::make_shared<image_collection>(input);
 
-            image_collection_ops::translate_cog(ic, output, nthreads);
+            image_collection_ops::translate_gtiff(ic, output, nthreads, force);
 
         }
 

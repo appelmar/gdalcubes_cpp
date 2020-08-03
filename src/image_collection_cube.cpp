@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -24,22 +24,26 @@
 #include "image_collection_cube.h"
 
 #include <gdal_utils.h>
+
 #include <map>
+#include <unordered_map>
+
 #include "error.h"
 #include "utils.h"
+#include "warp.h"
 
 namespace gdalcubes {
 
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
-image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() { load_bands(); }
-image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() {
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, cube_view v) : cube(std::make_shared<cube_view>(v)), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
+image_collection_cube::image_collection_cube(std::string icfile, std::string vfile) : cube(std::make_shared<cube_view>(cube_view::read_json(vfile))), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") { load_bands(); }
+image_collection_cube::image_collection_cube(std::shared_ptr<image_collection> ic) : cube(), _collection(ic), _input_bands(), _mask(nullptr), _mask_band("") {
     st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
     load_bands();
 }
 
-image_collection_cube::image_collection_cube(std::string icfile) : cube(), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band(""), _warp_args() {
+image_collection_cube::image_collection_cube(std::string icfile) : cube(), _collection(std::make_shared<image_collection>(icfile)), _input_bands(), _mask(nullptr), _mask_band("") {
     st_reference(std::make_shared<cube_view>(image_collection_cube::default_view(_collection)));
     load_bands();
 }
@@ -380,6 +384,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         uint32_t image_id = datasets[i].image_id;
         std::string image_name = datasets[i].image_name;
+        std::string src_srs = datasets[i].srs;
         datetime dt = datetime::from_string(datasets[i].datetime);
         dt.unit() = _st_ref->dt_unit();  // explicit datetime unit cast
         duration temp_dt = _st_ref->dt();
@@ -413,90 +418,64 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         std::fill((double *)img_buf, ((double *)img_buf) + size_btyx[0] * size_btyx[3] * size_btyx[2], NAN);
 
         for (auto it = image_datasets.begin(); it != image_datasets.end(); ++it) {
+            GDALDataset *bandsel_vrt = nullptr;
             GDALDataset *g = (GDALDataset *)GDALOpen(it->first.c_str(), GA_ReadOnly);
             if (!g) {
                 throw std::string("ERROR in image_collection_cube::read_chunk(): GDAL cannot open'" + it->first + "'");
             }
 
-            CPLStringList warp_args;
-            warp_args.AddString("-of");
-            warp_args.AddString("MEM");  // TODO: Check whether /vsimem/GTiff is faster?
+            // If input dataset has more bands than requested
+            bool create_band_subset_vrt = false;
+            if (g->GetRasterCount() > int(it->second.size())) {
+                create_band_subset_vrt = true;
+                // create temporary VRT dataset
 
-            warp_args.AddString("-t_srs");
-            warp_args.AddString(_st_ref->srs().c_str());
+                CPLStringList translate_args;
+                translate_args.AddString("-of");
+                translate_args.AddString("VRT");
 
-            warp_args.AddString("-te");  // xmin ymin xmax ymax
-            warp_args.AddString(utils::dbl_to_string(cextent.s.left).c_str());
-            warp_args.AddString(utils::dbl_to_string(cextent.s.bottom).c_str());
-            warp_args.AddString(utils::dbl_to_string(cextent.s.right).c_str());
-            warp_args.AddString(utils::dbl_to_string(cextent.s.top).c_str());
+                for (uint16_t b = 0; b < it->second.size(); ++b) {
+                    translate_args.AddString("-b");
+                    translate_args.AddString(std::to_string(std::get<1>(it->second[b])).c_str());
+                }
 
-            warp_args.AddString("-dstnodata");
-            warp_args.AddString("nan");
+                GDALTranslateOptions *trans_options = GDALTranslateOptionsNew(translate_args.List(), NULL);
+                if (trans_options == NULL) {
+                    GCBS_ERROR("Cannot create gdal_translate options");
+                    throw std::string("Cannot create gdal_translate options");
+                }
 
-            warp_args.AddString("-wo");
-            warp_args.AddString("INIT_DEST=nan");
+                bandsel_vrt = (GDALDataset *)GDALTranslate("", (GDALDatasetH)g, trans_options, NULL);
+                if (bandsel_vrt == NULL) {
+                    create_band_subset_vrt = false;
+                }
+                GDALTranslateOptionsFree(trans_options);
+            }
 
-            std::string nodata_value_list = "";
+            std::vector<double> nodata_value_list;
+            //std::string nodata_value_list = "";
             uint16_t hasnodata_count = 0;
             for (uint16_t b = 0; b < it->second.size(); ++b) {
                 if (!_input_bands.get(std::get<0>(it->second[b])).no_data_value.empty()) {
                     ++hasnodata_count;
-                    nodata_value_list += _input_bands.get(std::get<0>(it->second[b])).no_data_value;
-                    if (b < it->second.size() - 1) nodata_value_list += " ";
+                    //nodata_value_list += _input_bands.get(std::get<0>(it->second[b])).no_data_value;
+                    nodata_value_list.push_back(std::stod(_input_bands.get(std::get<0>(it->second[b])).no_data_value));
+                    //if (b < it->second.size() - 1) nodata_value_list += " ";
                 }
             }
-            if (hasnodata_count == it->second.size() || hasnodata_count == 1) {
-                warp_args.AddString("-srcnodata");
-                warp_args.AddString(("\"" + nodata_value_list + "\"").c_str());
-            } else if (hasnodata_count != 0) {
-                // What if nodata value is only defined for some of the bands?
-                GCBS_WARN("Missing nodata value(s) for " + it->first + ", no nodata value will be used");
+
+            GDALDataset *gdal_out = nullptr;
+            if (create_band_subset_vrt && bandsel_vrt != nullptr) {
+                //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&bandsel_vrt), warp_opts, NULL);
+                gdal_out = gdalwarp_client::warp(bandsel_vrt, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                 cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                 resampling::to_string(view()->resampling_method()), nodata_value_list);
+            } else {
+                //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
+                gdal_out = gdalwarp_client::warp(g, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                 cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                 resampling::to_string(view()->resampling_method()), nodata_value_list);
             }
-
-            warp_args.AddString("-ot");
-            warp_args.AddString("Float64");
-
-            warp_args.AddString("-te_srs");
-            warp_args.AddString(_st_ref->srs().c_str());
-
-            warp_args.AddString("-ts");
-            warp_args.AddString(std::to_string(size_btyx[3]).c_str());
-            warp_args.AddString(std::to_string(size_btyx[2]).c_str());
-
-            warp_args.AddString("-r");
-            warp_args.AddString(resampling::to_string(view()->resampling_method()).c_str());
-
-            // warp_args.AddString("-ovr");
-            //warp_args.AddString("none");
-
-            warp_args.AddString("-wo");
-            warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
-
-            // add custom warp args
-            for (uint16_t iwarp_args = 0; iwarp_args < _warp_args.size(); ++iwarp_args) {
-                warp_args.AddString(_warp_args[iwarp_args].c_str());
-            }
-
-            GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
-            if (warp_opts == NULL) {
-                GDALWarpAppOptionsFree(warp_opts);
-                throw std::string("ERROR in image_collection_cube::read_chunk(): cannot create gdalwarp options.");
-            }
-
-            // log gdalwarp call
-            //            std::stringstream ss;
-            //            ss << "Running gdalwarp ";
-            //            for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
-            //                ss << warp_args[iws] << " ";
-            //            }
-            //            ss << it->first;
-            //            GCBS_TRACE(ss.str());
-
-            GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
-
-            // GDALDataset *gdal_out = (GDALDataset *)GDALWarp(("/vsimem/" + std::to_string(id) + "_" + std::to_string(i) + ".tif").c_str(), NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
-            GDALWarpAppOptionsFree(warp_opts);
 
             // For each band, call RasterIO to read and copy data to the right position in the buffers
             for (uint16_t b = 0; b < it->second.size(); ++b) {
@@ -506,13 +485,18 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 if (b_internal < 0 || b_internal >= out->size()[0])
                     continue;
 
-                CPLErr res = gdal_out->GetRasterBand(std::get<1>(it->second[b]))->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                CPLErr res;
+                if (create_band_subset_vrt) {  // bands have been renumbered / sorted according to order of it->second
+                    res = gdal_out->GetRasterBand(b + 1)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                } else {
+                    res = gdal_out->GetRasterBand(std::get<1>(it->second[b]))->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], ((double *)img_buf) + b_internal * size_btyx[2] * size_btyx[3], size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
+                }
                 if (res != CE_None) {
                     GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                 }
             }
 
-            GDALClose(g);
+            if (bandsel_vrt) GDALClose(bandsel_vrt);
             GDALClose(gdal_out);
         }
 
@@ -526,79 +510,54 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             if (mask_dataset_band.first.empty()) {
                 GCBS_WARN("Missing mask band for image '" + image_name + "', mask will be ignored");
             } else {
+                GDALDataset *bandsel_vrt = nullptr;
                 GDALDataset *g = (GDALDataset *)GDALOpen(mask_dataset_band.first.c_str(), GA_ReadOnly);
                 if (!g) {
                     throw std::string("ERROR in image_collection_cube::read_chunk(): GDAL cannot open'" + mask_dataset_band.first + "'");
                 }
 
-                OGRSpatialReference srs_in(g->GetProjectionRef());
-                double affine_in[6];
-                g->GetGeoTransform(affine_in);
+                // If input dataset has more bands than requested
+                bool create_band_subset_vrt = false;
+                if (g->GetRasterCount() > 1) {
+                    create_band_subset_vrt = true;
+                    // create temporary VRT dataset
 
-                CPLStringList warp_args;
-                warp_args.AddString("-of");
-                warp_args.AddString("MEM");
+                    CPLStringList translate_args;
+                    translate_args.AddString("-of");
+                    translate_args.AddString("VRT");
 
-                warp_args.AddString("-t_srs");
-                warp_args.AddString(_st_ref->srs().c_str());
+                    translate_args.AddString("-b");
+                    translate_args.AddString(std::to_string(mask_dataset_band.second).c_str());
 
-                warp_args.AddString("-te");  // xmin ymin xmax ymax
-                warp_args.AddString(utils::dbl_to_string(cextent.s.left).c_str());
-                warp_args.AddString(utils::dbl_to_string(cextent.s.bottom).c_str());
-                warp_args.AddString(utils::dbl_to_string(cextent.s.right).c_str());
-                warp_args.AddString(utils::dbl_to_string(cextent.s.top).c_str());
+                    GDALTranslateOptions *trans_options = GDALTranslateOptionsNew(translate_args.List(), NULL);
+                    if (trans_options == NULL) {
+                        GCBS_ERROR("Cannot create gdal_translate options");
+                        throw std::string("Cannot create gdal_translate options");
+                    }
 
-                warp_args.AddString("-dstnodata");
-                warp_args.AddString("nan");
-
-                warp_args.AddString("-wo");
-                warp_args.AddString("INIT_DEST=nan");
-
-                warp_args.AddString("-ot");
-                warp_args.AddString("Float64");
-
-                warp_args.AddString("-te_srs");
-                warp_args.AddString(_st_ref->srs().c_str());
-
-                warp_args.AddString("-ts");
-                warp_args.AddString(std::to_string(size_btyx[3]).c_str());
-                warp_args.AddString(std::to_string(size_btyx[2]).c_str());
-
-                warp_args.AddString("-r");
-                warp_args.AddString("near");
-
-                warp_args.AddString("-wo");
-                warp_args.AddString(("NUM_THREADS=" + std::to_string(config::instance()->get_gdal_num_threads())).c_str());
-
-                // add custom warp args
-                for (uint16_t iwarp_args = 0; iwarp_args < _warp_args.size(); ++iwarp_args) {
-                    warp_args.AddString(_warp_args[iwarp_args].c_str());
+                    bandsel_vrt = (GDALDataset *)GDALTranslate("", (GDALDatasetH)g, trans_options, NULL);
+                    if (bandsel_vrt == NULL) {
+                        create_band_subset_vrt = false;
+                    }
+                    GDALTranslateOptionsFree(trans_options);
                 }
 
-                GDALWarpAppOptions *warp_opts = GDALWarpAppOptionsNew(warp_args.List(), NULL);
-                if (warp_opts == NULL) {
-                    GDALWarpAppOptionsFree(warp_opts);
-                    throw std::string("ERROR in image_collection_cube::read_chunk(): cannot create gdalwarp options.");
+                GDALDataset *gdal_out = nullptr;
+                if (create_band_subset_vrt && bandsel_vrt != nullptr) {
+                    //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&bandsel_vrt), warp_opts, NULL);
+                    gdal_out = gdalwarp_client::warp(bandsel_vrt, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                     cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                     "near", std::vector<double>());
+                } else {
+                    //gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
+                    gdal_out = gdalwarp_client::warp(g, src_srs.c_str(), _st_ref->srs().c_str(), cextent.s.left, cextent.s.right,
+                                                     cextent.s.top, cextent.s.bottom, size_btyx[3], size_btyx[2],
+                                                     "near", std::vector<double>());
                 }
-
-                //                // log gdalwarp call
-                //                std::stringstream ss;
-                //                ss << "Running gdalwarp ";
-                //                for (uint16_t iws = 0; iws < warp_args.size(); ++iws) {
-                //                    ss << warp_args[iws] << " ";
-                //                }
-                //                ss << (mask_dataset_band.first);
-                //                GCBS_DEBUG(ss.str());
-
-                GDALDataset *gdal_out = (GDALDataset *)GDALWarp("", NULL, 1, (GDALDatasetH *)(&g), warp_opts, NULL);
-
-                GDALWarpAppOptionsFree(warp_opts);
-
                 CPLErr res = gdal_out->GetRasterBand(mask_dataset_band.second)->RasterIO(GF_Read, 0, 0, size_btyx[3], size_btyx[2], mask_buf, size_btyx[3], size_btyx[2], GDT_Float64, 0, 0, NULL);
                 if (res != CE_None) {
                     GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                 }
-                GDALClose(g);
                 GDALClose(gdal_out);
                 _mask->apply((double *)mask_buf, (double *)img_buf, size_btyx[0], size_btyx[2], size_btyx[3]);
             }
@@ -613,6 +572,8 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
     std::free(img_buf);
     if (mask_buf) std::free(mask_buf);
+
+    //    CPLFree(srs_out_str);
 
     return out;
 }
@@ -647,49 +608,54 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
 
     std::string srs = ic->distinct_srs();
     if (srs.empty()) {
-        out.srs() = "EPSG:3857";
+        out.srs("EPSG:3857");
     } else {
-        out.srs() = srs;
+        out.srs(srs);
     }
 
     // Transform WGS84 boundaries to target srs
     bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326", out.srs().c_str());
-    out.left() = ext_transformed.left;
-    out.right() = ext_transformed.right;
-    out.top() = ext_transformed.top;
-    out.bottom() = ext_transformed.bottom;
+    out.left(ext_transformed.left);
+    out.right(ext_transformed.right);
+    out.top(ext_transformed.top);
+    out.bottom(ext_transformed.bottom);
 
     uint32_t ncells_space = 512 * 512;
     double asp_ratio = (out.right() - out.left()) / (out.top() - out.bottom());
-    out.nx() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0);
-    out.ny() = (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0);
+    out.nx((uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0));
+    out.ny((uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0));
 
-    out.t0() = extent.t0;
-    out.t1() = extent.t1;
+    out.t0(extent.t0);
+    out.t1(extent.t1);
 
     duration d = out.t1() - out.t0();
 
     if (out.t0() == out.t1()) {
-        out.dt_unit() = datetime_unit::DAY;
-        out.dt_interval() = 1;
+        out.dt_unit(datetime_unit::DAY);
+        out.dt_interval(1);
     } else {
         if (d.convert(datetime_unit::YEAR).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::YEAR;
+            out.dt_unit(datetime_unit::YEAR);
         } else if (d.convert(datetime_unit::MONTH).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::MONTH;
+            out.dt_unit(datetime_unit::MONTH);
         } else if (d.convert(datetime_unit::DAY).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::DAY;
+            out.dt_unit(datetime_unit::DAY);
         } else if (d.convert(datetime_unit::HOUR).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::HOUR;
+            out.dt_unit(datetime_unit::HOUR);
         } else if (d.convert(datetime_unit::MINUTE).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::MINUTE;
+            out.dt_unit(datetime_unit::MINUTE);
         } else if (d.convert(datetime_unit::SECOND).dt_interval > 4) {
-            out.dt_unit() = datetime_unit::SECOND;
+            out.dt_unit(datetime_unit::SECOND);
         } else {
-            out.dt_unit() = datetime_unit::DAY;
+            out.dt_unit(datetime_unit::DAY);
         }
-        out.t0().unit() = out.dt().dt_unit;
-        out.t1().unit() = out.dt().dt_unit;
+
+        datetime t0 = out.t0();
+        datetime t1 = out.t1();
+        t0.unit() = out.dt().dt_unit;
+        t1.unit() = out.dt().dt_unit;
+        out.t0(t0);
+        out.t1(t1);
         out.nt(4);
     }
 

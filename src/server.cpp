@@ -23,10 +23,13 @@
 */
 
 #include "server.h"
+
 #include <cpprest/filestream.h>
 #include <cpprest/rawptrstream.h>
+
 #include <boost/program_options.hpp>
 #include <condition_variable>
+
 #include "build_info.h"
 #include "cube_factory.h"
 #include "image_collection.h"
@@ -83,7 +86,7 @@ void gdalcubes_server::handle_get(web::http::http_request req) {
                 if (_cubestore.find(cube_id) == _cubestore.end()) {
                     req.reply(web::http::status_codes::NotFound, "ERROR in /GET /cube/{cube_id}: cube with given id is not available.", "text/plain");
                 } else {
-                    req.reply(web::http::status_codes::OK, _cubestore[cube_id]->make_constructible_json().dump(2).c_str(),
+                    req.reply(web::http::status_codes::OK, _cubestore[cube_id]->make_constructible_json().dump().c_str(),
                               "application/json");
                 }
             } else if (path.size() == 4) {
@@ -216,8 +219,9 @@ void gdalcubes_server::handle_post(web::http::http_request req) {
                 GCBS_DEBUG("POST /cube");
                 // we do not use cpprest JSON library here
                 uint32_t id;
-                req.extract_string(true).then([&id, this](std::string s) {
-                                            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(nlohmann::json::parse(s));
+                std::string err;
+                req.extract_string(true).then([&id, this, &err](std::string s) {
+                                            std::shared_ptr<cube> c = cube_factory::instance()->create_from_json(json11::Json::parse(s, err));
                                             id = get_unique_id();
                                             _mutex_cubestore.lock();
                                             _cubestore.insert(std::make_pair(id, c));

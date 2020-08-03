@@ -23,11 +23,14 @@ SOFTWARE.
 */
 
 #include "cube.h"
-#include <thread>
 
 #include <gdal_utils.h>  // for GDAL translate
 #include <netcdf.h>
+
 #include <algorithm>  // std::transform
+#include <fstream>
+#include <thread>
+
 #include "build_info.h"
 #include "filesystem.h"
 
@@ -55,16 +58,23 @@ void cube::write_chunks_gtiff(std::string dir, std::shared_ptr<chunk_processor> 
         throw std::string("ERROR: cannot find GDAL driver for GTiff.");
     }
 
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: GeoTIFF export currently does not support irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
-    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, gtiff_driver](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, gtiff_driver, stref](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
         bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
         double affine[6];
         affine[0] = cextent.s.left;
         affine[3] = cextent.s.top;
-        affine[1] = _st_ref->dx();
-        affine[5] = -_st_ref->dy();
+        affine[1] = stref->dx();
+        affine[5] = -stref->dy();
         affine[2] = 0.0;
         affine[4] = 0.0;
 
@@ -166,6 +176,13 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
         throw std::string("ERROR: cannot find GDAL driver for GTiff.");
     }
 
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: GeoTIFF export currently does not support irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
 
@@ -198,7 +215,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     // create all datasets
     for (uint32_t it = 0; it < size_t(); ++it) {
-        std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+        std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + ".tif");
 
         GDALDataset *gdal_out = gtiff_driver->Create(name.c_str(), size_x(), size_y(), size_bands(), ot, out_co.List());
         char *wkt_out;
@@ -210,8 +227,8 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
         double affine[6];
         affine[0] = st_reference()->left();
         affine[3] = st_reference()->top();
-        affine[1] = st_reference()->dx();
-        affine[5] = -st_reference()->dy();
+        affine[1] = stref->dx();
+        affine[5] = -stref->dy();
         affine[2] = 0.0;
         affine[4] = 0.0;
         GDALSetGeoTransform(gdal_out, affine);
@@ -219,94 +236,104 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
         // Setting NoData value seems to be not needed for Float64 GeoTIFFs
         //gdal_out->GetRasterBand(1)->SetNoDataValue(NAN); // GeoTIFF supports only one NoData value for all bands
-
         if (packing.type != packed_export::packing_type::PACK_NONE) {
             if (packing.scale.size() > 1) {
                 for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                     gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[ib]);
                     gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[ib]);
                     gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[ib]);
+                    gdal_out->GetRasterBand(ib + 1)->Fill(packing.nodata[ib]);
                 }
             } else {
                 for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                     gdal_out->GetRasterBand(ib + 1)->SetNoDataValue(packing.nodata[0]);
                     gdal_out->GetRasterBand(ib + 1)->SetOffset(packing.offset[0]);
                     gdal_out->GetRasterBand(ib + 1)->SetScale(packing.scale[0]);
+                    gdal_out->GetRasterBand(ib + 1)->Fill(packing.nodata[0]);
                 }
             }
+        } else {
+            // Fill nodata value
+            for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                gdal_out->GetRasterBand(ib + 1)->Fill(NAN);
+            }
         }
+
         GDALClose((GDALDatasetH)gdal_out);
     }
 
     std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, dir, prg, &mtx, &prefix, &packing, cog, overviews](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
-        for (uint32_t it = 0; it < dat->size()[1]; ++it) {
-            uint32_t cur_t_index = chunk_limits(id).low[0] + it;
-            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * cur_t_index).to_string() + ".tif");
+        if (!dat->empty()) {
+            for (uint32_t it = 0; it < dat->size()[1]; ++it) {
+                uint32_t cur_t_index = chunk_limits(id).low[0] + it;
+                std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(cur_t_index).to_string() + ".tif");
 
-            mtx[cur_t_index].lock();
-            GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
-            if (!gdal_out) {
-                GCBS_WARN("GDAL failed to open " + name);
-                mtx[cur_t_index].unlock();
-                continue;
-            }
+                mtx[cur_t_index].lock();
+                GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
+                if (!gdal_out) {
+                    GCBS_WARN("GDAL failed to open " + name);
+                    mtx[cur_t_index].unlock();
+                    continue;
+                }
 
-            // apply packing
-            if (packing.type != packed_export::packing_type::PACK_NONE) {
-                for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-                    double cur_scale;
-                    double cur_offset;
-                    double cur_nodata;
-                    if (packing.scale.size() == size_bands()) {
-                        cur_scale = packing.scale[ib];
-                        cur_offset = packing.offset[ib];
-                        cur_nodata = packing.nodata[ib];
-                    } else {
-                        cur_scale = packing.scale[0];
-                        cur_offset = packing.offset[0];
-                        cur_nodata = packing.nodata[0];
-                    }
+                // apply packing
+                if (packing.type != packed_export::packing_type::PACK_NONE) {
+                    for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                        double cur_scale;
+                        double cur_offset;
+                        double cur_nodata;
+                        if (packing.scale.size() == size_bands()) {
+                            cur_scale = packing.scale[ib];
+                            cur_offset = packing.offset[ib];
+                            cur_nodata = packing.nodata[ib];
+                        } else {
+                            cur_scale = packing.scale[0];
+                            cur_offset = packing.offset[0];
+                            cur_nodata = packing.nodata[0];
+                        }
 
-                    /*
-                     * If band of cube already has scale + offset, we do not apply this before.
-                     * As a consequence, provided scale and offset values refer to actual data values
-                     * but ignore band metadata. The following commented code would apply the
-                     * unpacking before
-                     */
-                    /*
-                    if (bands().get(ib).scale != 1 || bands().get(ib).offset != 0) {
+                        /*
+                         * If band of cube already has scale + offset, we do not apply this before.
+                         * As a consequence, provided scale and offset values refer to actual data values
+                         * but ignore band metadata. The following commented code would apply the
+                         * unpacking before
+                         */
+                        /*
+                        if (bands().get(ib).scale != 1 || bands().get(ib).offset != 0) {
+                            for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
+                                double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
+                                                                     it * dat->size()[2] * dat->size()[3]  + i];
+                                v = v * bands().get(ib).scale + bands().get(ib).offset;
+                            }
+                        } */
+
                         for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
                             double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
-                                                                 it * dat->size()[2] * dat->size()[3]  + i];
-                            v = v * bands().get(ib).scale + bands().get(ib).offset;
-                        }
-                    } */
-
-                    for (uint32_t i = 0; i < dat->size()[2] * dat->size()[3]; ++i) {
-                        double &v = ((double *)(dat->buf()))[ib * dat->size()[1] * dat->size()[2] * dat->size()[3] +
-                                                             it * dat->size()[2] * dat->size()[3] + i];
-                        if (std::isnan(v)) {
-                            v = cur_nodata;
-                        } else {
-                            v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                                                                 it * dat->size()[2] * dat->size()[3] + i];
+                            if (std::isnan(v)) {
+                                v = cur_nodata;
+                            } else {
+                                v = std::round((v - cur_offset) / cur_scale);  // use std::round to avoid truncation bias
+                            }
                         }
                     }
-                }
-            }  // if packing
+                }  // if packing
 
-            for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-                CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
-                                                                       ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]),
-                                                                       dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
-                if (res != CE_None) {
-                    GCBS_WARN("RasterIO (write) failed for " + name);
-                    break;
+                for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+                    CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
+                                                                           ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]),
+                                                                           dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
+                    if (res != CE_None) {
+                        GCBS_WARN("RasterIO (write) failed for " + name);
+                        break;
+                    }
                 }
+
+                GDALClose(gdal_out);
+                mtx[cur_t_index].unlock();
             }
-
-            GDALClose(gdal_out);
-            mtx[cur_t_index].unlock();
         }
+
         if (overviews) {
             prg->increment((double)0.5 / (double)this->count_chunks());
         } else {
@@ -321,7 +348,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
 
     if (overviews) {
         for (uint32_t it = 0; it < size_t(); ++it) {
-            std::string name = cog ? filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+            std::string name = cog ? filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + "_temp.tif") : filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + ".tif");
 
             GDALDataset *gdal_out = (GDALDataset *)GDALOpen(name.c_str(), GA_Update);
             if (!gdal_out) {
@@ -388,7 +415,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                     GCBS_ERROR("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                     throw std::string("ERROR in cube::write_tif_collection(): Cannot create gdal_translate options.");
                 }
-                std::string cogname = filesystem::join(dir, prefix + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".tif");
+                std::string cogname = filesystem::join(dir, prefix + st_reference()->datetime_at_index(it).to_string() + ".tif");
                 GDALDatasetH gdal_cog = GDALTranslate(cogname.c_str(), (GDALDatasetH)gdal_out, trans_options, NULL);
 
                 GDALClose((GDALDatasetH)gdal_out);
@@ -419,6 +446,13 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     if (!filesystem::exists(filesystem::parent(op))) {
         filesystem::mkdir_recursive(filesystem::parent(op));
     }
+
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: netCDF export currently does not support irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
 
     std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
     prg->set(0);  // explicitly set to zero to show progress bar immediately
@@ -478,33 +512,48 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         dim_t_bnds = (int *)std::calloc(size_t() * 2, sizeof(int));
     }
 
-    if (_st_ref->dt().dt_unit == datetime_unit::WEEK) {
-        _st_ref->dt_unit() = datetime_unit::DAY;
-        _st_ref->dt_interval() *= 7;  // UDUNIT does not support week
+    if (stref->dt().dt_unit == datetime_unit::WEEK) {
+        stref->dt_unit(datetime_unit::DAY);
+        stref->dt_interval(stref->dt_interval() * 7);  // UDUNIT does not support week
     }
 
-    for (uint32_t i = 0; i < size_t(); ++i) {
-        dim_t[i] = (i * st_reference()->dt().dt_interval);
+    if (stref->has_regular_time()) {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (i * stref->dt().dt_interval);
+        }
+    } else {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+        }
     }
+
     for (uint32_t i = 0; i < size_y(); ++i) {
-        dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
+        dim_y[i] = stref->win().bottom + size_y() * stref->dy() - (i + 0.5) * stref->dy();  // cell center
     }
     for (uint32_t i = 0; i < size_x(); ++i) {
-        dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
+        dim_x[i] = stref->win().left + (i + 0.5) * stref->dx();
     }
 
     if (write_bounds) {
-        for (uint32_t i = 0; i < size_t(); ++i) {
-            dim_t_bnds[2 * i] = (i * st_reference()->dt().dt_interval);
-            dim_t_bnds[2 * i + 1] = ((i + 1) * st_reference()->dt().dt_interval);
+        if (stref->has_regular_time()) {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t_bnds[2 * i] = (i * stref->dt().dt_interval);
+                dim_t_bnds[2 * i + 1] = ((i + 1) * stref->dt().dt_interval);
+            }
+        } else {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t_bnds[2 * i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+                dim_t_bnds[2 * i + 1] = dim_t_bnds[2 * i] + stref->dt_interval();
+            }
         }
+
         for (uint32_t i = 0; i < size_y(); ++i) {
-            dim_y_bnds[2 * i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i)*st_reference()->dy();
-            dim_y_bnds[2 * i + 1] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 1) * st_reference()->dy();
+            dim_y_bnds[2 * i] = stref->win().bottom + size_y() * stref->dy() - (i)*stref->dy();
+            dim_y_bnds[2 * i + 1] = stref->win().bottom + size_y() * stref->dy() - (i + 1) * stref->dy();
         }
         for (uint32_t i = 0; i < size_x(); ++i) {
-            dim_x_bnds[2 * i] = st_reference()->win().left + (i + 0) * st_reference()->dx();
-            dim_x_bnds[2 * i + 1] = st_reference()->win().left + (i + 1) * st_reference()->dx();
+            dim_x_bnds[2 * i] = stref->win().left + (i + 0) * stref->dx();
+            dim_x_bnds[2 * i + 1] = stref->win().left + (i + 1) * stref->dx();
         }
     }
 
@@ -551,54 +600,64 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
 
     // write json graph as metadata
-    //    std::string j = make_constructible_json().dump();
-    //    nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
+    std::string j = make_constructible_json().dump();
+    nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
 
     char *wkt;
     srs.exportToWkt(&wkt);
 
-    double geoloc_array[6] = {st_reference()->left(), st_reference()->dx(), 0.0, st_reference()->top(), 0.0, st_reference()->dy()};
-    nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
-    nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+    //double geoloc_array[6] = {stref->left(), stref->dx(), 0.0, stref->top(), 0.0, stref->dy()};
+    std::string geoloc_array_str = utils::dbl_to_string(stref->left()) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(stref->top()) + " 0 " + utils::dbl_to_string(-stref->dy());
+    //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
+    //nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
     std::string dtunit_str;
-    if (_st_ref->dt().dt_unit == datetime_unit::YEAR) {
+    if (stref->dt().dt_unit == datetime_unit::YEAR) {
         dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
-    } else if (_st_ref->dt().dt_unit == datetime_unit::MONTH) {
+    } else if (stref->dt().dt_unit == datetime_unit::MONTH) {
         dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
-    } else if (_st_ref->dt().dt_unit == datetime_unit::DAY) {
+    } else if (stref->dt().dt_unit == datetime_unit::DAY) {
         dtunit_str = "days";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::HOUR) {
+    } else if (stref->dt().dt_unit == datetime_unit::HOUR) {
         dtunit_str = "hours";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::MINUTE) {
+    } else if (stref->dt().dt_unit == datetime_unit::MINUTE) {
         dtunit_str = "minutes";
-    } else if (_st_ref->dt().dt_unit == datetime_unit::SECOND) {
+    } else if (stref->dt().dt_unit == datetime_unit::SECOND) {
         dtunit_str = "seconds";
     }
     dtunit_str += " since ";
-    dtunit_str += _st_ref->t0().to_string(datetime_unit::SECOND);
+    dtunit_str += stref->t0().to_string(datetime_unit::SECOND);
 
+    nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
     nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
     nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-    nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
-    nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
 
     if (srs.IsProjected()) {
         // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
-#if GDAL_VERSION_MAJOR >= 2 && GDAL_VERSION_MINOR >= 3 && GDAL_VERSION_REV >= 0
+#if GDAL_VERSION_MAJOR > 2 || (GDAL_VERSION_MAJOR == 2 && GDAL_VERSION_MINOR >= 3)
         const char *unit = nullptr;
 #else
         char *unit = nullptr;
 #endif
         srs.GetLinearUnits(&unit);
 
+        nc_put_att_text(ncout, v_y, "standard_name", strlen("projection_y_coordinate"), "projection_y_coordinate");
+        nc_put_att_text(ncout, v_y, "long_name", strlen("y coordinate of projection"), "y coordinate of projection");
         nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
+        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+        nc_put_att_text(ncout, v_x, "standard_name", strlen("projection_x_coordinate"), "projection_x_coordinate");
+        nc_put_att_text(ncout, v_x, "long_name", strlen("x coordinate of projection"), "x coordinate of projection");
         nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
+        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
 
         int v_crs;
-        nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
-        nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-        nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+        nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
 
     } else {
         // char* unit;
@@ -606,15 +665,21 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
         nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
         nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
 
         nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
         nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
         nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
 
         int v_crs;
-        nc_def_var(ncout, "crs", NC_INT, 0, NULL, &v_crs);
-        nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
-        nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
+        //nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+        nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
     }
     CPLFree(wkt);
     int d_all[] = {d_t, d_y, d_x};
@@ -632,7 +697,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 #if USE_NCDF4 == 1
             nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
 #else
-            GCBS_WARN("gdalcubes has been built to write netCDF-3 classic model files, compression will be ignored.");
+            GCBS_WARN("gdalcubes has been built with support for netCDF-3 classic model only; compression will be ignored.");
 #endif
         }
 
@@ -713,18 +778,18 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
                 }
 
                 /*
-                 * If band of cube already has scale + offset, we do not apply this before.
-                 * As a consequence, provided scale and offset values refer to actual data values
-                 * but ignore band metadata. The following commented code would apply the
-                 * unpacking before
-                 */
+               * If band of cube already has scale + offset, we do not apply this before.
+               * As a consequence, provided scale and offset values refer to actual data values
+               * but ignore band metadata. The following commented code would apply the
+               * unpacking before
+               */
                 /*
-                if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
-                    for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
-                        double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
-                        v = v * bands().get(i).scale + bands().get(i).offset;
-                    }
-                } */
+              if (bands().get(i).scale != 1 || bands().get(i).offset != 0) {
+                  for (uint32_t i = 0; i < dat->size()[1] * dat->size()[2] * dat->size()[3]; ++i) {
+                      double &v = ((double *)(dat->buf()))[i * dat->size()[1] * dat->size()[2] * dat->size()[3] + i];
+                      v = v * bands().get(i).scale + bands().get(i).offset;
+                  }
+              } */
 
                 uint8_t *packedbuf = nullptr;
 
@@ -827,17 +892,17 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     if (with_VRT) {
         for (uint32_t it = 0; it < size_t(); ++it) {
             std::string dir = filesystem::directory(path);
-            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + (st_reference()->t0() + st_reference()->dt() * it).to_string() + ".vrt");
+            std::string outfile = dir.empty() ? filesystem::stem(path) + +"_" + st_reference()->datetime_at_index(it).to_string() + ".vrt" : filesystem::join(dir, filesystem::stem(path) + "_" + st_reference()->datetime_at_index(it).to_string() + ".vrt");
 
             std::ofstream fout(outfile);
             fout << "<VRTDataset rasterXSize=\"" << size_x() << "\" rasterYSize=\"" << size_y() << "\">" << std::endl;
             fout << "<SRS>" << st_reference()->srs() << "</SRS>" << std::endl;  // TODO: if SRS is WKT, it must be escaped with ampersand sequences
-            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(st_reference()->dx()) << ", "
+            fout << "<GeoTransform>" << utils::dbl_to_string(st_reference()->left()) << ", " << utils::dbl_to_string(stref->dx()) << ", "
                  << "0.0"
-                 << ", " << utils::dbl_to_string(st_reference()->top()) << ", "
+                 << ", " << utils::dbl_to_string(stref->top()) << ", "
                  << "0.0"
                  << ", "
-                 << "-" << utils::dbl_to_string(st_reference()->dy()) << "</GeoTransform>" << std::endl;
+                 << "-" << utils::dbl_to_string(stref->dy()) << "</GeoTransform>" << std::endl;
 
             for (uint16_t ib = 0; ib < size_bands(); ++ib) {
                 fout << "<VRTRasterBand dataType=\"Float64\" band=\"" << ib + 1 << "\">" << std::endl;
@@ -860,6 +925,435 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
             fout.close();
         }
     }
+}
+
+void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, uint8_t compression_level) {
+    std::string fname = path;  // TODO: check for existence etc.
+
+    if (!_st_ref->has_regular_space()) {
+        throw std::string("ERROR: netCDF export does not supported irregular spatial dimensions");
+    }
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
+    std::shared_ptr<chunk_data> dat = this->read_chunk(id);
+
+    double *dim_x = (double *)std::calloc(dat->size()[3], sizeof(double));
+    double *dim_y = (double *)std::calloc(dat->size()[2], sizeof(double));
+    int *dim_t = (int *)std::calloc(dat->size()[1], sizeof(int));
+
+    if (stref->dt().dt_unit == datetime_unit::WEEK) {
+        stref->dt_unit(datetime_unit::DAY);
+        stref->dt_interval(stref->dt_interval() * 7);  // UDUNIT does not support week
+    }
+    bounds_st bbox = this->bounds_from_chunk(id);
+
+    if (stref->has_regular_time()) {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (i * stref->dt().dt_interval);
+        }
+    } else {
+        for (uint32_t i = 0; i < size_t(); ++i) {
+            dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+        }
+    }
+    for (uint32_t i = 0; i < dat->size()[2]; ++i) {
+        dim_y[i] = bbox.s.top - (i + 0.5) * stref->dy();
+        //dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
+    }
+    for (uint32_t i = 0; i < dat->size()[3]; ++i) {
+        dim_x[i] = bbox.s.left + (i + 0.5) * stref->dx();
+        //dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
+    }
+
+    OGRSpatialReference srs = st_reference()->srs_ogr();
+    std::string yname = srs.IsProjected() ? "y" : "latitude";
+    std::string xname = srs.IsProjected() ? "x" : "longitude";
+
+    int ncout;
+
+#if USE_NCDF4 == 1
+    nc_create(fname.c_str(), NC_NETCDF4, &ncout);
+#else
+    nc_create(fname.c_str(), NC_CLASSIC_MODEL, &ncout);
+#endif
+
+    int d_t, d_y, d_x;
+    nc_def_dim(ncout, "time", dat->size()[1], &d_t);
+    nc_def_dim(ncout, yname.c_str(), dat->size()[2], &d_y);
+    nc_def_dim(ncout, xname.c_str(), dat->size()[3], &d_x);
+
+    int v_t, v_y, v_x;
+    nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
+    nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
+    nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
+
+    std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
+    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
+    nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+
+    // write json graph as metadata
+    std::string j = make_constructible_json().dump();
+    nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
+
+    char *wkt;
+    srs.exportToWkt(&wkt);
+
+    //double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
+    std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(bbox.s.top) + " 0 " + utils::dbl_to_string(-stref->dy());
+
+    //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
+    //nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+
+    std::string dtunit_str;
+    if (stref->dt().dt_unit == datetime_unit::YEAR) {
+        dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
+    } else if (stref->dt().dt_unit == datetime_unit::MONTH) {
+        dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
+    } else if (stref->dt().dt_unit == datetime_unit::DAY) {
+        dtunit_str = "days";
+    } else if (stref->dt().dt_unit == datetime_unit::HOUR) {
+        dtunit_str = "hours";
+    } else if (stref->dt().dt_unit == datetime_unit::MINUTE) {
+        dtunit_str = "minutes";
+    } else if (stref->dt().dt_unit == datetime_unit::SECOND) {
+        dtunit_str = "seconds";
+    }
+    dtunit_str += " since ";
+    dtunit_str += bbox.t0.to_string(datetime_unit::SECOND);
+
+    nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
+    nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
+    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
+
+    if (srs.IsProjected()) {
+        // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
+#if GDAL_VERSION_MAJOR > 2 || (GDAL_VERSION_MAJOR == 2 && GDAL_VERSION_MINOR >= 3)
+        const char *unit = nullptr;
+#else
+        char *unit = nullptr;
+#endif
+        srs.GetLinearUnits(&unit);
+
+        nc_put_att_text(ncout, v_y, "standard_name", strlen("projection_y_coordinate"), "projection_y_coordinate");
+        nc_put_att_text(ncout, v_y, "long_name", strlen("y coordinate of projection"), "y coordinate of projection");
+        nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
+        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+        nc_put_att_text(ncout, v_x, "standard_name", strlen("projection_x_coordinate"), "projection_x_coordinate");
+        nc_put_att_text(ncout, v_x, "long_name", strlen("x coordinate of projection"), "x coordinate of projection");
+        nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
+        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+
+        int v_crs;
+        nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+
+    } else {
+        // char* unit;
+        // double scale = srs.GetAngularUnits(&unit);
+        nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
+        nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+
+        nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
+        nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+
+        int v_crs;
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
+        //nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+        nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+    }
+    CPLFree(wkt);
+    int d_all[] = {d_t, d_y, d_x};
+
+    std::vector<int> v_bands;
+
+    for (uint16_t i = 0; i < bands().count(); ++i) {
+        int v;
+        nc_def_var(ncout, bands().get(i).name.c_str(), NC_DOUBLE, 3, d_all, &v);
+        std::size_t csize[3] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
+#if USE_NCDF4 == 1
+        nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);
+#endif
+        if (compression_level > 0) {
+#if USE_NCDF4 == 1
+            nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
+#else
+            GCBS_WARN("gdalcubes has been built to write netCDF-3 classic model files, compression will be ignored.");
+#endif
+        }
+
+        if (!bands().get(i).unit.empty())
+            nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+
+        double pscale = bands().get(i).scale;
+        double poff = bands().get(i).offset;
+        double pNAN = NAN;
+
+        nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
+        nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
+        nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+        nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+
+        nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
+
+        v_bands.push_back(v);
+    }
+
+    nc_enddef(ncout);  ////////////////////////////////////////////////////
+
+    nc_put_var(ncout, v_t, (void *)dim_t);
+    nc_put_var(ncout, v_y, (void *)dim_y);
+    nc_put_var(ncout, v_x, (void *)dim_x);
+
+    if (dim_t) std::free(dim_t);
+    if (dim_y) std::free(dim_y);
+    if (dim_x) std::free(dim_x);
+
+    std::size_t startp[] = {0, 0, 0};
+    std::size_t countp[] = {dat->size()[1], dat->size()[2], dat->size()[3]};
+
+    for (uint16_t i = 0; i < bands().count(); ++i) {
+        nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)dat->size()[1] * (int)dat->size()[2] * (int)dat->size()[3]));
+    }
+    nc_close(ncout);
+}
+
+void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compression_level, std::shared_ptr<chunk_processor> p) {
+    if (name.empty()) {
+        name = utils::generate_unique_filename();
+    }
+
+    dir = filesystem::make_absolute(dir);
+
+    if (filesystem::exists(dir)) {
+        if (!filesystem::is_directory(dir)) {
+            throw std::string("ERROR in cube::write_chunks_netcdf(): output is not a directory");
+        }
+    } else {
+        filesystem::mkdir_recursive(dir);
+    }
+
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, prg, &compression_level, &name, &dir](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+        std::string fname = filesystem::join(dir, name + "_" + std::to_string(id) + ".nc");
+
+        if (!_st_ref->has_regular_space()) {
+            throw std::string("ERROR: netCDF export currently does not support irregular spatial dimensions");
+        }
+
+        // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+        std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
+        double *dim_x = (double *)std::calloc(dat->size()[3], sizeof(double));
+        double *dim_y = (double *)std::calloc(dat->size()[2], sizeof(double));
+        int *dim_t = (int *)std::calloc(dat->size()[1], sizeof(int));
+
+        if (stref->dt().dt_unit == datetime_unit::WEEK) {
+            stref->dt_unit(datetime_unit::DAY);
+            stref->dt_interval(stref->dt_interval() * 7);  // UDUNIT does not support week
+        }
+        bounds_st bbox = this->bounds_from_chunk(id);
+
+        if (stref->has_regular_time()) {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t[i] = (i * stref->dt().dt_interval);
+            }
+        } else {
+            for (uint32_t i = 0; i < size_t(); ++i) {
+                dim_t[i] = (stref->datetime_at_index(i) - stref->t0()).dt_interval;
+            }
+        }
+        for (uint32_t i = 0; i < dat->size()[2]; ++i) {
+            dim_y[i] = bbox.s.top - (i + 0.5) * stref->dy();
+            //dim_y[i] = st_reference()->win().bottom + size_y() * st_reference()->dy() - (i + 0.5) * st_reference()->dy();  // cell center
+        }
+        for (uint32_t i = 0; i < dat->size()[3]; ++i) {
+            dim_x[i] = bbox.s.left + (i + 0.5) * stref->dx();
+            //dim_x[i] = st_reference()->win().left + (i + 0.5) * st_reference()->dx();
+        }
+
+        OGRSpatialReference srs = st_reference()->srs_ogr();
+        std::string yname = srs.IsProjected() ? "y" : "latitude";
+        std::string xname = srs.IsProjected() ? "x" : "longitude";
+
+        int ncout;
+
+#if USE_NCDF4 == 1
+        nc_create(fname.c_str(), NC_NETCDF4, &ncout);
+#else
+        nc_create(fname.c_str(), NC_CLASSIC_MODEL, &ncout);
+#endif
+
+        int d_t, d_y, d_x;
+        nc_def_dim(ncout, "time", dat->size()[1], &d_t);
+        nc_def_dim(ncout, yname.c_str(), dat->size()[2], &d_y);
+        nc_def_dim(ncout, xname.c_str(), dat->size()[3], &d_x);
+
+        int v_t, v_y, v_x;
+        nc_def_var(ncout, "time", NC_INT, 1, &d_t, &v_t);
+        nc_def_var(ncout, yname.c_str(), NC_DOUBLE, 1, &d_y, &v_y);
+        nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
+
+        std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
+        nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
+        nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+
+        // write json graph as metadata
+        std::string j = make_constructible_json().dump();
+        nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());
+
+        char *wkt;
+        srs.exportToWkt(&wkt);
+        //double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
+        std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(bbox.s.top) + " 0 " + utils::dbl_to_string(-stref->dy());
+        //       nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
+        //       nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+
+        std::string dtunit_str;
+        if (stref->dt().dt_unit == datetime_unit::YEAR) {
+            dtunit_str = "years";  // WARNING: UDUNITS defines a year as 365.2425 days
+        } else if (stref->dt().dt_unit == datetime_unit::MONTH) {
+            dtunit_str = "months";  // WARNING: UDUNITS defines a month as 1/12 year
+        } else if (stref->dt().dt_unit == datetime_unit::DAY) {
+            dtunit_str = "days";
+        } else if (stref->dt().dt_unit == datetime_unit::HOUR) {
+            dtunit_str = "hours";
+        } else if (stref->dt().dt_unit == datetime_unit::MINUTE) {
+            dtunit_str = "minutes";
+        } else if (stref->dt().dt_unit == datetime_unit::SECOND) {
+            dtunit_str = "seconds";
+        }
+        dtunit_str += " since ";
+        dtunit_str += bbox.t0.to_string(datetime_unit::SECOND);
+
+        nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
+        nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
+        nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
+        nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
+        nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
+
+        if (srs.IsProjected()) {
+            // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
+#if GDAL_VERSION_MAJOR > 2 || (GDAL_VERSION_MAJOR == 2 && GDAL_VERSION_MINOR >= 3)
+            const char *unit = nullptr;
+#else
+            char *unit = nullptr;
+#endif
+            srs.GetLinearUnits(&unit);
+
+            nc_put_att_text(ncout, v_y, "standard_name", strlen("projection_y_coordinate"), "projection_y_coordinate");
+            nc_put_att_text(ncout, v_y, "long_name", strlen("y coordinate of projection"), "y coordinate of projection");
+            nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
+            nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+            nc_put_att_text(ncout, v_x, "standard_name", strlen("projection_x_coordinate"), "projection_x_coordinate");
+            nc_put_att_text(ncout, v_x, "long_name", strlen("x coordinate of projection"), "x coordinate of projection");
+            nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
+            nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+
+            int v_crs;
+            nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+            //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+            nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+            //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+            nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+
+        } else {
+            // char* unit;
+            // double scale = srs.GetAngularUnits(&unit);
+            nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
+            nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
+            nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
+            nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+
+            nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
+            nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
+            nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
+            nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+
+            int v_crs;
+            //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
+            //nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+            nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
+            //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
+            nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+            //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
+            nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+        }
+        CPLFree(wkt);
+        int d_all[] = {d_t, d_y, d_x};
+
+        std::vector<int> v_bands;
+
+        for (uint16_t i = 0; i < bands().count(); ++i) {
+            int v;
+            nc_def_var(ncout, bands().get(i).name.c_str(), NC_DOUBLE, 3, d_all, &v);
+            std::size_t csize[3] = {_chunk_size[0], _chunk_size[1], _chunk_size[2]};
+#if USE_NCDF4 == 1
+            nc_def_var_chunking(ncout, v, NC_CHUNKED, csize);
+#endif
+            if (compression_level > 0) {
+#if USE_NCDF4 == 1
+                nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
+#else
+                GCBS_WARN("gdalcubes has been built to write netCDF-3 classic model files, compression will be ignored.");
+#endif
+            }
+
+            if (!bands().get(i).unit.empty())
+                nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+
+            double pscale = bands().get(i).scale;
+            double poff = bands().get(i).offset;
+            double pNAN = NAN;
+
+            nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
+            nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
+            nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+            nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+
+            nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
+
+            v_bands.push_back(v);
+        }
+
+        nc_enddef(ncout);  ////////////////////////////////////////////////////
+
+        nc_put_var(ncout, v_t, (void *)dim_t);
+        nc_put_var(ncout, v_y, (void *)dim_y);
+        nc_put_var(ncout, v_x, (void *)dim_x);
+
+        if (dim_t) std::free(dim_t);
+        if (dim_y) std::free(dim_y);
+        if (dim_x) std::free(dim_x);
+
+        std::size_t startp[] = {0, 0, 0};
+        std::size_t countp[] = {dat->size()[1], dat->size()[2], dat->size()[3]};
+
+        for (uint16_t i = 0; i < bands().count(); ++i) {
+            nc_put_vara(ncout, v_bands[i], startp, countp, (void *)(((double *)dat->buf()) + (int)i * (int)dat->size()[1] * (int)dat->size()[2] * (int)dat->size()[3]));
+        }
+        nc_close(ncout);
+        prg->increment((double)1 / (double)this->count_chunks());
+    };
+
+    p->apply(shared_from_this(), f);
+    prg->finalize();
 }
 
 void chunk_processor_singlethread::apply(std::shared_ptr<cube> c,

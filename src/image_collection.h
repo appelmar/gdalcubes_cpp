@@ -25,121 +25,17 @@
 #ifndef IMAGE_COLLECTION_H
 #define IMAGE_COLLECTION_H
 
-#include <gdal_priv.h>
 #include <ogr_spatialref.h>
-#include <iomanip>
+
 #include "collection_format.h"
+#include "coord_types.h"
 #include "datetime.h"
 
+// SQLite forward declarations
+class sqlite3;
+class sqlite3_stmt;
+
 namespace gdalcubes {
-
-template <typename Ta>
-struct bounds_2d {
-    Ta left, bottom, top, right;
-    static bool intersects(bounds_2d<Ta> a, bounds_2d<Ta> b) {
-        return (
-            a.right >= b.left &&
-            a.left <= b.right &&
-            a.top >= b.bottom &&
-            a.bottom <= b.top);
-    }
-    static bool within(bounds_2d<Ta> a, bounds_2d<Ta> b) {
-        return (
-            a.left >= b.left &&
-            a.right <= b.right &&
-            a.top <= b.top &&
-            a.bottom >= b.bottom);
-    }
-    static bool outside(bounds_2d<Ta> a, bounds_2d<Ta> b) {
-        return !intersects(a, b);
-    }
-    static bounds_2d<Ta> union2d(bounds_2d<Ta> a, bounds_2d<Ta> b) {
-        bounds_2d<Ta> out;
-        out.left = fmin(a.left, b.left);
-        out.right = fmax(a.right, b.right);
-        out.bottom = fmin(a.bottom, b.bottom);
-        out.top = fmax(a.top, b.top);
-        return out;
-    }
-
-    static bounds_2d<Ta> intersection(bounds_2d<Ta> a, bounds_2d<Ta> b) {
-        bounds_2d<Ta> out;
-        out.left = fmax(a.left, b.left);
-        out.right = fmin(a.right, b.right);
-        out.bottom = fmin(a.bottom, b.bottom);
-        out.top = fmax(a.top, b.top);
-        return out;
-    }
-
-    bounds_2d<Ta> transform(std::string srs_from, std::string srs_to) {
-        if (srs_from == srs_to) {
-            return *this;
-        }
-        OGRSpatialReference srs_in;
-        OGRSpatialReference srs_out;
-        srs_in.SetFromUserInput(srs_from.c_str());
-        srs_out.SetFromUserInput(srs_to.c_str());
-
-        if (srs_in.IsSame(&srs_out)) {
-            return *this;
-        }
-
-        OGRCoordinateTransformation* coord_transform = OGRCreateCoordinateTransformation(&srs_in, &srs_out);
-
-        Ta x[4] = {left, left, right, right};
-        Ta y[4] = {top, bottom, top, bottom};
-
-        if (coord_transform == NULL || !coord_transform->Transform(4, x, y)) {
-            throw std::string("ERROR: coordinate transformation failed (from " + srs_from + " to " + srs_to + ").");
-        }
-
-        Ta xmin = std::numeric_limits<Ta>::is_integer ? std::numeric_limits<Ta>::max() : std::numeric_limits<Ta>::max();
-        Ta ymin = std::numeric_limits<Ta>::is_integer ? std::numeric_limits<Ta>::max() : std::numeric_limits<Ta>::max();
-        Ta xmax = std::numeric_limits<Ta>::is_integer ? std::numeric_limits<Ta>::min() : -std::numeric_limits<Ta>::max();
-        Ta ymax = std::numeric_limits<Ta>::is_integer ? std::numeric_limits<Ta>::min() : -std::numeric_limits<Ta>::max();
-        for (uint8_t k = 0; k < 4; ++k) {
-            if (x[k] < xmin) xmin = x[k];
-            if (y[k] < ymin) ymin = y[k];
-            if (x[k] > xmax) xmax = x[k];
-            if (y[k] > ymax) ymax = y[k];
-        }
-
-        left = xmin;
-        right = xmax;
-        top = ymax;
-        bottom = ymin;
-
-        OCTDestroyCoordinateTransformation(coord_transform);
-
-        return *this;
-    }
-};
-
-template <typename T>
-struct coords_2d {
-    T x, y;
-};
-
-//template <typename T> using coords_nd = std::vector<T>;
-template <typename T, uint16_t N>
-using coords_nd = std::array<T, N>;
-
-template <typename T, uint16_t N>
-struct bounds_nd {
-    coords_nd<T, N> low;
-    coords_nd<T, N> high;
-};
-
-struct coords_st {
-    coords_2d<double> s;
-    datetime t;
-};
-
-struct bounds_st {
-    bounds_2d<double> s;
-    datetime t0;
-    datetime t1;
-};
 
 /**
  * @note copy construction and assignment are deleted because the sqlite must not be shared (handle will be closed in destructor). Instrad, use
@@ -178,6 +74,12 @@ class image_collection {
 
    public:
     /**
+     * Default constructor, creates an empty image collection
+     * in a temporary SQLite database
+     */
+    image_collection();
+
+    /**
      * Constructs an empty image collection with given format
      * @param format
      */
@@ -189,29 +91,22 @@ class image_collection {
      */
     image_collection(std::string filename);
 
-    ~image_collection() {
-        if (_db) {
-            sqlite3_close(_db);
-            _db = nullptr;
-        }
-    }
-
+    ~image_collection();
     image_collection(const image_collection&) = delete;
     void operator=(const image_collection&) = delete;
 
     // move constructor
-    image_collection(image_collection&& A) {
-        _db = A._db;
-        _filename = A._filename;
-        _format = A._format;
-    }
+    image_collection(image_collection&& A) : _format(A._format), _filename(A._filename), _db(A._db) {}
 
     static std::shared_ptr<image_collection> create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
+    static std::shared_ptr<image_collection> create(std::vector<std::string> descriptors, std::vector<std::string> date_time, std::vector<std::string> band_names = {}, bool use_subdatasets = false);
 
     std::string to_string();
 
-    void add(std::vector<std::string> descriptors, bool strict = true);
-    void add(std::string descriptor, bool strict = true);
+    void add_with_collection_format(std::vector<std::string> descriptors, bool strict = true);
+    void add_with_collection_format(std::string descriptor, bool strict = true);
+
+    void add_with_datetime(std::vector<std::string> descriptors, std::vector<std::string> date_time, std::vector<std::string> band_names = {}, bool use_subdatasets = false);
 
     void write(const std::string filename);
 
@@ -296,6 +191,7 @@ class image_collection {
         std::string datetime;
         std::string band_name;
         uint16_t band_num;
+        std::string srs;
     };
     std::vector<find_range_st_row> find_range_st(bounds_st range, std::string srs,
                                                  std::vector<std::string> bands, std::vector<std::string> order_by = {});
@@ -364,12 +260,31 @@ class image_collection {
      */
     static std::vector<std::string> unroll_archives(std::vector<std::string> descriptors);
 
+    /**
+     * Return a pointer to the SQlite handle.
+     * Ownership is not transferred, i.e. do NOT call sqlite3_close() on the returned object.
+     * @return
+     */
+    sqlite3* get_db_handle();
+
    protected:
     collection_format _format;
     std::string _filename;
     sqlite3* _db;
 
     static std::string sqlite_as_string(sqlite3_stmt* stmt, uint16_t col);
+
+    /**
+     * Add a single image to the collection, where one GDAL dataset has spatial dimensions and variables / spectral bands
+     * @param descriptor GDAL dataset descriptor
+     */
+    void add_spaceband_image(const std::string& descriptor);
+
+    /**
+     * Add a single image to the collection, where one GDAL dataset has spatial dimensions and time encoded as bands but only one variable
+     * @param descriptor GDAL dataset descriptor
+     */
+    void add_spacetime_image(const std::string& descriptor);
 };
 
 }  // namespace gdalcubes

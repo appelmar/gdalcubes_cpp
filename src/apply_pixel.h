@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <string>
 #include <unordered_set>
+
 #include "cube.h"
 
 namespace gdalcubes {
@@ -65,7 +66,7 @@ class apply_pixel_cube : public cube {
      * @param band_names specify names for the bands of the resulting cube, if empty, "band1", "band2", "band3", etc. will be used as names
      * @param keep_bands if true, bands will be added to the existing bands of the input cube, otherwise (default) they are dropped
      */
-    apply_pixel_cube(std::shared_ptr<cube> in, std::vector<std::string> expr, std::vector<std::string> band_names = {}, bool keep_bands = false) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _expr(expr), _band_names(band_names), _band_usage(), _band_usage_all(), _keep_bands(keep_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    apply_pixel_cube(std::shared_ptr<cube> in, std::vector<std::string> expr, std::vector<std::string> band_names = {}, bool keep_bands = false) : cube(in->st_reference()->copy()), _in_cube(in), _expr(expr), _band_names(band_names), _band_usage(), _band_usage_all(), _keep_bands(keep_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -143,8 +144,8 @@ class apply_pixel_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "apply_pixel";
         out["expr"] = _expr;
         if (!_band_names.empty())
@@ -164,16 +165,6 @@ class apply_pixel_cube : public cube {
     std::vector<std::unordered_set<std::string>> _var_usage;
 
     bool _keep_bands;
-
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
-        _st_ref->dt(stref->dt());
-    }
 
     bool parse_expressions();
 };

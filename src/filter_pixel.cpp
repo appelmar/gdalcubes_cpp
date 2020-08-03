@@ -23,6 +23,7 @@
 */
 
 #include "filter_pixel.h"
+
 #include "external/tinyexpr/tinyexpr.h"
 
 namespace gdalcubes {

@@ -26,6 +26,7 @@
 
 #include <cmath>
 #include <mutex>
+
 #include "timer.h"
 #include "utils.h"
 

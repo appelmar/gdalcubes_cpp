@@ -26,11 +26,11 @@ namespace gdalcubes {
      */
 class image_collection_ops {
    public:
-    static void translate_cog(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads = 1);
+    static void translate_gtiff(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads = 1, bool overwrite = true, std::vector<std::string> creation_options = {});
+
+    static void translate_cog(std::shared_ptr<gdalcubes::image_collection> in, std::string out_dir, uint16_t nthreads = 1, bool overwrite = true, std::vector<std::string> creation_options = {});
 
     static void create_overviews(std::shared_ptr<image_collection> in, std::vector<int> levels = std::vector<int>{2, 4, 8, 16, 32}, std::string resampling = "NEAREST", uint16_t nthreads = 1);
-
-    //static void filter_image(image_collection in, )
 };
 
 }  // namespace gdalcubes

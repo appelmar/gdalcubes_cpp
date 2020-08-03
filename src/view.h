@@ -26,9 +26,10 @@
 #define VIEW_H
 
 #include <algorithm>
+
+#include "coord_types.h"
 #include "datetime.h"
-#include "external/json.hpp"
-#include "image_collection.h"
+#include "external/json11/json11.hpp"
 
 namespace gdalcubes {
 
@@ -226,40 +227,93 @@ struct resampling {
     }
 };
 
+// Forwartds declarations of all spacetime reference classes
+class cube_stref_regular;
+class cube_stref_labeled_time;
+
+class cube_stref {
+   public:
+    virtual uint32_t nx() = 0;
+    virtual uint32_t ny() = 0;
+    virtual uint32_t nt() = 0;
+    virtual double left() = 0;
+    virtual double right() = 0;
+    virtual double bottom() = 0;
+    virtual double top() = 0;
+    virtual std::string srs() = 0;
+    virtual OGRSpatialReference srs_ogr() const = 0;
+
+    // Spatiotemporal support of grid cells
+    virtual duration dt() = 0;
+    virtual datetime_unit dt_unit() = 0;
+    virtual int32_t dt_interval() = 0;
+    virtual double dx() = 0;
+    virtual double dy() = 0;
+
+    virtual coords_st map_coords(coords_nd<uint32_t, 3> p) = 0;
+    virtual coords_nd<uint32_t, 3> cube_coords(coords_st p) = 0;
+    virtual datetime datetime_at_index(uint32_t index) = 0;
+    virtual uint32_t index_at_datetime(datetime t) = 0;
+
+    virtual std::shared_ptr<cube_stref> copy() = 0;
+
+    virtual bool has_regular_space() = 0;
+    virtual bool has_regular_time() = 0;
+
+    // TODO: add x_at_index, y_at_index, index_at_x, index_at_y
+
+    // TODO: add dimension label functions x_labels
+    //    virtual std::vector<double> x_labels();
+    //    virtual std::vector<double> y_labels();
+    //    virtual std::vector<datetime> t_labels();
+
+    // TODO: add subset function?
+    //virtual std::unique_ptr<cube_stref> subset_t() ... // TODO
+
+    //virtual std::unique_ptr<cube_stref> copy() = 0;
+
+    static std::string type_string(std::shared_ptr<cube_stref> obj) {
+        if (std::dynamic_pointer_cast<cube_stref_regular>(obj) != nullptr) {
+            return "cube_stref_regular";
+        }
+        if (std::dynamic_pointer_cast<cube_stref_labeled_time>(obj) != nullptr) {
+            return "cube_stref_labeled_time";
+        }
+        return "";
+    }
+};
+
 /**
  * @brief Spatial and temporal reference for data cubes
  */
-class cube_st_reference {
+class cube_stref_regular : public cube_stref {
    public:
-    virtual ~cube_st_reference() {
+    virtual ~cube_stref_regular() {}
+
+    virtual uint32_t nx() override { return _nx; }
+    virtual void nx(uint32_t nx) { _nx = nx; }
+
+    virtual uint32_t ny() override { return _ny; }
+    virtual void ny(uint32_t ny) { _ny = ny; }
+
+    virtual double dx() override { return (_win.right - _win.left) / _nx; }
+
+    virtual bool has_regular_space() override {
+        return true;
+    }
+
+    virtual bool has_regular_time() override {
+        return true;
     }
 
     /**
-         * Get the number of cells in x dimension
-         * @return number of cells in x dimension
-         */
-    inline uint32_t &nx() { return _nx; }
-
-    /**
-        * Get the number of cells in y dimension
-        * @return number of cells in y dimension
-        */
-    inline uint32_t &ny() { return _ny; }
-
-    /**
-        * Get the size of cells in x dimension
-        * @return size of cells in x dimension
-        */
-    inline double dx() { return (_win.right - _win.left) / _nx; }
-
-    /**
-        * Set the size of cells in x dimension
-        * @note if the width of the spatial window is not a multiple of the new dx, the window will be widened at both ends
-        * @param x size of cells in x dimension
-        */
-    inline void dx(double x) {
-        _nx = (uint32_t)std::ceil((_win.right - _win.left) / x);
-        double exp_x = _nx * x - (_win.right - _win.left);
+    * Set the size of cells in x dimension
+    * @note if the width of the spatial window is not a multiple of the new dx, the window will be widened at both ends
+    * @param x size of cells in x dimension
+    */
+    virtual void dx(double dx) {
+        _nx = (uint32_t)std::ceil((_win.right - _win.left) / dx);
+        double exp_x = _nx * dx - (_win.right - _win.left);
         _win.right += exp_x / 2;
         _win.left -= exp_x / 2;
         if (std::fabs(exp_x) > std::numeric_limits<double>::epsilon()) {
@@ -268,20 +322,10 @@ class cube_st_reference {
         }
     }
 
-    /**
-       * Get the size of cells in y dimension
-       * @return size of cells in y dimension
-       */
-    inline double dy() { return (_win.top - _win.bottom) / _ny; }
-
-    /**
-        * Set the size of cells in y dimension
-         *@note if the height of the spatial window is not a multiple of the new dy, the window will be widened at both ends
-        * @param x size of cells in y dimension
-        */
-    inline void dy(double x) {
-        _ny = (uint32_t)std::ceil((_win.top - _win.bottom) / x);
-        double exp_y = _ny * x - (_win.top - _win.bottom);
+    virtual double dy() override { return (_win.top - _win.bottom) / _ny; }
+    virtual void dy(double dy) {
+        _ny = (uint32_t)std::ceil((_win.top - _win.bottom) / dy);
+        double exp_y = _ny * dy - (_win.top - _win.bottom);
         _win.top += exp_y / 2;
         _win.bottom -= exp_y / 2;
         if (std::fabs(exp_y) > std::numeric_limits<double>::epsilon()) {
@@ -290,41 +334,26 @@ class cube_st_reference {
         }
     }
 
-    /**
-         * Get the lower limit in x dimension / left boundary of the cube's extent
-         * @return left boundary of the cube's extent
-         */
-    inline double &left() { return _win.left; }
+    virtual double left() override { return _win.left; }
+    virtual void left(double left) { _win.left = left; }
 
-    /**
-         * Get the upper limit in x dimension / right boundary of the cube's extent
-         * @return right boundary of the cube's extent
-         */
-    inline double &right() { return _win.right; }
+    virtual double right() override { return _win.right; }
+    virtual void right(double right) { _win.right = right; }
 
-    /**
-         * Get the lower limit in y dimension / bottom boundary of the cube's extent
-         * @return bottom boundary of the cube's extent
-         */
-    inline double &bottom() { return _win.bottom; }
+    virtual double bottom() override { return _win.bottom; }
+    virtual void bottom(double bottom) { _win.bottom = bottom; }
 
-    /**
-         * Get the upper limit in y dimension / top boundary of the cube's extent
-         * @return top boundary of the cube's extent
-         */
-    inline double &top() { return _win.top; }
+    virtual double top() override { return _win.top; }
+    virtual void top(double top) { _win.top = top; }
 
-    /**
-         * Get or set the spatial reference system / projection
-         * @return string (reference) with projection / SRS information that is understandable by GDAL / OGR
-         */
-    inline std::string &srs() { return _srs; }
+    virtual std::string srs() override { return _srs; }
+    virtual void srs(std::string srs) { _srs = srs; }
 
     /**
          * Return the spatial reference system / projection
          * @return OGRSpatialReference object
          */
-    inline OGRSpatialReference srs_ogr() const {
+    virtual OGRSpatialReference srs_ogr() const override {
         OGRSpatialReference s;
         s.SetFromUserInput(_srs.c_str());
         return s;
@@ -334,29 +363,19 @@ class cube_st_reference {
          * Getter / setter for the lower boundary of the cube's temporal extent (start datetime)
          * @return reference to the object's t0 object
          */
-    inline datetime &t0() { return _t0; }
+    virtual datetime t0() { return _t0; }
+    virtual void t0(datetime t0) { _t0 = t0; }
 
-    /**
-         * Getter / setter for the upper boundary of the cube's temporal extent (end datetime)
-         * @return reference to the object's t1 object
-         */
-    inline datetime &t1() { return _t1; }
+    virtual datetime t1() { return _t1; }
+    virtual void t1(datetime t1) { _t1 = t1; }
 
-    /**
-         * Get the numbers of cells in the time dimension
-         * @return integer number of cells
-         */
-    uint32_t nt() {
+    virtual uint32_t nt() override {
         if (_t1 == _t0) return 1;
         duration d = (_t1 - _t0) + 1;
         return (d % _dt == 0) ? d / _dt : (1 + (d / _dt));
     }
 
-    /**
-         * Set the numbers of cells in the time dimension. This method will automatically derive a
-         * datetime duration of cells based on the current unit
-         */
-    void nt(uint32_t n) {
+    virtual void nt(uint32_t n) {
         duration d = (_t1 - _t0) + 1;
         duration dnew = dt();
         if (dnew.dt_interval == 0) {  // if dt has not been set
@@ -379,27 +398,16 @@ class cube_st_reference {
         assert(nt() == n);
     }
 
-    /**
-     * Get the spatial extent / window of a cube view
-     * @return spatial extent, coordinates are expressed in the view's projection / SRS
-     */
-    inline bounds_2d<double> &win() { return _win; }
+    virtual bounds_2d<double> win() { return _win; }
+    virtual void win(bounds_2d<double> win) { _win = win; }
 
-    /**
-     * Get the temporal size / duration of one cube cell
-     * @return the view's dt field as a duration object
-     */
-    inline duration dt() { return _dt; }
+    virtual duration dt() override { return _dt; }
+    virtual datetime_unit dt_unit() override { return _dt.dt_unit; }
+    virtual void dt_unit(datetime_unit unit) { _dt.dt_unit = unit; }
+    virtual int32_t dt_interval() override { return _dt.dt_interval; }
+    virtual void dt_interval(int32_t interval) { _dt.dt_interval = interval; }
 
-    inline datetime_unit &dt_unit() { return _dt.dt_unit; }
-
-    inline int32_t &dt_interval() { return _dt.dt_interval; }
-
-    /**
-    * Set the temporal size / duration of one cube cell
-    * @param dt new datetime duration of a cube cell
-    */
-    void dt(duration dt) {
+    virtual void dt(duration dt) {
         //if (dt.dt_unit != _dt.dt_unit) {
         _t0.unit() = dt.dt_unit;
         _t1.unit() = dt.dt_unit;
@@ -467,7 +475,7 @@ class cube_st_reference {
         * @param p cube-based coordinates
         * @return spacetime coordinates
         */
-    coords_st map_coords(coords_nd<uint32_t, 3> p) {
+    virtual coords_st map_coords(coords_nd<uint32_t, 3> p) override {
         coords_st s;
         s.s.x = _win.left + p[2] * dx();
         s.s.y = _win.bottom + p[1] * dy();
@@ -484,7 +492,7 @@ class cube_st_reference {
          * @param p spacetime coordinates
          * @return cube-based coordinates
          */
-    coords_nd<uint32_t, 3> cube_coords(coords_st p) {
+    virtual coords_nd<uint32_t, 3> cube_coords(coords_st p) override {
         coords_nd<uint32_t, 3> s;
         s[2] = (uint32_t)((p.s.x - _win.left) / dx());
         s[1] = (uint32_t)((p.s.y - _win.bottom) / dy());
@@ -492,7 +500,30 @@ class cube_st_reference {
         return s;
     }
 
-    friend bool operator==(const cube_st_reference &l, const cube_st_reference &r) {
+    virtual datetime datetime_at_index(uint32_t index) override {
+        return _t0 + _dt * index;
+    }
+
+    virtual uint32_t index_at_datetime(datetime t) override {
+        return (uint32_t)((t - _t0) / _dt);
+    }
+
+    virtual std::shared_ptr<cube_stref> copy() override {
+        std::shared_ptr<cube_stref_regular> x = std::make_shared<cube_stref_regular>();
+        x->_win.left = _win.left;
+        x->_win.right = _win.right;
+        x->_win.top = _win.top;
+        x->_win.bottom = _win.bottom;
+        x->_nx = _nx;
+        x->_ny = _ny;
+        x->_dt = _dt;
+        x->_t0 = _t0;
+        x->_t1 = _t1;
+        x->_srs = _srs;
+        return x;
+    }
+
+    friend bool operator==(const cube_stref_regular &l, const cube_stref_regular &r) {
         if (!(l._win.left == r._win.left &&
               l._win.right == r._win.right &&
               l._win.top == r._win.top &&
@@ -513,7 +544,7 @@ class cube_st_reference {
         return true;
     }
 
-    inline friend bool operator!=(const cube_st_reference &l, const cube_st_reference &r) { return !(l == r); }
+    inline friend bool operator!=(const cube_stref_regular &l, const cube_stref_regular &r) { return !(l == r); }
 
    protected:
     /**
@@ -545,8 +576,9 @@ class cube_st_reference {
  * cube cell from different images are combined whereas resampling refers to the algorithm used
  * to warp / reproject images to the cube geometry.
  */
-class cube_view : public cube_st_reference {
+class cube_view : public cube_stref_regular {
    public:
+    cube_view() : _resampling(resampling::resampling_type::RSMPL_NEAR), _aggregation(aggregation::aggregation_type::AGG_FIRST) {}
     /**
          * Deserializes a cube_view object from a JSON file.
          * @param filename Path to the json file on disk
@@ -586,10 +618,158 @@ class cube_view : public cube_st_reference {
     inline resampling::resampling_type &resampling_method() { return _resampling; }
 
    private:
-    static cube_view read(nlohmann::json j);
+    static cube_view read(json11::Json j);
 
     resampling::resampling_type _resampling;
     aggregation::aggregation_type _aggregation;
+};
+
+class cube_stref_labeled_time : public cube_stref_regular {
+   public:
+    virtual bool has_regular_space() override {
+        return true;
+    }
+
+    virtual bool has_regular_time() override {
+        return false;
+    }
+
+    virtual void t0(datetime t0) override {
+        // DO NOTHING, t0 is derived from labels
+    }
+
+    virtual datetime t0() override {
+        return _t_values[0];
+    }
+
+    virtual void t1(datetime t1) override {
+        // DO NOTHING, t0 is derived from labels
+    }
+
+    virtual datetime t1() override {
+        return _t_values[_t_values.size() - 1];
+    }
+
+    virtual void nt(uint32_t n) override {
+        // DO NOTHING, nt is derived from labels
+    }
+
+    virtual uint32_t nt() override {
+        return _t_values.size();
+    }
+
+    virtual void dt(duration dt) override {
+        _t0.unit() = dt.dt_unit;
+        _t1.unit() = dt.dt_unit;
+        _dt = dt;
+    }
+
+    virtual duration dt() override {
+        return _dt;
+    }
+
+    void set_time_labels(std::vector<datetime> t) {
+        // TODO: if t.empty()
+        _t_values = t;
+
+        // TODO: what if not sorted?
+        for (uint32_t i = 0; i < _t_values.size(); ++i) {
+            _t_index.insert(std::make_pair(t[i], i));
+        }
+    }
+
+    void set_time_labels(std::vector<std::string> t) {
+        // TODO: what if not sorted?
+        for (uint32_t i = 0; i < _t_values.size(); ++i) {
+            _t_index.insert(std::make_pair(datetime::from_string(t[i]), i));
+        }
+    }
+
+    std::vector<datetime> get_time_labels() {
+        return _t_values;
+    }
+
+    std::vector<std::string> get_time_labels_as_string() {
+        std::vector<std::string> out;
+        for (uint32_t i = 0; i < _t_values.size(); ++i) {
+            out.push_back(_t_values[i].to_string());
+        }
+        return out;
+    }
+
+    virtual coords_st map_coords(coords_nd<uint32_t, 3> p) override {
+        coords_st s;
+        s.s.x = _win.left + p[2] * dx();
+        s.s.y = _win.bottom + p[1] * dy();
+        s.t = datetime_at_index(p[0]);
+        return s;
+    }
+
+    virtual coords_nd<uint32_t, 3> cube_coords(coords_st p) override {
+        coords_nd<uint32_t, 3> s;
+        s[2] = (uint32_t)((p.s.x - _win.left) / dx());
+        s[1] = (uint32_t)((p.s.y - _win.bottom) / dy());
+        s[0] = index_at_datetime(p.t);
+        return s;
+    }
+
+    virtual datetime datetime_at_index(uint32_t index) override {
+        return _t_values[index];
+    }
+
+    virtual uint32_t index_at_datetime(datetime t) override {
+        auto res = _t_index.find(t);
+        if (res == _t_index.end()) {
+            GCBS_ERROR("Data cubes does not contain time slice for requested datetime");
+            throw std::string("Data cubes does not contain time slice for requested datetime");
+        }
+        return res->second;
+    }
+
+    friend bool operator==(const cube_stref_labeled_time &l, const cube_stref_labeled_time &r) {
+        if (!(l._win.left == r._win.left &&
+              l._win.right == r._win.right &&
+              l._win.top == r._win.top &&
+              l._win.bottom == r._win.bottom &&
+              l._nx == r._nx &&
+              l._ny == r._ny &&
+              l._dt == r._dt &&
+              l._t_values == r._t_values))
+            return false;
+
+        // compare SRS
+        OGRSpatialReference a = l.srs_ogr();
+        OGRSpatialReference b = r.srs_ogr();
+
+        if (!a.IsSame(&b))
+            return false;
+
+        return true;
+    }
+
+    inline friend bool operator!=(const cube_stref_labeled_time &l, const cube_stref_labeled_time &r) { return !(l == r); }
+
+    virtual std::shared_ptr<cube_stref> copy() override {
+        std::shared_ptr<cube_stref_labeled_time> x = std::make_shared<cube_stref_labeled_time>();
+        x->_win.left = _win.left;
+        x->_win.right = _win.right;
+        x->_win.top = _win.top;
+        x->_win.bottom = _win.bottom;
+        x->_nx = _nx;
+        x->_ny = _ny;
+        x->_dt = _dt;
+        x->_t0 = _t0;
+        x->_t1 = _t1;
+        x->_srs = _srs;
+
+        x->_t_values = _t_values;
+        x->_t_index = _t_index;
+        return x;
+    }
+
+   protected:
+    std::vector<datetime> _t_values;
+    std::map<datetime, uint32_t> _t_index;
 };
 
 }  // namespace gdalcubes

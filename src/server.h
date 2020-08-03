@@ -27,9 +27,11 @@
 
 #include <cpprest/http_listener.h>
 #include <cpprest/uri_builder.h>
+
 #include <mutex>
 #include <queue>
 #include <thread>
+
 #include "cube.h"
 
 namespace gdalcubes {

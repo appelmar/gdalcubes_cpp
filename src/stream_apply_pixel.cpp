@@ -1,4 +1,7 @@
 #include "stream_apply_pixel.h"
+
+#include <fstream>
+
 #include "external/tiny-process-library/process.hpp"
 
 namespace gdalcubes {
@@ -54,7 +57,7 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
     int i = 0;
     for (int it = 0; it < size[1]; ++it) {
-        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * (it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0])).to_double();
+        dims[i] = _in_cube->st_reference()->datetime_at_index(it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0]).to_double();
         ++i;
     }
     bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
@@ -95,12 +98,13 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
 #endif
 
     // start process
-    TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {},
-                                    [&errstr](const char *bytes, std::size_t n) {
-                                        errstr = std::string(bytes, n);
-                                        GCBS_DEBUG(errstr);
-                                    },
-                                    false);
+    TinyProcessLib::Process process(
+        _cmd, "", [](const char *bytes, std::size_t n) {},
+        [&errstr](const char *bytes, std::size_t n) {
+            errstr = std::string(bytes, n);
+            GCBS_DEBUG(errstr);
+        },
+        false);
     mtx.unlock();
     auto exit_status = process.get_exit_status();
     filesystem::remove(f_in);

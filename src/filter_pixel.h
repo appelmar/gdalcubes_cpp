@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <string>
+
 #include "cube.h"
 
 struct te_variable;  // forward declaration for add_default_functions
@@ -56,7 +57,7 @@ class filter_pixel_cube : public cube {
          * @param expr vector of string expressions, each expression will result in a new band in the resulting cube where values are derived from the input cube according to the specific expression
          * @param band_names specify names for the bands of the resulting cube, if empty, "band1", "band2", "band3", etc. will be used as names
          */
-    filter_pixel_cube(std::shared_ptr<cube> in, std::string predicate) : cube(std::make_shared<cube_st_reference>(*(in->st_reference()))), _in_cube(in), _pred(predicate) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    filter_pixel_cube(std::shared_ptr<cube> in, std::string predicate) : cube(in->st_reference()->copy()), _in_cube(in), _pred(predicate) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -83,8 +84,8 @@ class filter_pixel_cube : public cube {
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
-    nlohmann::json make_constructible_json() override {
-        nlohmann::json out;
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
         out["cube_type"] = "filter_pixel";
         out["predicate"] = _pred;
         out["in_cube"] = _in_cube->make_constructible_json();
@@ -94,16 +95,6 @@ class filter_pixel_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::string _pred;
-
-    virtual void set_st_reference(std::shared_ptr<cube_st_reference> stref) override {
-        _st_ref->win() = stref->win();
-        _st_ref->srs() = stref->srs();
-        _st_ref->ny() = stref->ny();
-        _st_ref->nx() = stref->nx();
-        _st_ref->t0() = stref->t0();
-        _st_ref->t1() = stref->t1();
-        _st_ref->dt(stref->dt());
-    }
 
     bool parse_predicate();
 };

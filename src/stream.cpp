@@ -23,7 +23,11 @@
 */
 
 #include "stream.h"
+
 #include <stdlib.h>
+
+#include <fstream>
+
 #include "external/tiny-process-library/process.hpp"
 
 namespace gdalcubes {
@@ -69,7 +73,8 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
     setenv("GDALCUBES_STREAMING_CHUNK_ID", std::to_string(id).c_str(), 1);
 #endif
 
-    TinyProcessLib::Process process(_cmd, "", [out, &databytes_read](const char *bytes, std::size_t n) {
+    TinyProcessLib::Process process(
+        _cmd, "", [out, &databytes_read](const char *bytes, std::size_t n) {
 
         if (databytes_read == 0) {
             // Assumption is that at least 4 integers with chunk size area always contained in the first call of this function
@@ -103,15 +108,22 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_stdin(std::shared_ptr<chun
         process.write((char *)(&str_size), sizeof(int));
         process.write(_in_cube->bands().get(i).name.c_str(), sizeof(char) * str_size);
     }
+
+    if (!_in_cube->st_reference()->has_regular_space()) {
+        throw std::string("ERROR: chunk streaming currently does not support irregular spatial dimensions");
+    }
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref_in = std::dynamic_pointer_cast<cube_stref_regular>(_in_cube->st_reference());
+
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
     for (int i = 0; i < size[1]; ++i) {
-        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * i).to_double();
+        dims[i] = stref_in->datetime_at_index(_in_cube->chunk_limits(id).low[0] + i).to_double();
     }
     for (int i = size[1]; i < size[1] + size[2]; ++i) {
-        dims[i] = _in_cube->st_reference()->win().bottom + i * _in_cube->st_reference()->dy();
+        dims[i] = stref_in->win().bottom + i * _in_cube->st_reference()->dy();
     }
     for (int i = size[1] + size[2]; i < size[1] + size[2] + size[3]; ++i) {
-        dims[i] = _in_cube->st_reference()->win().left + i * _in_cube->st_reference()->dx();
+        dims[i] = stref_in->win().left + i * _in_cube->st_reference()->dx();
     }
     process.write((char *)(dims), sizeof(double) * (size[1] + size[2] + size[3]));
     std::free(dims);
@@ -164,7 +176,7 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
     double *dims = (double *)std::calloc(size[1] + size[2] + size[3], sizeof(double));
     int i = 0;
     for (int it = 0; it < size[1]; ++it) {
-        dims[i] = (_in_cube->st_reference()->t0() + _in_cube->st_reference()->dt() * (it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0])).to_double();
+        dims[i] = (_in_cube->st_reference()->datetime_at_index(it + _in_cube->chunk_size()[0] * _in_cube->chunk_limits(id).low[0])).to_double();
         ++i;
     }
     bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
@@ -204,7 +216,8 @@ std::shared_ptr<chunk_data> stream_cube::stream_chunk_file(std::shared_ptr<chunk
 #endif
 
     // start process
-    TinyProcessLib::Process process(_cmd, "", [](const char *bytes, std::size_t n) {}, [&errstr](const char *bytes, std::size_t n) {
+    TinyProcessLib::Process process(
+        _cmd, "", [](const char *bytes, std::size_t n) {}, [&errstr](const char *bytes, std::size_t n) {
         errstr = std::string(bytes, n);
         GCBS_DEBUG(errstr); }, false);
     mtx.unlock();

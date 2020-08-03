@@ -26,6 +26,7 @@
 #define SWARM_H
 
 #include <curl/curl.h>
+
 #include "cube.h"
 
 namespace gdalcubes {

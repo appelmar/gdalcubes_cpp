@@ -77,7 +77,7 @@ gdalcubes uses the following open source libraries. Detailed licensing and copyr
 
 **[GDAL](https://www.gdal.org/):  A translator library for raster and vector geospatial data formats**
 
-**[json](https://github.com/nlohmann/json): JSON for Modern C++**
+**[json11](https://github.com/dropbox/json11)**
 
 **[SQLite](https://www.sqlite.org/): A self-contained, high-reliability, embedded, full-featured, public-domain, SQL database engine**
 

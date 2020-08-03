@@ -51,5 +51,6 @@
 #include "utils.h"
 #include "vector_queries.h"
 #include "window_time.h"
+#include "image_collection_ops.h"
 
 #endif  //GDALCUBES_H

@@ -50,7 +50,13 @@ class filter_geom_cube : public cube {
 
    public:
     filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, std::string srs);
-    ~filter_geom_cube() {}
+    ~filter_geom_cube() {
+        if (!_ogr_dataset.empty()) {
+            if (filesystem::exists(_ogr_dataset)) {
+                filesystem::remove(_ogr_dataset);
+            }
+        }
+    }
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 

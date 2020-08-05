@@ -120,7 +120,8 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
     _max_chunk_y = imaxy / _in_cube->chunk_size()[1];
 
     // Create new OGR dataset with single feature...
-    std::string output_file = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename(8, "crop_", ".gpkg"));
+    //std::string output_file = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename(8, "crop_", ".gpkg"));
+    std::string output_file = "/vsimem/" + utils::generate_unique_filename(8, "crop_", ".gpkg");
     _ogr_dataset = output_file;
     GDALDriver *gpkg_driver = GetGDALDriverManager()->GetDriverByName("GPKG");
     GDALDataset *gpkg_out = gpkg_driver->Create(output_file.c_str(), 0, 0, 0, GDT_Unknown, NULL);

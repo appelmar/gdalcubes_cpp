@@ -1,4 +1,16 @@
 
+# 0.3.0
+
+* New data cube types `select_time_cube`, `filter_geom_cube`, `stream_apply_time_cube`
+* New data cube extraction functions `query_timeseries` and `zonal_statistics`
+* New batch functions to translate complete imagery of image collections to GeoTIFF / COG 
+* Revised data model to support irregular / labeled time dimension
+* Replaced external JSON library with `json11`
+* New gdalwarp client to avoid multithreading issues with GDAL3
+* fix CRS metadata in produced netCDF files
+* Optional global SRS definition in collection formats
+* `join_bands_cube` may now combine more than two data cubes
+
 # 0.2.3
 
 * fixed clang compiler warnings

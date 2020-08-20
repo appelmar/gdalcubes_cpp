@@ -1096,8 +1096,8 @@ std::vector<image_collection::find_range_st_row> image_collection::find_range_st
     std::string sql =  // TODO: do we really need image_name ?
         "SELECT gdalrefs.image_id, images.name, gdalrefs.descriptor, images.datetime, bands.name, gdalrefs.band_num, images.proj "
         "FROM images INNER JOIN gdalrefs ON images.id = gdalrefs.image_id INNER JOIN bands ON gdalrefs.band_id = bands.id WHERE "
-        "images.datetime >= '" +
-        range.t0.to_string(datetime_unit::SECOND) + "' AND images.datetime <= '" + range.t1.to_string(datetime_unit::SECOND) +
+        "strftime('%Y-%m-%dT%H:%M:%S', images.datetime) >= '" +
+        range.t0.to_string(datetime_unit::SECOND) + "' AND strftime('%Y-%m-%dT%H:%M:%S', images.datetime) <= '" + range.t1.to_string(datetime_unit::SECOND) +
         "' AND NOT "
         "(images.right < " +
         std::to_string(range_trans.left) + " OR images.left > " + std::to_string(range_trans.right) + " OR images.bottom > " + std::to_string(range_trans.top) + " OR images.top < " + std::to_string(range_trans.bottom) + ")";

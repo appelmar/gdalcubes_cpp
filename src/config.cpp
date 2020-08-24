@@ -26,6 +26,7 @@
 
 #include <curl/curl.h>
 #include <gdal_priv.h>
+#include <ogr_geometry.h>
 
 #include "cube.h"
 

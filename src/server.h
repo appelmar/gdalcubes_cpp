@@ -30,6 +30,7 @@
 
 #include <mutex>
 #include <queue>
+#include <list>
 #include <thread>
 
 #include "cube.h"

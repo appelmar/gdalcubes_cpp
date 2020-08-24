@@ -166,4 +166,8 @@ std::vector<std::string> config::gdal_formats() {
     return out;
 }
 
+bool config::gdal_has_geos() {
+    return OGRGeometryFactory::haveGEOS();
+}
+
 }  // namespace gdalcubes

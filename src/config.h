@@ -180,6 +180,7 @@ class config {
 
     std::string gdal_version_info();
     std::vector<std::string> gdal_formats();
+    bool gdal_has_geos();
 
    private:
     std::shared_ptr<chunk_processor> _chunk_processor;

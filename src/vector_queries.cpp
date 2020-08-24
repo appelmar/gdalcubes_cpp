@@ -710,7 +710,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     OGRSpatialReference srs_features = *(layer->GetSpatialRef());
     srs_features.AutoIdentifyEPSG();
 
-    if (!srs_cube.IsSame(&srs_features, NULL)) {
+    if (!srs_cube.IsSame(&srs_features)) {
         GCBS_ERROR("Data cube and input features have different SRSes");
         GDALClose(in_ogr_dataset);
         // TODO: do we have to clean up more things here?

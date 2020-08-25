@@ -142,7 +142,7 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
                 psWarpOptions->pTransformerArg = create_transform(in, out, s_srs, t_srs);
                 psWarpOptions->hSrcDS = in;  // TODO: close in_ov
             } else {
-                GCBS_WARN("Failed to open GDAL overview dataset for " + std::string(in->GetDescription()) + ", using original full resolution image.");
+                GCBS_WARN("Failed to open GDAL overview dataset for '" + descr + "', using original full resolution image.");
             }
             CSLDestroy(oo);
         }

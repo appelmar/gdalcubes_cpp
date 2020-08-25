@@ -419,6 +419,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
         for (auto it = image_datasets.begin(); it != image_datasets.end(); ++it) {
             GDALDataset *bandsel_vrt = nullptr;
+            std::string bandsel_vrt_name = "";
             GDALDataset *g = (GDALDataset *)GDALOpen(it->first.c_str(), GA_ReadOnly);
             if (!g) {
                 throw std::string("ERROR in image_collection_cube::read_chunk(): GDAL cannot open'" + it->first + "'");
@@ -444,8 +445,8 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                     GCBS_ERROR("Cannot create gdal_translate options");
                     throw std::string("Cannot create gdal_translate options");
                 }
-
-                bandsel_vrt = (GDALDataset *)GDALTranslate("", (GDALDatasetH)g, trans_options, NULL);
+                bandsel_vrt_name = "/vsimem/" + utils::generate_unique_filename() + ".vrt";
+                bandsel_vrt = (GDALDataset *)GDALTranslate(bandsel_vrt_name.c_str(), (GDALDatasetH)g, trans_options, NULL);
                 if (bandsel_vrt == NULL) {
                     create_band_subset_vrt = false;
                 }
@@ -495,8 +496,9 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                     GCBS_WARN("RasterIO (read) failed for " + std::string(gdal_out->GetDescription()));
                 }
             }
-
-            if (bandsel_vrt) GDALClose(bandsel_vrt);
+            if (!bandsel_vrt_name.empty()) {
+                filesystem::remove(bandsel_vrt_name);
+            }
             GDALClose(gdal_out);
         }
 

@@ -29,6 +29,7 @@
 
 #include <regex>
 #include <unordered_set>
+#include <set>
 
 #include "config.h"
 #include "external/date.h"
@@ -1330,6 +1331,94 @@ std::vector<std::string> image_collection::unroll_archives(std::vector<std::stri
     }
     return out;
 }
+
+
+std::shared_ptr<image_collection> image_collection::create_from_tables(std::vector<std::string> band_name,
+                                                                       std::vector<std::string> image_name, std::vector<std::string> image_proj,
+                                                                       std::vector<std::string> image_datetime, std::vector<double> image_left,
+                                                                       std::vector<double> image_top, std::vector<double> image_bottom,
+                                                                       std::vector<double> image_right, std::vector<std::string> gdalrefs_descriptor,
+                                                                       std::vector<uint16_t> gdalrefs_band_num) {
+
+
+    // Make sure that length of all vectors is identical
+    if (band_name.size() != image_name.size() ||
+        band_name.size() != image_proj.size() ||
+        band_name.size() != image_datetime.size() ||
+        band_name.size() != image_left.size() ||
+        band_name.size() != image_top.size() ||
+        band_name.size() != image_bottom.size() ||
+        band_name.size() != image_right.size() ||
+        band_name.size() != gdalrefs_descriptor.size() ||
+        band_name.size() != gdalrefs_band_num.size()) {
+
+        GCBS_ERROR("Arguments must have identical size.");
+        throw std::string("Arguments must have identical size.");
+    }
+    if (band_name.empty()) {
+        GCBS_ERROR("Arguments are empty");
+        throw std::string("Arguments are empty");
+    }
+
+
+    // create empty image collection
+    std::shared_ptr<image_collection> o = std::make_shared<image_collection>();
+
+
+    std::map<std::string, uint32_t> image_ids;
+    std::map<std::string, uint32_t> band_ids;
+    uint32_t cur_image_id;
+    uint32_t cur_band_id;
+
+    sqlite3_exec(o->get_db_handle(), "BEGIN TRANSACTION;", NULL, NULL, NULL);  // what if this fails?!
+    for (uint32_t i=0; i<image_name.size(); ++i) {
+        sqlite3_exec(o->get_db_handle(), "SAVEPOINT s1;", NULL, NULL, NULL);  // what if this fails?!
+        auto itband = band_ids.find(band_name[i]);
+        if (itband == band_ids.end()) {
+            std::string sql_band_insert = "INSERT INTO bands(name) VALUES ('" +  band_name[i] + "')";
+            if (sqlite3_exec(o->get_db_handle(), sql_band_insert.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                GCBS_WARN("Failed to add band '" +  band_name[i] + "' for dataset at row " + std::to_string(i) + "; dataset will be skipped");
+                sqlite3_exec(o->get_db_handle(), "ROLLBACK TO s1;", NULL, NULL, NULL);  // what if this fails?!
+                continue;
+            }
+            cur_band_id = sqlite3_last_insert_rowid(o->get_db_handle());
+            band_ids.insert(std::make_pair(band_name[i], cur_band_id));
+        }
+        else {
+            cur_band_id = itband->second;
+        }
+
+        auto itimage = image_ids.find(image_name[i]);
+        if (itimage == image_ids.end()) {
+            datetime d = datetime::from_string(image_datetime[i]);
+            std::string sql_insert_image = "INSERT INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + image_name[i] + "','" +
+                                           d.to_string() + "'," +
+                                           std::to_string(image_left[i]) + "," + std::to_string(image_top[i]) + "," + std::to_string(image_bottom[i]) + "," + std::to_string(image_right[i]) + ",'" + image_proj[i] + "')";
+            if (sqlite3_exec(o->get_db_handle(), sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                GCBS_WARN("Failed to add image '" +  image_name[i] + "' for dataset at row " + std::to_string(i) + "; dataset will be skipped");
+                sqlite3_exec(o->get_db_handle(), "ROLLBACK TO s1;", NULL, NULL, NULL);  // what if this fails?!
+                continue;
+            }
+            cur_image_id = sqlite3_last_insert_rowid(o->get_db_handle());
+            image_ids.insert(std::make_pair(image_name[i], cur_image_id));  // take care of race conditions if things run parallel at some po
+        }
+        else {
+            cur_image_id = itimage->second;
+        }
+
+        std::string sql_insert_gdalref = "INSERT INTO gdalrefs(descriptor, image_id, band_id, band_num) VALUES('" + gdalrefs_descriptor[i] + "'," + std::to_string(cur_image_id) + "," + std::to_string(cur_band_id) + "," + std::to_string(gdalrefs_band_num[i]) + ");";
+        if (sqlite3_exec(o->get_db_handle(), sql_insert_gdalref.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+            GCBS_WARN("Failed to add dataset '" +  gdalrefs_descriptor[i]  + "'; dataset will be skipped");
+            sqlite3_exec(o->get_db_handle(), "ROLLBACK TO s1;", NULL, NULL, NULL);  // what if this fails?!
+            continue;
+        }
+        sqlite3_exec(o->get_db_handle(), "RELEASE s1;", NULL, NULL, NULL);  // what if this fails?!
+
+    }
+    sqlite3_exec(o->get_db_handle(), "COMMIT TRANSACTION;", NULL, NULL, NULL);  // what if this fails?!
+    return o;
+}
+
 
 std::string image_collection::sqlite_as_string(sqlite3_stmt* stmt, uint16_t col) {
     const unsigned char* a = sqlite3_column_text(stmt, col);

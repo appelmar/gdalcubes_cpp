@@ -218,11 +218,22 @@ class image_collection {
     std::vector<image_collection::images_row> get_images();
 
     /**
-     * Helper function to create image collections programatically,
-     * e.g. for processing results.
-     * @note NOT YET IMPLEMENTED
+     * Helper function to create image collections from full tables
+     *
+     * @note Rows with identical image names are expected to have identical datetime, left, right, bottom, top, and proj values
+     * @note Currently, it is not possible to specify additional band metadata (offset, scale, unit, etc.)
+     * @note All vector arguments represent columns of a table and must have identical sizes.
      */
-    static void create_empty(std::vector<bands_row>);
+    static std::shared_ptr<image_collection> create_from_tables(std::vector<std::string> band_name,
+                                                                std::vector<std::string>image_name,
+                                                                std::vector<std::string>image_proj,
+                                                                std::vector<std::string>image_datetime,
+                                                                std::vector<double> image_left,
+                                                                std::vector<double> image_top,
+                                                                std::vector<double> image_bottom,
+                                                                std::vector<double> image_right,
+                                                                std::vector<std::string> gdalrefs_descriptor,
+                                                                std::vector<uint16_t> gdalrefs_band_num);
 
     /**
      * Derive the size of a pixel for one or all bands in bytes

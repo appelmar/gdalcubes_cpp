@@ -235,6 +235,25 @@ class image_collection {
                                                                 std::vector<std::string> gdalrefs_descriptor,
                                                                 std::vector<uint16_t> gdalrefs_band_num);
 
+    // Lowe level functions to create image collections programmatically
+
+    uint32_t insert_band(uint32_t id, std::string name, std::string type="", double offset = 0.0, double scale = 1.0, std::string unit = "", std::string nodata = "");
+    uint32_t insert_band(std::string name, std::string type="", double offset = 0.0, double scale = 1.0, std::string unit = "", std::string nodata = "");
+
+    uint32_t insert_image(uint32_t id, std::string name, double left, double top, double bottom, double right, std::string datetime, std::string proj);
+    uint32_t insert_image(std::string name, double left, double top, double bottom, double right, std::string datetime, std::string proj);
+
+    void insert_dataset(uint32_t image_id, uint32_t band_id, std::string descriptor, uint32_t band_num = 1);
+
+    void insert_collection_md(std::string key, std::string value);
+    void insert_band_md(uint32_t band_id, std::string key, std::string value);
+    void insert_image_md(uint32_t image_id, std::string key, std::string value);
+
+    void transaction_start();
+    void transaction_end();
+
+
+
     /**
      * Derive the size of a pixel for one or all bands in bytes
      * @param band band identifier, if emtpy the sum of all bands is used

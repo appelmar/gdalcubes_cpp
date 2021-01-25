@@ -100,6 +100,7 @@ class image_collection {
 
     static std::shared_ptr<image_collection> create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
     static std::shared_ptr<image_collection> create(std::vector<std::string> descriptors, std::vector<std::string> date_time, std::vector<std::string> band_names = {}, bool use_subdatasets = false);
+    static std::shared_ptr<image_collection> create();
 
     std::string to_string();
 

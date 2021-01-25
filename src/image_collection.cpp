@@ -181,6 +181,11 @@ std::shared_ptr<image_collection> image_collection::create(std::vector<std::stri
     return o;
 }
 
+std::shared_ptr<image_collection> image_collection::create() {
+    std::shared_ptr<image_collection> o = std::make_shared<image_collection>();
+    return o;
+}
+
 struct image_band {
     GDALDataType type;
     std::string unit;

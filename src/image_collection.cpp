@@ -1510,6 +1510,13 @@ void image_collection::transaction_end() {
     sqlite3_exec(_db, "COMMIT TRANSACTION;", NULL, NULL, NULL);  // what if this fails?!
 }
 
+
+
+bool image_collection::is_empty() {
+    if (count_bands() == 0 || count_images() == 0 || count_gdalrefs() == 0) return true;
+    return false;
+}
+
 std::string image_collection::sqlite_as_string(sqlite3_stmt* stmt, uint16_t col) {
     const unsigned char* a = sqlite3_column_text(stmt, col);
     if (!a) {

@@ -123,9 +123,8 @@ class image_collection {
     bool is_valid();
 
     /**
-    * Check if the database has no images
-    * @return true, if the database is OK, false otherwise
-    * @note NOT YET IMPLEMENTED
+    * Check if the database has no images and/or bands
+    * @return true, if the database is empty, i.e. does not point to any bands or datasets
     */
     bool is_empty();
 

@@ -464,6 +464,20 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                     //if (b < it->second.size() - 1) nodata_value_list += " ";
                 }
             }
+            if (nodata_value_list.empty()) {
+                // try to derive nodata value from gdal dataset
+                GDALDataset *d = (create_band_subset_vrt && bandsel_vrt != nullptr)? bandsel_vrt : g;
+                for (uint16_t b = 0; b < d->GetRasterCount(); ++b) {
+                    int succ = 0;
+                    double val = d->GetRasterBand(b+1)->GetNoDataValue(&succ);
+                    if (succ) {
+                        nodata_value_list.push_back(val);
+                    }
+                }
+                if ((int)nodata_value_list.size() != d->GetRasterCount()) {
+                    nodata_value_list.clear();
+                }
+            }
 
             GDALDataset *gdal_out = nullptr;
             if (create_band_subset_vrt && bandsel_vrt != nullptr) {

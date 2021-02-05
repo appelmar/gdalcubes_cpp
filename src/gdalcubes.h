@@ -37,6 +37,7 @@
 #include "filter_pixel.h"
 #include "image_collection_cube.h"
 #include "join_bands.h"
+#include "ncdf_cube.h"
 #include "progress.h"
 #include "reduce_space.h"
 #include "reduce_time.h"

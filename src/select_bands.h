@@ -27,6 +27,7 @@
 
 #include "cube.h"
 #include "image_collection_cube.h"
+#include "ncdf_cube.h"
 
 namespace gdalcubes {
 
@@ -68,14 +69,18 @@ class select_bands_cube : public cube {
     }
 
    public:
-    select_bands_cube(std::shared_ptr<cube> in, std::vector<std::string> bands) : cube(in->st_reference()->copy()), _in_cube(in), _band_sel(bands), _input_is_image_collection_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    select_bands_cube(std::shared_ptr<cube> in, std::vector<std::string> bands) : cube(in->st_reference()->copy()), _in_cube(in), _band_sel(bands), _defer_to_input_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
 
         if (std::dynamic_pointer_cast<image_collection_cube>(in)) {
-            _input_is_image_collection_cube = true;
+            _defer_to_input_cube = true;
             std::dynamic_pointer_cast<image_collection_cube>(in)->select_bands(bands);
+        }
+        else  if (std::dynamic_pointer_cast<ncdf_cube>(in)) {
+            _defer_to_input_cube = true;
+            std::dynamic_pointer_cast<ncdf_cube>(in)->select_bands(bands);
         }
 
         for (uint16_t ib = 0; ib < _band_sel.size(); ++ib) {
@@ -87,7 +92,7 @@ class select_bands_cube : public cube {
         }
     }
 
-    select_bands_cube(std::shared_ptr<cube> in, std::vector<uint16_t> bands) : cube(in->st_reference()->copy()), _in_cube(in), _band_sel(), _input_is_image_collection_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    select_bands_cube(std::shared_ptr<cube> in, std::vector<uint16_t> bands) : cube(in->st_reference()->copy()), _in_cube(in), _band_sel(), _defer_to_input_cube(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -103,8 +108,12 @@ class select_bands_cube : public cube {
         _band_sel = bands_str;
 
         if (std::dynamic_pointer_cast<image_collection_cube>(in)) {
-            _input_is_image_collection_cube = true;
+            _defer_to_input_cube = true;
             std::dynamic_pointer_cast<image_collection_cube>(in)->select_bands(bands);
+        }
+        else  if (std::dynamic_pointer_cast<ncdf_cube>(in)) {
+            _defer_to_input_cube = true;
+            std::dynamic_pointer_cast<ncdf_cube>(in)->select_bands(bands_str);
         }
 
         for (uint16_t ib = 0; ib < _band_sel.size(); ++ib) {
@@ -132,7 +141,7 @@ class select_bands_cube : public cube {
    private:
     std::shared_ptr<cube> _in_cube;
     std::vector<std::string> _band_sel;
-    bool _input_is_image_collection_cube;
+    bool _defer_to_input_cube;
 };
 
 }  // namespace gdalcubes

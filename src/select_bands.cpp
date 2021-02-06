@@ -32,7 +32,7 @@ std::shared_ptr<chunk_data> select_bands_cube::read_chunk(chunkid_t id) {
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
 
     // if input cube is image_collection_cube, delegate (since in->select_bands has been called in the cosntructor)
-    if (_input_is_image_collection_cube) {
+    if (_defer_to_input_cube) {
         return _in_cube->read_chunk(id);
     }
 

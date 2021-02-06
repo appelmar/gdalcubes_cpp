@@ -152,6 +152,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     }
     attr_text = (char*)std::malloc(len + 1);
     retval = nc_get_att_text(ncfile, v_crs, "spatial_ref", attr_text);
+    attr_text[len] = '\0';
     if (retval != NC_NOERR) {
         GCBS_ERROR("Failed to read spatial_ref attribute of crs variable in netCDF file '" + path + "'");
         std::free(attr_text);
@@ -175,6 +176,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     }
     attr_text = (char*)std::malloc(len + 1);
     retval = nc_get_att_text(ncfile, v_crs, "GeoTransform", attr_text);
+    attr_text[len] = '\0';
     if (retval != NC_NOERR) {
         GCBS_ERROR("Failed to read GeoTransform attribute of crs variable in netCDF file '" + path + "'");
         std::free(attr_text);
@@ -247,6 +249,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     retval = nc_inq_attlen(ncfile, var_id_t, "units", &len);  // TODO: error handling
     attr_text = (char*)std::malloc(len + 1);
     retval = nc_get_att_text(ncfile, var_id_t, "units",attr_text);  // TODO: error handling
+    attr_text[len] = '\0';
     std::string datetime_str = attr_text;
     std::free(attr_text);
 
@@ -263,7 +266,6 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         }
         throw std::string("Failed to parse time units in netCDF file '" + path + "'");
     }
-
 
     datetime_unit tunit;
     if (datetime_parts[0] == "years") {
@@ -303,7 +305,8 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         dt.dt_interval = 1;
         dt.dt_unit = tunit;
     }
-    //datetime t1 = t0 + duration(tvalues[nt-1],tunit);
+
+    datetime t1 = t0 + duration(tvalues[nt-1] + delta - 1,tunit);
 
     // TODO: double check whether temporal reference is correct also for regular and irregular time axis
     if (time_is_regular) {
@@ -316,8 +319,10 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         ref.ny(ny);
         ref.srs(spatial_ref_str);
         ref.t0(t0);
+        ref.t1(t1);
         ref.dt(dt);
-        ref.nt(nt);
+        assert(ref.nt() == nt);
+        //ref.nt(nt);
         _st_ref = std::make_shared<cube_stref_regular>(ref);
     }
     else {
@@ -364,6 +369,10 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     }
     else {
         for (uint16_t i=0; i<nvars; ++i) {
+            if (i == var_id_t ||
+                i == var_id_y ||
+                i == var_id_x ||
+                i == v_crs) continue;
             char* name = (char*)std::malloc(NC_MAX_NAME * sizeof(char));
             retval = nc_inq_varname(ncfile, i, name); // TODO: error handling
             std::string varname = name;
@@ -395,6 +404,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
                 if (nc_inq_attlen(ncfile, v_crs, "type", &len) == NC_NOERR) {
                     attr_text = (char*)std::malloc(len + 1);
                     if (nc_get_att_text(ncfile, v_crs, "type", attr_text) == NC_NOERR) {
+                        attr_text[len] = '\0';
                         b.type = attr_text;
                     }
                     std::free(attr_text);
@@ -402,6 +412,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
                 if (nc_inq_attlen(ncfile, v_crs, "units", &len) == NC_NOERR) {
                     attr_text = (char*)std::malloc(len + 1);
                     if (nc_get_att_text(ncfile, v_crs, "units", attr_text) == NC_NOERR) {
+                        attr_text[len] = '\0';
                         b.unit = attr_text;
                     }
                     std::free(attr_text);
@@ -433,6 +444,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     if (nc_inq_attlen(ncfile, NC_GLOBAL, "process_graph", &len) == NC_NOERR) {
         attr_text = (char*)std::malloc(len + 1);
         if (nc_get_att_text(ncfile, v_crs, "GeoTransform", attr_text) == NC_NOERR) {
+            attr_text[len] = '\0';
             process_graph = attr_text;
         }
         std::free(attr_text);

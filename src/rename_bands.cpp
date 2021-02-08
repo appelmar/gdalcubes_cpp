@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -22,37 +22,13 @@
     SOFTWARE.
 */
 
-// gdalcubes.h shall be used by external programs as library entry point
-
-#ifndef GDALCUBES_H
-#define GDALCUBES_H
-
-#include "apply_pixel.h"
-#include "build_info.h"
-#include "config.h"
-#include "cube.h"
-#include "dummy.h"
-#include "fill_time.h"
-#include "filter_geom.h"
-#include "filter_pixel.h"
-#include "image_collection_cube.h"
-#include "join_bands.h"
-#include "ncdf_cube.h"
-#include "progress.h"
-#include "reduce_space.h"
-#include "reduce_time.h"
 #include "rename_bands.h"
-#include "select_bands.h"
-#include "select_time.h"
-#include "stream.h"
-#include "stream_apply_pixel.h"
-#include "stream_apply_time.h"
-#include "stream_reduce_space.h"
-#include "stream_reduce_time.h"
-#include "swarm.h"
-#include "utils.h"
-#include "vector_queries.h"
-#include "window_time.h"
-#include "image_collection_ops.h"
 
-#endif  //GDALCUBES_H
+namespace gdalcubes {
+
+std::shared_ptr<chunk_data> rename_bands_cube::read_chunk(chunkid_t id) {
+    GCBS_TRACE("rename_bands_cube::read_chunk(" + std::to_string(id) + ")");
+    return _in_cube->read_chunk(id);
+}
+
+}  // namespace gdalcubes

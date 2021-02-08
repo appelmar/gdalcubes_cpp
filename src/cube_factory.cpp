@@ -37,6 +37,7 @@
 #include "join_bands.h"
 #include "ncdf_cube.h"
 #include "reduce_time.h"
+#include "rename_bands.h"
 #include "select_bands.h"
 #include "select_time.h"
 #include "stream.h"
@@ -121,6 +122,16 @@ void cube_factory::register_default() {
             }
             auto x = select_bands_cube::create(instance()->create_from_json(j["in_cube"]), bands);
             return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "rename_bands", [](json11::Json& j) {
+          std::map<std::string, std::string> band_names;
+          for (auto it = j["band_names"].object_items().begin(); it != j["band_names"].object_items().end(); ++it) {
+              band_names[it->first] = it->second.string_value();
+          }
+          auto x = rename_bands_cube::create(instance()->create_from_json(j["in_cube"]), band_names);
+          return x;
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(

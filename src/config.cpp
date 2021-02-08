@@ -24,7 +24,10 @@
 
 #include "config.h"
 
+#ifndef WITHOUT_CURL
 #include <curl/curl.h>
+#endif
+
 #include <gdal_priv.h>
 #include <ogr_geometry.h>
 
@@ -90,11 +93,14 @@ void config::set_gdal_num_threads(uint16_t threads) {
 }
 
 void config::gdalcubes_init() {
+#ifndef WITHOUT_CURL
     curl_global_init(CURL_GLOBAL_ALL);
+    curl_global_init(CURL_GLOBAL_ALL);
+#endif
     GDALAllRegister();
     GDALSetCacheMax(_gdal_cache_max);
     CPLSetConfigOption("GDAL_PAM_ENABLED", "NO");  // avoid aux files for PNG tiles
-    curl_global_init(CURL_GLOBAL_ALL);
+
     CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
     //srand(time(NULL)); // R will complain if calling srand...
     CPLSetErrorHandler(CPLQuietErrorHandler);
@@ -142,7 +148,9 @@ void config::gdalcubes_init() {
 }
 
 void config::gdalcubes_cleanup() {
+#ifndef WITHOUT_CURL
     curl_global_cleanup();
+#endif
     GDALDestroyDriverManager();
     OGRCleanupAll();
 }

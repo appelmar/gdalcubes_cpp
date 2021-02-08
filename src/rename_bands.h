@@ -63,7 +63,9 @@ class rename_bands_cube : public cube {
             if (band_names.find(oldname) != band_names.end()) {
                 band b = in->bands().get(i);
                 b.name = band_names[oldname];
+                _bands.add(b);
                 band_names.erase(band_names.find(oldname));
+
             }
             else {
                 _bands.add(in->bands().get(i));

@@ -22,8 +22,11 @@
     SOFTWARE.
 */
 
+#ifndef GDALCUBES_NO_SWARM
+
 #ifndef SWARM_H
 #define SWARM_H
+
 
 #include <curl/curl.h>
 
@@ -92,3 +95,5 @@ class gdalcubes_swarm : public chunk_processor {
 }  // namespace gdalcubes
 
 #endif  //SWARM_H
+
+#endif // GDALCUBES_NO_SWARM

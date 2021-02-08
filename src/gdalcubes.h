@@ -49,10 +49,13 @@
 #include "stream_apply_time.h"
 #include "stream_reduce_space.h"
 #include "stream_reduce_time.h"
-#include "swarm.h"
 #include "utils.h"
 #include "vector_queries.h"
 #include "window_time.h"
 #include "image_collection_ops.h"
+
+#ifndef GDALCUBES_NO_SWARM
+#include "swarm.h"
+#endif
 
 #endif  //GDALCUBES_H

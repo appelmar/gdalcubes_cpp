@@ -24,7 +24,7 @@
 
 #include "config.h"
 
-#ifndef WITHOUT_CURL
+#ifndef GDALCUBES_NO_SWARM
 #include <curl/curl.h>
 #endif
 
@@ -93,7 +93,7 @@ void config::set_gdal_num_threads(uint16_t threads) {
 }
 
 void config::gdalcubes_init() {
-#ifndef WITHOUT_CURL
+#ifndef GDALCUBES_NO_SWARM
     curl_global_init(CURL_GLOBAL_ALL);
     curl_global_init(CURL_GLOBAL_ALL);
 #endif
@@ -148,7 +148,7 @@ void config::gdalcubes_init() {
 }
 
 void config::gdalcubes_cleanup() {
-#ifndef WITHOUT_CURL
+#ifndef GDALCUBES_NO_SWARM
     curl_global_cleanup();
 #endif
     GDALDestroyDriverManager();

@@ -1004,10 +1004,6 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", strlen(att_t.c_str()), att_t.c_str());
 
 
-    att_t =  stref->has_regular_time() ? "regular" : "labeled";
-    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen(att_t.c_str()), att_t.c_str());
-
-
     // write json graph as metadata
     std::string j = make_constructible_json().dump();
     nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());

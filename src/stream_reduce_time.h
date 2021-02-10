@@ -39,8 +39,8 @@ class stream_reduce_time_cube : public cube {
                             std::vector<std::string> names = std::vector<std::string>()) : cube(in->st_reference()->copy()), _in_cube(in), _cmd(cmd), _nbands(nbands), _names(names) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-            stref->dt((stref->t1() - stref->t0()) + 1);
-            stref->t1(stref->t0());  // set nt=1
+            duration dt = (stref->t1() - stref->t0() + 1);
+            stref->dt(dt);
         } else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
             std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
             stref->dt((stref->t1() - stref->t0()) + 1);

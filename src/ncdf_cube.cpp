@@ -365,7 +365,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         if (time_is_regular) {
             datetime t1 = t0 + duration(tvalues[nt-1] + delta - 1,tunit);
             // If nt == 1, delta cannot be derived and hence dt interval is unclear
-            if (t1 < t0) {
+            if (delta == 0) {
                 t1 = t0;
                 dt.dt_interval = 1;
                 GCBS_WARN("Setting dt = " + dt.to_string() + " due to missing metadata in netCDF file" );

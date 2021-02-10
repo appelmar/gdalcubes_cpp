@@ -257,10 +257,10 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     std::string str_dt = ncdf_attr_to_string(ncfile, NC_GLOBAL, "gdalcubes_datetime_dt");
 
     bool finished_st_reference = false;
-    if (str_datetime_type.empty() ||
-        str_t0.empty() ||
-        str_t1.empty() ||
-        str_dt.empty()) {
+    if (!str_datetime_type.empty() &&
+        !str_t0.empty() &&
+        !str_t1.empty() &&
+        !str_dt.empty()) {
 
         if (str_datetime_type == "regular") {
             cube_stref_regular ref;

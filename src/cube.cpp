@@ -993,6 +993,21 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
     nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
 
+
+    std::string att_t =  stref->has_regular_time() ? "regular" : "labeled";
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", strlen(att_t.c_str()), att_t.c_str());
+    att_t =  stref->t0().to_string();
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", strlen(att_t.c_str()), att_t.c_str());
+    att_t =  stref->t1().to_string();
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", strlen(att_t.c_str()), att_t.c_str());
+    att_t =  stref->dt().to_string();
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", strlen(att_t.c_str()), att_t.c_str());
+
+
+    att_t =  stref->has_regular_time() ? "regular" : "labeled";
+    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen(att_t.c_str()), att_t.c_str());
+
+
     // write json graph as metadata
     std::string j = make_constructible_json().dump();
     nc_put_att_text(ncout, NC_GLOBAL, "process_graph", j.length(), j.c_str());

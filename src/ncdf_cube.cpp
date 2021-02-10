@@ -32,6 +32,30 @@
 namespace gdalcubes {
 
 
+// Helper function to convert ncdf text attributes to std::string
+std::string ncdf_attr_to_string(int ncid, int varid, std::string attr_name) {
+    std::size_t  len=0;
+    char *attr_text = nullptr;
+
+    int retval = nc_inq_attlen(ncid, varid, attr_name.c_str(), &len);
+    if (retval != NC_NOERR) {
+        GCBS_DEBUG("Failed to find attribute '" + attr_name + "' of variable '" + std::to_string(varid)  + "' in netCDF file");
+        return "";
+    }
+    attr_text = (char*)std::malloc(len + 1);
+    retval = nc_get_att_text(ncid, varid, attr_name.c_str(), attr_text);
+    attr_text[len] = '\0';
+    if (retval != NC_NOERR) {
+        std::free(attr_text);
+        GCBS_DEBUG("Failed to read attribute '" + attr_name + "' of variable '" + std::to_string(varid)  + "' in netCDF file");
+        return "";
+    }
+    std::string out = attr_text;
+    std::free(attr_text);
+    return out;
+}
+
+
 ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(auto_unpack),
                                                            _path({path}), _orig_bands(),
                                                            _band_selection() , _mutex() {
@@ -225,125 +249,165 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
 
     /* Read time metadata */
 
-    // 1. Find out nt using nc_inq_dimlen(), allocate int buffer
-    // 2. Read all integer time values using nc_get_var_int()
-    // 3. Iterate over integer values and find out whether time is regular or not! and create new st_ref accordingly
-    // 4. Get datetime unit and start with nc_inq_attlen() nc_get_att_text()  [var = id of time, ttribute name = "units"]
-    // 5. free int buffer
-    std::size_t  nt = -1;
-    retval = nc_inq_dimlen(ncfile, dim_id_t, &nt); // TODO: error handling
-    int* tvalues = (int*)std::malloc(nt * sizeof(int));
-    nc_get_var_int(ncfile,var_id_t, tvalues); // TODO: error handling
-    bool time_is_regular = true;
-    int delta = tvalues[0];
-    if (nt > 1) {
-        delta = tvalues[1] - tvalues[0];
-        for (uint32_t i=2; i < nt; ++i) {
-            if (tvalues[i] - tvalues[i-1] != delta) {
-                time_is_regular  = false;
-                break;
+    // 0. try to read from NC_GLOBAL metadata (gdalcubes version >= 0.3.2)
+
+    std::string str_datetime_type = ncdf_attr_to_string(ncfile, NC_GLOBAL, "gdalcubes_datetime_type");
+    std::string str_t0 = ncdf_attr_to_string(ncfile, NC_GLOBAL, "gdalcubes_datetime_t0");
+    std::string str_t1 = ncdf_attr_to_string(ncfile, NC_GLOBAL, "gdalcubes_datetime_t1");
+    std::string str_dt = ncdf_attr_to_string(ncfile, NC_GLOBAL, "gdalcubes_datetime_dt");
+
+    bool finished_st_reference = false;
+    if (str_datetime_type.empty() ||
+        str_t0.empty() ||
+        str_t1.empty() ||
+        str_dt.empty()) {
+
+        if (str_datetime_type == "regular") {
+            cube_stref_regular ref;
+            ref.left(left);
+            ref.right(right);
+            ref.top(top);
+            ref.bottom(bottom);
+            ref.nx(nx);
+            ref.ny(ny);
+            ref.srs(spatial_ref_str);
+            ref.t0(datetime::from_string(str_t0));
+            ref.t1(datetime::from_string(str_t1));
+            ref.dt(duration::from_string(str_dt));
+            _st_ref = std::make_shared<cube_stref_regular>(ref);
+            finished_st_reference = true;
+        }
+
+    }
+
+    if (!finished_st_reference) { // gdalcubes version < 0.3.2 / labeled / previous error
+        // 1. Find out nt using nc_inq_dimlen(), allocate int buffer
+        // 2. Read all integer time values using nc_get_var_int()
+        // 3. Iterate over integer values and find out whether time is regular or not! and create new st_ref accordingly
+        // 4. Get datetime unit and start with nc_inq_attlen() nc_get_att_text()  [var = id of time, ttribute name = "units"]
+        // 5. free int buffer
+        std::size_t  nt = -1;
+        retval = nc_inq_dimlen(ncfile, dim_id_t, &nt); // TODO: error handling
+        int* tvalues = (int*)std::malloc(nt * sizeof(int));
+        nc_get_var_int(ncfile,var_id_t, tvalues); // TODO: error handling
+        bool time_is_regular = true;
+        int delta = tvalues[0];
+        if (nt > 1) {
+            delta = tvalues[1] - tvalues[0];
+            for (uint32_t i=2; i < nt; ++i) {
+                if (tvalues[i] - tvalues[i-1] != delta) {
+                    time_is_regular  = false;
+                    break;
+                }
             }
         }
-    }
 
-    retval = nc_inq_attlen(ncfile, var_id_t, "units", &len);  // TODO: error handling
-    attr_text = (char*)std::malloc(len + 1);
-    retval = nc_get_att_text(ncfile, var_id_t, "units",attr_text);  // TODO: error handling
-    attr_text[len] = '\0';
-    std::string datetime_str = attr_text;
-    std::free(attr_text);
+        retval = nc_inq_attlen(ncfile, var_id_t, "units", &len);  // TODO: error handling
+        attr_text = (char*)std::malloc(len + 1);
+        retval = nc_get_att_text(ncfile, var_id_t, "units",attr_text);  // TODO: error handling
+        attr_text[len] = '\0';
+        std::string datetime_str = attr_text;
+        std::free(attr_text);
 
-    // find out t0 and dt unit from datetime_str
-    std::istringstream isd(datetime_str);
-    std::vector<std::string> datetime_parts(
-        std::istream_iterator<std::string>{isd},
-        std::istream_iterator<std::string>());
-    if (datetime_parts.size() != 3) {
-        GCBS_ERROR("Failed to parse time units in netCDF file '" + path + "'");
-        retval = nc_close(ncfile);
-        if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+        // find out t0 and dt unit from datetime_str
+        std::istringstream isd(datetime_str);
+        std::vector<std::string> datetime_parts(
+            std::istream_iterator<std::string>{isd},
+            std::istream_iterator<std::string>());
+        if (datetime_parts.size() != 3) {
+            GCBS_ERROR("Failed to parse time units in netCDF file '" + path + "'");
+            retval = nc_close(ncfile);
+            if (retval != NC_NOERR) {
+                GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            }
+            throw std::string("Failed to parse time units in netCDF file '" + path + "'");
         }
-        throw std::string("Failed to parse time units in netCDF file '" + path + "'");
-    }
 
-    datetime_unit tunit;
-    if (datetime_parts[0] == "years") {
-        tunit = datetime_unit::YEAR;
-    }
-    else if (datetime_parts[0] == "months") {
-        tunit = datetime_unit::MONTH;
-    }
-    else if (datetime_parts[0] == "days") {
-        tunit = datetime_unit::DAY;
-    }
-    else if (datetime_parts[0] == "hours") {
-        tunit = datetime_unit::HOUR;
-    }
-    else if (datetime_parts[0] == "minutes") {
-        tunit = datetime_unit::MINUTE;
-    }
-    else if (datetime_parts[0] == "seconds") {
-        tunit = datetime_unit::SECOND;
-    }
-    else {
-        GCBS_ERROR("Failed to parse datetime unit '" + datetime_parts[0] + "' in netCDF file '" + path + "'");
-        retval = nc_close(ncfile);
-        if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+        datetime_unit tunit;
+        if (datetime_parts[0] == "years") {
+            tunit = datetime_unit::YEAR;
         }
-        throw std::string("Failed to parse datetime unit '" + datetime_parts[0] + "' in netCDF file '" + path + "'");
-    }
-
-    datetime t0 = datetime::from_string(datetime_parts[2]);
-    duration dt;
-    if (time_is_regular) {
-        dt.dt_interval = delta;
-        dt.dt_unit = tunit;
-    }
-    else {
-        dt.dt_interval = 1;
-        dt.dt_unit = tunit;
-    }
-
-    datetime t1 = t0 + duration(tvalues[nt-1] + delta - 1,tunit);
-
-    // TODO: double check whether temporal reference is correct also for regular and irregular time axis
-    if (time_is_regular) {
-        cube_stref_regular ref;
-        ref.left(left);
-        ref.right(right);
-        ref.top(top);
-        ref.bottom(bottom);
-        ref.nx(nx);
-        ref.ny(ny);
-        ref.srs(spatial_ref_str);
-        ref.t0(t0);
-        ref.t1(t1);
-        ref.dt(dt);
-        assert(ref.nt() == nt);
-        //ref.nt(nt);
-        _st_ref = std::make_shared<cube_stref_regular>(ref);
-    }
-    else {
-        cube_stref_labeled_time ref;
-        ref.left(left);
-        ref.right(right);
-        ref.top(top);
-        ref.bottom(bottom);
-        ref.nx(nx);
-        ref.ny(ny);
-        ref.srs(spatial_ref_str);
-
-        ref.dt(dt);
-        std::vector<datetime> labels;
-        for (uint32_t i=0; i < nt; ++i) {
-            labels.push_back(t0 + dt * tvalues[i]);
+        else if (datetime_parts[0] == "months") {
+            tunit = datetime_unit::MONTH;
         }
-        ref.set_time_labels(labels);
-        _st_ref = std::make_shared<cube_stref_labeled_time>(ref);
+        else if (datetime_parts[0] == "days") {
+            tunit = datetime_unit::DAY;
+        }
+        else if (datetime_parts[0] == "hours") {
+            tunit = datetime_unit::HOUR;
+        }
+        else if (datetime_parts[0] == "minutes") {
+            tunit = datetime_unit::MINUTE;
+        }
+        else if (datetime_parts[0] == "seconds") {
+            tunit = datetime_unit::SECOND;
+        }
+        else {
+            GCBS_ERROR("Failed to parse datetime unit '" + datetime_parts[0] + "' in netCDF file '" + path + "'");
+            retval = nc_close(ncfile);
+            if (retval != NC_NOERR) {
+                GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            }
+            throw std::string("Failed to parse datetime unit '" + datetime_parts[0] + "' in netCDF file '" + path + "'");
+        }
+
+        duration dt;
+        if (time_is_regular) {
+            dt.dt_interval = delta;
+            dt.dt_unit = tunit;
+        }
+        else {
+            dt.dt_interval = 1;
+            dt.dt_unit = tunit;
+        }
+
+        datetime t0 = datetime::from_string(datetime_parts[2]);
+        if (time_is_regular) {
+            datetime t1 = t0 + duration(tvalues[nt-1] + delta - 1,tunit);
+            // If nt == 1, delta cannot be derived and hence dt interval is unclear
+            if (t1 < t0) {
+                t1 = t0;
+                dt.dt_interval = 1;
+                GCBS_WARN("Setting dt = " + dt.to_string() + " due to missing metadata in netCDF file" );
+            }
+            cube_stref_regular ref;
+            ref.left(left);
+            ref.right(right);
+            ref.top(top);
+            ref.bottom(bottom);
+            ref.nx(nx);
+            ref.ny(ny);
+            ref.srs(spatial_ref_str);
+            ref.t0(t0);
+            ref.t1(t1);
+            ref.dt(dt);
+            assert(ref.nt() == nt);
+            //ref.nt(nt);
+            _st_ref = std::make_shared<cube_stref_regular>(ref);
+        }
+        else {
+            cube_stref_labeled_time ref;
+            ref.left(left);
+            ref.right(right);
+            ref.top(top);
+            ref.bottom(bottom);
+            ref.nx(nx);
+            ref.ny(ny);
+            ref.srs(spatial_ref_str);
+
+            ref.dt(dt);
+            std::vector<datetime> labels;
+            for (uint32_t i=0; i < nt; ++i) {
+                labels.push_back(t0 + dt * tvalues[i]);
+            }
+            ref.set_time_labels(labels);
+            _st_ref = std::make_shared<cube_stref_labeled_time>(ref);
+        }
+        std::free(tvalues);
     }
-    std::free(tvalues);
+
+
+
 
 
 

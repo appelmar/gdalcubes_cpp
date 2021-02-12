@@ -33,7 +33,6 @@
 #include "cube_factory.h"
 #include "gdalcubes.h"
 #include "image_collection_ops.h"
-#include "test_multiprocess.h"
 
 using namespace gdalcubes;
 
@@ -362,15 +361,25 @@ int main(int argc, char* argv[]) {
             //            cc->write_netcdf_file("full.nc");
         }
 
-        setenv("GDAL_DISABLE_READDIR_ON_OPEN", "TRUE", 1);
+        //setenv("GDAL_DISABLE_READDIR_ON_OPEN", "TRUE", 1);
         //        setenv("CPL_DEBUG", "ON", 1);
         //        setenv("CPL_LOG_ERRORS", "ON", 1);
         //        setenv("CPL_LOG", "/tmp/gdal.log", 1);
 
+        std::cout << datetime::from_string("2020-01-01T04:56:22").to_string() << std::endl;
+        std::cout << datetime::from_string("2020-01-01T04:56:22Z").to_string() << std::endl;
+        std::cout << datetime::from_string("2020-01-01T04:56:22+11").to_string() << std::endl;
+        std::cout << datetime::from_string("2020-01-01T04:56:22-11").to_string() << std::endl;
+        std::cout << datetime::from_string("2020-01-01T04:56:22+11:00").to_string() << std::endl;
+        std::cout << datetime::from_string("2020-01-01T04:56:22-11:00").to_string() << std::endl;
+        std::cout << datetime::from_string("2020-01-01T04:56:22+1100").to_string() << std::endl;
+        std::cout << datetime::from_string("2020-01-01T04:56:22-1100").to_string()  << std::endl;
+
         //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_netcdf_file("/tmp/cube.nc");
         //test_multiprocess::write_chunks_netcdf(cube_factory::instance()->create_from_json_file("/tmp/cube.json"),"/tmp", "test");
-        auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
-        c->write_netcdf_file("/tmp/xxx12.nc");
+        //config::instance()->set_gdal_use_overviews(false);
+//        auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
+//        c->write_netcdf_file("/tmp/xxx.nc");
         //c->write_tif_collection("/tmp/TESTTIF", "xxx");
 
         /******************************************/

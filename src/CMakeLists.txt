@@ -162,7 +162,7 @@ add_executable(gdalcubes_test ${TEST_FILES})
 target_link_libraries (gdalcubes_test libgdalcubes_shared)
 
 
-find_package(Boost 1.65 COMPONENTS program_options system) # system is required for error codes
+find_package(Boost COMPONENTS program_options system) # system is required for error codes
 if (Boost_FOUND)
     message(STATUS "Found Boost libraries ${Boost_LIBRARIES}")
 

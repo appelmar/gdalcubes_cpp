@@ -16,7 +16,7 @@ jobs:
       run: cmake -E make_directory ${{github.workspace}}/build
       
     - name: Install dependencies
-      run: $GITHUB_WORKSPACE/.github/workflows/ubuntu-18.04/install_dependencies.sh
+      run: $GITHUB_WORKSPACE/.github/workflows/ubuntu-16.04/install_dependencies.sh
 
     - name: Configure CMake
       shell: bash

@@ -124,7 +124,12 @@ void filesystem::iterate_directory_recursive(std::string p, std::function<void(c
 }
 
 void filesystem::remove(std::string p) {
-    VSIUnlink(p.c_str());
+    if (is_directory(p)) {
+        VSIRmdir(p.c_str());
+    }
+    else {
+        VSIUnlink(p.c_str());
+    }
 }
 
 void filesystem::mkdir(std::string p) {

@@ -263,7 +263,7 @@ void cube_factory::register_default() {
         }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
-        "stream_apply_pixel", [](json11::Json& j) {
+        "stream_apply_pixel_cube", [](json11::Json& j) { // FIXME
             std::vector<std::string> names;
             for (uint16_t i = 0; i < j["names"].array_items().size(); ++i) {
                 names.push_back(j["names"][i].string_value());
@@ -272,7 +272,7 @@ void cube_factory::register_default() {
             return x;
         }));
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
-        "stream_apply_time", [](json11::Json& j) {
+        "stream_apply_time_cube", [](json11::Json& j) { // FIXME
             std::vector<std::string> names;
             for (uint16_t i = 0; i < j["names"].array_items().size(); ++i) {
                 names.push_back(j["names"][i].string_value());

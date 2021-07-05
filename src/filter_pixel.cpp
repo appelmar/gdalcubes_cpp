@@ -35,6 +35,10 @@ std::shared_ptr<chunk_data> filter_pixel_cube::read_chunk(chunkid_t id) {
         return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
 
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
+    std::shared_ptr<chunk_data> in = _in_cube->read_chunk(id);
+    if (in->empty()) {
+        return out;
+    }
 
     // Parse expressions and create symbol table
     std::vector<double> values;
@@ -61,7 +65,7 @@ std::shared_ptr<chunk_data> filter_pixel_cube::read_chunk(chunkid_t id) {
         return out;
     }
 
-    std::shared_ptr<chunk_data> in = _in_cube->read_chunk(id);
+
     out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
     out->buf(std::calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
 

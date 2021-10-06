@@ -297,6 +297,28 @@ std::shared_ptr<chunk_data> simple_cube::read_chunk(chunkid_t id) {
             int32_t top = dataset->GetRasterYSize() - (cextent.s.top - bbox.bottom) / std::abs(affine_in[5]);
             int32_t right = (cextent.s.right - bbox.left) / affine_in[1];
 
+            // If dx and dy have been user-defined, we need to handle
+            // cubes with extent larger than the images
+            if (_in_dx > 0.0 ) {
+                if (right > dataset->GetRasterXSize()) {
+                    right = dataset->GetRasterXSize();
+                }
+                if (left < 0) {
+                    left = 0;
+                }
+
+            }
+            if (_in_dy > 0.0) {
+                if (bottom > dataset->GetRasterYSize() ) {
+                    bottom = dataset->GetRasterYSize();
+                }
+                if (top < 0) {
+                   top = 0;
+                }
+            }
+
+
+
             CPLErr res;
             // TODO: add resampling parameter?!
 
@@ -315,6 +337,7 @@ std::shared_ptr<chunk_data> simple_cube::read_chunk(chunkid_t id) {
                     GCBS_WARN("RasterIO (read) failed for " + gdal_file);
                 }
             }
+            GDALClose(dataset);
         }
     }
     return out;

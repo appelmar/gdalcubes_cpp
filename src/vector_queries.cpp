@@ -719,21 +719,21 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
         translate_args.AddString("GPKG");
         translate_args.AddString("-t_srs");
         translate_args.AddString(cube->st_reference()->srs().c_str());
-        GDALVectorTranslateOptions* opts = GDALVectorTranslateOptionsNew(translate_args.List(), NULL);
+        GDALVectorTranslateOptions *opts = GDALVectorTranslateOptionsNew(translate_args.List(), NULL);
         if (opts == NULL) {
             GDALVectorTranslateOptionsFree(opts);
             throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create ogr2ogr options.");
         }
         // remember filename of temporary copy with transformed input features
         ogr_dataset = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename() + ".gpkg");
-        GDALDatasetH temp = GDALVectorTranslate(ogr_dataset.c_str(), NULL, 1, (GDALDatasetH*)&in_ogr_dataset,opts, NULL);
+        GDALDatasetH temp = GDALVectorTranslate(ogr_dataset.c_str(), NULL, 1, (GDALDatasetH *)&in_ogr_dataset, opts, NULL);
         if (!temp) {
             GDALClose(in_ogr_dataset);
             GCBS_ERROR("Failed to transform input feature to data cube SRS");
             throw std::string("Failed to transform input feature to data cube SRS");
         }
         GDALClose(in_ogr_dataset);
-        in_ogr_dataset = (GDALDataset*)temp;
+        in_ogr_dataset = (GDALDataset *)temp;
         layer = in_ogr_dataset->GetLayerByName(ogr_layer.c_str());
         GDALVectorTranslateOptionsFree(opts);
         in_ogr_was_transformed = true;
@@ -1160,7 +1160,7 @@ void vector_queries::zonal_statistics(std::shared_ptr<cube> cube, std::string og
     }
 
     GDALClose(gpkg_out);
-    if (in_ogr_was_transformed) { // if temporary copy (due to coordinate transformation needed)
+    if (in_ogr_was_transformed) {  // if temporary copy (due to coordinate transformation needed)
         filesystem::remove(ogr_dataset);
     }
     prg->finalize();

@@ -53,7 +53,7 @@ class reduce_time_cube : public cube {
    public:
     reduce_time_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
 
-        if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
+        if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
             duration dt = (stref->t1() - stref->t0() + 1);
             stref->dt(dt);

@@ -49,14 +49,13 @@ class ncdf_cube : public cube {
         return std::make_shared<ncdf_cube>(path, auto_unpack);
     }
 
-
    public:
     ncdf_cube(std::string path, bool auto_unpack = true);
 
    public:
     ~ncdf_cube() {}
 
-   // std::string to_string() override;
+    // std::string to_string() override;
 
     /**
      * @brief Select bands by names
@@ -66,30 +65,25 @@ class ncdf_cube : public cube {
         _band_selection.clear();
         if (bands.empty()) {
             _bands = _orig_bands;
-        }
-        else {
+        } else {
             band_collection bands_new;
-            for (uint16_t i=0; i< bands.size(); ++i) {
+            for (uint16_t i = 0; i < bands.size(); ++i) {
                 if (_orig_bands.has(bands[i])) {
                     bands_new.add(_orig_bands.get(bands[i]));
                     _band_selection.push_back(bands[i]);
-                }
-                else {
+                } else {
                     GCBS_WARN("Data cube has no band with name '" + bands[i] + "'; band will be skipped");
                 }
             }
             if (bands_new.count() > 0) {
                 _bands = bands_new;
-            }
-            else {
+            } else {
                 _bands = _orig_bands;
             }
         }
     }
 
-
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
-
 
     json11::Json make_constructible_json() override {
         json11::Json::object out;
@@ -109,7 +103,7 @@ class ncdf_cube : public cube {
     // nc_cube allows changing chunk sizes from outside, although this is not recommended
     // This is important for e.g. streaming.
     void set_chunk_size(uint32_t t, uint32_t y, uint32_t x) {
-       _chunk_size = {t, y, x};
+        _chunk_size = {t, y, x};
     }
 
    private:
@@ -117,8 +111,7 @@ class ncdf_cube : public cube {
     std::string _path;
     band_collection _orig_bands;
     std::vector<std::string> _band_selection;
-    std::mutex _mutex; // netCDF is not thread safe
-
+    std::mutex _mutex;  // netCDF is not thread safe
 };
 
 }  // namespace gdalcubes

@@ -28,6 +28,7 @@
 #include "cube.h"
 #include "image_collection_cube.h"
 #include "ncdf_cube.h"
+#include "simple_cube.h"
 
 namespace gdalcubes {
 
@@ -77,10 +78,12 @@ class select_bands_cube : public cube {
         if (std::dynamic_pointer_cast<image_collection_cube>(in)) {
             _defer_to_input_cube = true;
             std::dynamic_pointer_cast<image_collection_cube>(in)->select_bands(bands);
-        }
-        else  if (std::dynamic_pointer_cast<ncdf_cube>(in)) {
+        } else if (std::dynamic_pointer_cast<ncdf_cube>(in)) {
             _defer_to_input_cube = true;
             std::dynamic_pointer_cast<ncdf_cube>(in)->select_bands(bands);
+        } else if (std::dynamic_pointer_cast<simple_cube>(in)) {
+            _defer_to_input_cube = true;
+            std::dynamic_pointer_cast<simple_cube>(in)->select_bands(bands);
         }
 
         for (uint16_t ib = 0; ib < _band_sel.size(); ++ib) {
@@ -110,10 +113,12 @@ class select_bands_cube : public cube {
         if (std::dynamic_pointer_cast<image_collection_cube>(in)) {
             _defer_to_input_cube = true;
             std::dynamic_pointer_cast<image_collection_cube>(in)->select_bands(bands);
-        }
-        else  if (std::dynamic_pointer_cast<ncdf_cube>(in)) {
+        } else if (std::dynamic_pointer_cast<ncdf_cube>(in)) {
             _defer_to_input_cube = true;
             std::dynamic_pointer_cast<ncdf_cube>(in)->select_bands(bands_str);
+        } else if (std::dynamic_pointer_cast<simple_cube>(in)) {
+            _defer_to_input_cube = true;
+            std::dynamic_pointer_cast<simple_cube>(in)->select_bands(bands_str);
         }
 
         for (uint16_t ib = 0; ib < _band_sel.size(); ++ib) {

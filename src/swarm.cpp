@@ -298,6 +298,4 @@ void gdalcubes_swarm::apply(std::shared_ptr<cube> c, std::function<void(chunkid_
 
 }  // namespace gdalcubes
 
-
 #endif  // GDALCUBES_NO_SWARM
-

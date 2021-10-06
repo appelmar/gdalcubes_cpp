@@ -27,27 +27,24 @@
 
 #include "filesystem.h"
 
-
-
 namespace gdalcubes {
-
 
 // Helper function to convert ncdf text attributes to std::string
 std::string ncdf_attr_to_string(int ncid, int varid, std::string attr_name) {
-    std::size_t  len=0;
+    std::size_t len = 0;
     char *attr_text = nullptr;
 
     int retval = nc_inq_attlen(ncid, varid, attr_name.c_str(), &len);
     if (retval != NC_NOERR) {
-        GCBS_DEBUG("Failed to find attribute '" + attr_name + "' of variable '" + std::to_string(varid)  + "' in netCDF file");
+        GCBS_DEBUG("Failed to find attribute '" + attr_name + "' of variable '" + std::to_string(varid) + "' in netCDF file");
         return "";
     }
-    attr_text = (char*)std::malloc(len + 1);
+    attr_text = (char *)std::malloc(len + 1);
     retval = nc_get_att_text(ncid, varid, attr_name.c_str(), attr_text);
     attr_text[len] = '\0';
     if (retval != NC_NOERR) {
         std::free(attr_text);
-        GCBS_DEBUG("Failed to read attribute '" + attr_name + "' of variable '" + std::to_string(varid)  + "' in netCDF file");
+        GCBS_DEBUG("Failed to read attribute '" + attr_name + "' of variable '" + std::to_string(varid) + "' in netCDF file");
         return "";
     }
     std::string out = attr_text;
@@ -55,34 +52,26 @@ std::string ncdf_attr_to_string(int ncid, int varid, std::string attr_name) {
     return out;
 }
 
-
-ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(auto_unpack),
-                                                           _path({path}), _orig_bands(),
-                                                           _band_selection() , _mutex() {
-
-
+ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(auto_unpack), _path({path}), _orig_bands(), _band_selection(), _mutex() {
     if (!filesystem::is_regular_file(path)) {
         GCBS_ERROR("NetCDF file '" + path + "' does not exist or is not a file");
         throw std::string("NetCDF file '" + path + "' does not exist or is not a file");
     }
 
-
-
     // Open file
     int ncfile;
     int retval = nc_open(path.c_str(), NC_NOWRITE, &ncfile);
     if (retval != NC_NOERR) {
-        GCBS_ERROR("Failed to open netCDF file '" + path + "'; nc_open() returned " +  std::to_string(retval));
-        throw std::string("Failed to open netCDF file '" + path + "'; nc_open() returned " +  std::to_string(retval));
+        GCBS_ERROR("Failed to open netCDF file '" + path + "'; nc_open() returned " + std::to_string(retval));
+        throw std::string("Failed to open netCDF file '" + path + "'; nc_open() returned " + std::to_string(retval));
     }
-
 
     // find dimensions
     int ndims = 0;
     retval = nc_inq_ndims(ncfile, &ndims);
     if (retval != NC_NOERR) {
-        GCBS_ERROR("Failed to read dimension number of netCDF file '" + path + "'; nc_inq_ndims() returned " +  std::to_string(retval));
-        throw std::string("Failed to read dimension number of netCDF file '" + path + "'; nc_inq_ndims() returned " +  std::to_string(retval));
+        GCBS_ERROR("Failed to read dimension number of netCDF file '" + path + "'; nc_inq_ndims() returned " + std::to_string(retval));
+        throw std::string("Failed to read dimension number of netCDF file '" + path + "'; nc_inq_ndims() returned " + std::to_string(retval));
     }
 
     int dim_id_x = -1;
@@ -107,11 +96,10 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     if (dim_id_x < 0 || dim_id_x >= ndims ||
         dim_id_y < 0 || dim_id_y >= ndims ||
         dim_id_t < 0 || dim_id_t >= ndims) {
-
         GCBS_ERROR("Failed to identify x,y,t dimensions in netCDF file '" + path + "'");
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to identify x,y,t dimensions in netCDF file '" + path + "'");
     }
@@ -135,20 +123,14 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         retval = nc_inq_varid(ncfile, "t", &var_id_t);
     }
 
-    if (var_id_x < 0 || var_id_y < 0 || var_id_t < 0 ) {
+    if (var_id_x < 0 || var_id_y < 0 || var_id_t < 0) {
         GCBS_ERROR("Failed to identify x,y,t variables in netCDF file '" + path + "'");
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to identify x,y,t variables in netCDF file '" + path + "'");
     }
-
-
-
-
-
-
 
     /* Read SRS and Geotransform metadata */
     int v_crs = -1;
@@ -157,12 +139,12 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         GCBS_ERROR("Failed to find crs variable in netCDF file '" + path + "'");
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to find crs variable in netCDF file '" + path + "'");
     }
 
-    std::size_t  len=0;
+    std::size_t len = 0;
     char *attr_text = nullptr;
 
     retval = nc_inq_attlen(ncfile, v_crs, "spatial_ref", &len);
@@ -170,11 +152,11 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         GCBS_ERROR("Failed to find spatial_ref attribute of crs variable in netCDF file '" + path + "'");
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to find spatial_ref attribute of crs variable in netCDF file '" + path + "'");
     }
-    attr_text = (char*)std::malloc(len + 1);
+    attr_text = (char *)std::malloc(len + 1);
     retval = nc_get_att_text(ncfile, v_crs, "spatial_ref", attr_text);
     attr_text[len] = '\0';
     if (retval != NC_NOERR) {
@@ -182,7 +164,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         std::free(attr_text);
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to read spatial_ref attribute of crs variable in netCDF file '" + path + "'");
     }
@@ -194,11 +176,11 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         GCBS_ERROR("Failed to find GeoTransform attribute of crs variable in netCDF file '" + path + "'");
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to find GeoTransform attribute of crs variable in netCDF file '" + path + "'");
     }
-    attr_text = (char*)std::malloc(len + 1);
+    attr_text = (char *)std::malloc(len + 1);
     retval = nc_get_att_text(ncfile, v_crs, "GeoTransform", attr_text);
     attr_text[len] = '\0';
     if (retval != NC_NOERR) {
@@ -206,7 +188,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         std::free(attr_text);
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to read GeoTransform attribute of crs variable in netCDF file '" + path + "'");
     }
@@ -222,7 +204,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         GCBS_ERROR("Failed to parse GeoTransform attribute of crs variable in netCDF file '" + path + "'");
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("Failed to parse GeoTransform attribute of crs variable in netCDF file '" + path + "'");
     }
@@ -233,19 +215,13 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
     double dy = std::abs(std::atof(geotranform_parts[5].c_str()));
 
     // find out nx / ny
-    std::size_t  nx = -1;
-    std::size_t  ny = -1;
-    retval = nc_inq_dimlen(ncfile, dim_id_x, &nx); // TODO: error handling
-    retval = nc_inq_dimlen(ncfile, dim_id_y, &ny); // TODO: error handling
+    std::size_t nx = -1;
+    std::size_t ny = -1;
+    retval = nc_inq_dimlen(ncfile, dim_id_x, &nx);  // TODO: error handling
+    retval = nc_inq_dimlen(ncfile, dim_id_y, &ny);  // TODO: error handling
 
     double right = left + dx * nx;
     double bottom = top - dy * ny;
-
-
-
-
-
-
 
     /* Read time metadata */
 
@@ -261,7 +237,6 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         !str_t0.empty() &&
         !str_t1.empty() &&
         !str_dt.empty()) {
-
         if (str_datetime_type == "regular") {
             cube_stref_regular ref;
             ref.left(left);
@@ -277,34 +252,33 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
             _st_ref = std::make_shared<cube_stref_regular>(ref);
             finished_st_reference = true;
         }
-
     }
 
-    if (!finished_st_reference) { // gdalcubes version < 0.3.2 / labeled / previous error
+    if (!finished_st_reference) {  // gdalcubes version < 0.3.2 / labeled / previous error
         // 1. Find out nt using nc_inq_dimlen(), allocate int buffer
         // 2. Read all integer time values using nc_get_var_int()
         // 3. Iterate over integer values and find out whether time is regular or not! and create new st_ref accordingly
         // 4. Get datetime unit and start with nc_inq_attlen() nc_get_att_text()  [var = id of time, ttribute name = "units"]
         // 5. free int buffer
-        std::size_t  nt = -1;
-        retval = nc_inq_dimlen(ncfile, dim_id_t, &nt); // TODO: error handling
-        int* tvalues = (int*)std::malloc(nt * sizeof(int));
-        nc_get_var_int(ncfile,var_id_t, tvalues); // TODO: error handling
+        std::size_t nt = -1;
+        retval = nc_inq_dimlen(ncfile, dim_id_t, &nt);  // TODO: error handling
+        int *tvalues = (int *)std::malloc(nt * sizeof(int));
+        nc_get_var_int(ncfile, var_id_t, tvalues);  // TODO: error handling
         bool time_is_regular = true;
         int delta = tvalues[0];
         if (nt > 1) {
             delta = tvalues[1] - tvalues[0];
-            for (uint32_t i=2; i < nt; ++i) {
-                if (tvalues[i] - tvalues[i-1] != delta) {
-                    time_is_regular  = false;
+            for (uint32_t i = 2; i < nt; ++i) {
+                if (tvalues[i] - tvalues[i - 1] != delta) {
+                    time_is_regular = false;
                     break;
                 }
             }
         }
 
         retval = nc_inq_attlen(ncfile, var_id_t, "units", &len);  // TODO: error handling
-        attr_text = (char*)std::malloc(len + 1);
-        retval = nc_get_att_text(ncfile, var_id_t, "units",attr_text);  // TODO: error handling
+        attr_text = (char *)std::malloc(len + 1);
+        retval = nc_get_att_text(ncfile, var_id_t, "units", attr_text);  // TODO: error handling
         attr_text[len] = '\0';
         std::string datetime_str = attr_text;
         std::free(attr_text);
@@ -318,7 +292,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
             GCBS_ERROR("Failed to parse time units in netCDF file '" + path + "'");
             retval = nc_close(ncfile);
             if (retval != NC_NOERR) {
-                GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+                GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
             }
             throw std::string("Failed to parse time units in netCDF file '" + path + "'");
         }
@@ -326,27 +300,21 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         datetime_unit tunit;
         if (datetime_parts[0] == "years") {
             tunit = datetime_unit::YEAR;
-        }
-        else if (datetime_parts[0] == "months") {
+        } else if (datetime_parts[0] == "months") {
             tunit = datetime_unit::MONTH;
-        }
-        else if (datetime_parts[0] == "days") {
+        } else if (datetime_parts[0] == "days") {
             tunit = datetime_unit::DAY;
-        }
-        else if (datetime_parts[0] == "hours") {
+        } else if (datetime_parts[0] == "hours") {
             tunit = datetime_unit::HOUR;
-        }
-        else if (datetime_parts[0] == "minutes") {
+        } else if (datetime_parts[0] == "minutes") {
             tunit = datetime_unit::MINUTE;
-        }
-        else if (datetime_parts[0] == "seconds") {
+        } else if (datetime_parts[0] == "seconds") {
             tunit = datetime_unit::SECOND;
-        }
-        else {
+        } else {
             GCBS_ERROR("Failed to parse datetime unit '" + datetime_parts[0] + "' in netCDF file '" + path + "'");
             retval = nc_close(ncfile);
             if (retval != NC_NOERR) {
-                GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+                GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
             }
             throw std::string("Failed to parse datetime unit '" + datetime_parts[0] + "' in netCDF file '" + path + "'");
         }
@@ -355,20 +323,19 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         if (time_is_regular) {
             dt.dt_interval = delta;
             dt.dt_unit = tunit;
-        }
-        else {
+        } else {
             dt.dt_interval = 1;
             dt.dt_unit = tunit;
         }
 
         datetime t0 = datetime::from_string(datetime_parts[2]);
         if (time_is_regular) {
-            datetime t1 = t0 + duration(tvalues[nt-1] + delta - 1,tunit);
+            datetime t1 = t0 + duration(tvalues[nt - 1] + delta - 1, tunit);
             // If nt == 1, delta cannot be derived and hence dt interval is unclear
             if (delta == 0) {
                 t1 = t0;
                 dt.dt_interval = 1;
-                GCBS_WARN("Setting dt = " + dt.to_string() + " due to missing metadata in netCDF file" );
+                GCBS_WARN("Setting dt = " + dt.to_string() + " due to missing metadata in netCDF file");
             }
             cube_stref_regular ref;
             ref.left(left);
@@ -384,8 +351,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
             assert(ref.nt() == nt);
             //ref.nt(nt);
             _st_ref = std::make_shared<cube_stref_regular>(ref);
-        }
-        else {
+        } else {
             cube_stref_labeled_time ref;
             ref.left(left);
             ref.right(right);
@@ -397,7 +363,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
 
             ref.dt(dt);
             std::vector<datetime> labels;
-            for (uint32_t i=0; i < nt; ++i) {
+            for (uint32_t i = 0; i < nt; ++i) {
                 labels.push_back(t0 + dt * tvalues[i]);
             }
             ref.set_time_labels(labels);
@@ -406,67 +372,53 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         std::free(tvalues);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
     /* Find band variables and metadata (having x,y,t dimensions) */
 
     int nvars = -1;
-    retval = nc_inq_nvars(ncfile, &nvars); // TODO: error handling
+    retval = nc_inq_nvars(ncfile, &nvars);  // TODO: error handling
 
     if (nvars < 1) {
         GCBS_ERROR("No variables found in netCDF file '" + path + "'");
         retval = nc_close(ncfile);
         if (retval != NC_NOERR) {
-            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
         }
         throw std::string("No variables found in netCDF file '" + path + "'");
-    }
-    else {
-        for (uint16_t i=0; i<nvars; ++i) {
+    } else {
+        for (uint16_t i = 0; i < nvars; ++i) {
             if (i == var_id_t ||
                 i == var_id_y ||
                 i == var_id_x ||
                 i == v_crs) continue;
-            char* name = (char*)std::malloc(NC_MAX_NAME * sizeof(char));
-            retval = nc_inq_varname(ncfile, i, name); // TODO: error handling
+            char *name = (char *)std::malloc(NC_MAX_NAME * sizeof(char));
+            retval = nc_inq_varname(ncfile, i, name);  // TODO: error handling
             std::string varname = name;
             std::free(name);
             int ndims = -1;
-            retval = nc_inq_varndims(ncfile, i, &ndims); // TODO: error handling
+            retval = nc_inq_varndims(ncfile, i, &ndims);  // TODO: error handling
             if (ndims != 3) {
                 GCBS_DEBUG("Variable '" + varname + "' in netCDF file '" + path + "' has " + std::to_string(ndims) + " dimensions and will be skipped");
                 continue;
             }
-            int* dims = (int*)std::malloc(sizeof(int)*ndims);
-            retval = nc_inq_vardimid(ncfile, i, dims); // TODO: error handling
+            int *dims = (int *)std::malloc(sizeof(int) * ndims);
+            retval = nc_inq_vardimid(ncfile, i, dims);  // TODO: error handling
 
             if (dims[0] == dim_id_t &&
                 dims[1] == dim_id_y &&
                 dims[2] == dim_id_x) {
-
                 band b(varname);
                 double v;
-                if (nc_get_att_double(ncfile, i,"_FillValue", &v) == NC_NOERR) {
+                if (nc_get_att_double(ncfile, i, "_FillValue", &v) == NC_NOERR) {
                     b.no_data_value = std::to_string(v);
                 }
-                if (nc_get_att_double(ncfile, i,"scale_factor", &v) == NC_NOERR) {
-                    b.scale= v;
+                if (nc_get_att_double(ncfile, i, "scale_factor", &v) == NC_NOERR) {
+                    b.scale = v;
                 }
-                if (nc_get_att_double(ncfile, i,"add_offset", &v) == NC_NOERR) {
+                if (nc_get_att_double(ncfile, i, "add_offset", &v) == NC_NOERR) {
                     b.offset = v;
                 }
                 if (nc_inq_attlen(ncfile, v_crs, "type", &len) == NC_NOERR) {
-                    attr_text = (char*)std::malloc(len + 1);
+                    attr_text = (char *)std::malloc(len + 1);
                     if (nc_get_att_text(ncfile, v_crs, "type", attr_text) == NC_NOERR) {
                         attr_text[len] = '\0';
                         b.type = attr_text;
@@ -474,7 +426,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
                     std::free(attr_text);
                 }
                 if (nc_inq_attlen(ncfile, v_crs, "units", &len) == NC_NOERR) {
-                    attr_text = (char*)std::malloc(len + 1);
+                    attr_text = (char *)std::malloc(len + 1);
                     if (nc_get_att_text(ncfile, v_crs, "units", attr_text) == NC_NOERR) {
                         attr_text[len] = '\0';
                         b.unit = attr_text;
@@ -486,7 +438,7 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
 
                 // if available use chunk size of netCDF file
                 // Assumption here is that all band variables have the same chunk sizes
-                std::size_t  chunksize_in[3];
+                std::size_t chunksize_in[3];
                 int storage_in;
                 if (nc_inq_var_chunking(ncfile, i, &storage_in, chunksize_in) == NC_NOERR) {
                     if (storage_in == NC_CHUNKED) {
@@ -495,18 +447,16 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
                         _chunk_size[2] = chunksize_in[2];
                     }
                 }
-            }
-            else {
+            } else {
                 GCBS_DEBUG("Variable '" + varname + "' in netCDF file '" + path + "' will be skipped; dimensions do not match (t/y/x)");
             }
             std::free(dims);
         }
     }
 
-
-    std::string process_graph; // TODO: store as member variable
+    std::string process_graph;  // TODO: store as member variable
     if (nc_inq_attlen(ncfile, NC_GLOBAL, "process_graph", &len) == NC_NOERR) {
-        attr_text = (char*)std::malloc(len + 1);
+        attr_text = (char *)std::malloc(len + 1);
         if (nc_get_att_text(ncfile, v_crs, "GeoTransform", attr_text) == NC_NOERR) {
             attr_text[len] = '\0';
             process_graph = attr_text;
@@ -516,23 +466,12 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
 
     retval = nc_close(ncfile);
     if (retval != NC_NOERR) {
-        GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " +  std::to_string(retval));
+        GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
     }
-
 }
-
-
-
-
-
-
-
-
-
 
 std::shared_ptr<chunk_data> ncdf_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("ncdf_cube::read_chunk(" + std::to_string(id) + ")");
-
 
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id >= count_chunks()) {
@@ -559,23 +498,20 @@ std::shared_ptr<chunk_data> ncdf_cube::read_chunk(chunkid_t id) {
     std::size_t startp[] = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
     std::size_t countp[] = {size_btyx[1], size_btyx[2], size_btyx[3]};
 
-
     _mutex.lock();
     // Open file
     int ncfile;
     int retval = nc_open(_path.c_str(), NC_NOWRITE, &ncfile);
     if (retval != NC_NOERR) {
-        GCBS_ERROR("Failed to open netCDF file '" + _path + "'; nc_open() returned " +  std::to_string(retval));
-        throw std::string("Failed to open netCDF file '" + _path + "'; nc_open() returned " +  std::to_string(retval));
+        GCBS_ERROR("Failed to open netCDF file '" + _path + "'; nc_open() returned " + std::to_string(retval));
+        throw std::string("Failed to open netCDF file '" + _path + "'; nc_open() returned " + std::to_string(retval));
     }
 
-
-    for (uint16_t i=0; i<size_btyx[0]; ++i) {
+    for (uint16_t i = 0; i < size_btyx[0]; ++i) {
         int varid = -1;
         if (nc_inq_varid(ncfile, _bands.get(i).name.c_str(), &varid) == NC_NOERR) {
-            nc_get_vara_double(ncfile, varid, startp, countp, (&((double*)(out->buf()))[i * size_btyx[1] * size_btyx[2] * size_btyx[3]]));
-        }
-        else {
+            nc_get_vara_double(ncfile, varid, startp, countp, (&((double *)(out->buf()))[i * size_btyx[1] * size_btyx[2] * size_btyx[3]]));
+        } else {
             GCBS_ERROR("Failed to read band '" + _bands.get(i).name + "' for chunk " + std::to_string(id) + " from netCDF file");
             throw std::string("Failed to read band '" + _bands.get(i).name + "' for chunk " + std::to_string(id) + " from netCDF file");
         }
@@ -583,24 +519,23 @@ std::shared_ptr<chunk_data> ncdf_cube::read_chunk(chunkid_t id) {
 
     retval = nc_close(ncfile);
     if (retval != NC_NOERR) {
-        GCBS_DEBUG("Failed to properly close netCDF file '" + _path + "'; nc_close() returned " +  std::to_string(retval));
+        GCBS_DEBUG("Failed to properly close netCDF file '" + _path + "'; nc_close() returned " + std::to_string(retval));
     }
 
     _mutex.unlock();
 
     double nodata = NAN;
     if (_auto_unpack) {
-        for (uint16_t ib=0; ib<size_btyx[0]; ++ib) {
+        for (uint16_t ib = 0; ib < size_btyx[0]; ++ib) {
             if (!_bands.get(ib).no_data_value.empty()) {
-                nodata = std::atof(_bands.get(ib).no_data_value.c_str()); // TODO ignore if this fails
+                nodata = std::atof(_bands.get(ib).no_data_value.c_str());  // TODO ignore if this fails
             }
             for (uint32_t i = 0; i < size_btyx[1] * size_btyx[2] * size_btyx[3]; ++i) {
-                double &v = ((double*)out->buf())[ib * size_btyx[1] * size_btyx[2] * size_btyx[3] + i];
+                double &v = ((double *)out->buf())[ib * size_btyx[1] * size_btyx[2] * size_btyx[3] + i];
                 if (v == nodata) {
                     v = NAN;
-                }
-                else {
-                    v = _bands.get(ib).offset + v *  _bands.get(ib).scale;
+                } else {
+                    v = _bands.get(ib).offset + v * _bands.get(ib).scale;
                 }
             }
         }
@@ -608,6 +543,5 @@ std::shared_ptr<chunk_data> ncdf_cube::read_chunk(chunkid_t id) {
 
     return out;
 }
-
 
 }  // namespace gdalcubes

@@ -27,7 +27,6 @@
 #ifndef SWARM_H
 #define SWARM_H
 
-
 #include <curl/curl.h>
 
 #include "cube.h"
@@ -96,4 +95,4 @@ class gdalcubes_swarm : public chunk_processor {
 
 #endif  //SWARM_H
 
-#endif // GDALCUBES_NO_SWARM
+#endif  // GDALCUBES_NO_SWARM

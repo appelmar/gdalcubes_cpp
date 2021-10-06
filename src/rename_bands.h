@@ -27,7 +27,6 @@
 
 #include "cube.h"
 
-
 namespace gdalcubes {
 
 /**
@@ -50,15 +49,13 @@ class rename_bands_cube : public cube {
         return out;
     }
 
-
    public:
-    rename_bands_cube(std::shared_ptr<cube> in,  std::map<std::string, std::string> band_names) : cube(in->st_reference()->copy()), _in_cube(in), _band_names(band_names) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    rename_bands_cube(std::shared_ptr<cube> in, std::map<std::string, std::string> band_names) : cube(in->st_reference()->copy()), _in_cube(in), _band_names(band_names) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
 
-
-        for (uint16_t i=0; i<in->bands().count(); ++i) {
+        for (uint16_t i = 0; i < in->bands().count(); ++i) {
             std::string oldname = in->bands().get(i).name;
             if (band_names.find(oldname) != band_names.end()) {
                 band b = in->bands().get(i);
@@ -66,8 +63,7 @@ class rename_bands_cube : public cube {
                 _bands.add(b);
                 band_names.erase(band_names.find(oldname));
 
-            }
-            else {
+            } else {
                 _bands.add(in->bands().get(i));
             }
         }
@@ -77,14 +73,12 @@ class rename_bands_cube : public cube {
         }
     }
 
-
    public:
     ~rename_bands_cube() {}
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
 
     json11::Json make_constructible_json() override {
-
         json11::Json::object band_names_json;
         for (auto it = _band_names.begin(); it != _band_names.end(); ++it) {
             band_names_json[it->first] = it->second;

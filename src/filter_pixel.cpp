@@ -65,7 +65,6 @@ std::shared_ptr<chunk_data> filter_pixel_cube::read_chunk(chunkid_t id) {
         return out;
     }
 
-
     out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
     out->buf(std::calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
 

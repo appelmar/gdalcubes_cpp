@@ -87,7 +87,6 @@ struct value_mask : public image_mask {
     std::unordered_set<double> _mask_values;
     bool _invert;
     std::vector<uint8_t> _bits;
-    bool _approximate;
 };
 
 struct range_mask : public image_mask {

@@ -273,11 +273,11 @@ class cube_stref {
     //virtual std::unique_ptr<cube_stref> copy() = 0;
 
     static std::string type_string(std::shared_ptr<cube_stref> obj) {
-        if (std::dynamic_pointer_cast<cube_stref_regular>(obj) != nullptr) {
-            return "cube_stref_regular";
-        }
         if (std::dynamic_pointer_cast<cube_stref_labeled_time>(obj) != nullptr) {
             return "cube_stref_labeled_time";
+        }
+        if (std::dynamic_pointer_cast<cube_stref_regular>(obj) != nullptr) {
+            return "cube_stref_regular";
         }
         return "";
     }

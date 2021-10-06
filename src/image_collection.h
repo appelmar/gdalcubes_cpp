@@ -225,9 +225,9 @@ class image_collection {
      * @note All vector arguments represent columns of a table and must have identical sizes.
      */
     static std::shared_ptr<image_collection> create_from_tables(std::vector<std::string> band_name,
-                                                                std::vector<std::string>image_name,
-                                                                std::vector<std::string>image_proj,
-                                                                std::vector<std::string>image_datetime,
+                                                                std::vector<std::string> image_name,
+                                                                std::vector<std::string> image_proj,
+                                                                std::vector<std::string> image_datetime,
                                                                 std::vector<double> image_left,
                                                                 std::vector<double> image_top,
                                                                 std::vector<double> image_bottom,
@@ -237,8 +237,8 @@ class image_collection {
 
     // Lowe level functions to create image collections programmatically
 
-    uint32_t insert_band(uint32_t id, std::string name, std::string type="", double offset = 0.0, double scale = 1.0, std::string unit = "", std::string nodata = "");
-    uint32_t insert_band(std::string name, std::string type="", double offset = 0.0, double scale = 1.0, std::string unit = "", std::string nodata = "");
+    uint32_t insert_band(uint32_t id, std::string name, std::string type = "", double offset = 0.0, double scale = 1.0, std::string unit = "", std::string nodata = "");
+    uint32_t insert_band(std::string name, std::string type = "", double offset = 0.0, double scale = 1.0, std::string unit = "", std::string nodata = "");
 
     uint32_t insert_image(uint32_t id, std::string name, double left, double top, double bottom, double right, std::string datetime, std::string proj);
     uint32_t insert_image(std::string name, double left, double top, double bottom, double right, std::string datetime, std::string proj);
@@ -251,8 +251,6 @@ class image_collection {
 
     void transaction_start();
     void transaction_end();
-
-
 
     /**
      * Derive the size of a pixel for one or all bands in bytes

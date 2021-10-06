@@ -41,7 +41,6 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
         return out;
     }
 
-
     // Parse expressions and create symbol table
     std::vector<double> values;
     values.resize(_in_cube->bands().count() + 9, NAN);

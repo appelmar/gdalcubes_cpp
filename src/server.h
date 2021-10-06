@@ -28,9 +28,9 @@
 #include <cpprest/http_listener.h>
 #include <cpprest/uri_builder.h>
 
+#include <list>
 #include <mutex>
 #include <queue>
-#include <list>
 #include <thread>
 
 #include "cube.h"

@@ -82,7 +82,12 @@ struct min_aggregtor_time_slice_singleband : public aggregator_time_slice_single
         for (uint32_t ixy = 0; ixy < size_x * size_y; ++ixy) {
             double v = in[ixy];
             if (!std::isnan(v)) {
-                out[ixy] = std::min(out[ixy], v);
+                if (std::isnan(out[ixy])) {
+                    out[ixy] = v;
+                }
+                else {
+                    out[ixy] = std::min(out[ixy], v);
+                }
             }
         }
     }
@@ -100,7 +105,12 @@ struct max_aggregtor_time_slice_singleband : public aggregator_time_slice_single
         for (uint32_t ixy = 0; ixy < size_x * size_y; ++ixy) {
             double v = in[ixy];
             if (!std::isnan(v)) {
-                out[ixy] = std::max(out[ixy], v);
+                if (std::isnan(out[ixy])) {
+                    out[ixy] = v;
+                }
+                else {
+                    out[ixy] = std::max(out[ixy], v);
+                }
             }
         }
     }

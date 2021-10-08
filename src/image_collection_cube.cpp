@@ -386,7 +386,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
         std::string image_name = datasets[i].image_name;
         std::string src_srs = datasets[i].srs;
         datetime dt = datetime::from_string(datasets[i].datetime);
-        dt.unit() = _st_ref->dt_unit();  // explicit datetime unit cast
+        dt.unit(_st_ref->dt_unit());  // explicit datetime unit cast
         duration temp_dt = _st_ref->dt();
         int itime = (dt - cextent.t0) / temp_dt;  // time index, at which time slice of the chunk buffer will this image be written?
 
@@ -668,8 +668,8 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
 
         datetime t0 = out.t0();
         datetime t1 = out.t1();
-        t0.unit() = out.dt().dt_unit;
-        t1.unit() = out.dt().dt_unit;
+        t0.unit(out.dt().dt_unit);
+        t1.unit(out.dt().dt_unit);
         out.t0(t0);
         out.t1(t1);
         out.nt(4);

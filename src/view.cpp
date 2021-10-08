@@ -42,8 +42,8 @@ cube_view cube_view::read(json11::Json j) {
     v._t1 = datetime::from_string(st1);
 
     // No matter how the start and end datetime are given, use the unit of the datetime interval!
-    v._t0.unit() = v._dt.dt_unit;
-    v._t1.unit() = v._dt.dt_unit;
+    v._t0.unit(v._dt.dt_unit);
+    v._t1.unit(v._dt.dt_unit);
 
     if (!j["space"].is_null()) {
         v._win.left = j["space"]["left"].number_value();

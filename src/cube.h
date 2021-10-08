@@ -884,6 +884,15 @@ class cube : public std::enable_shared_from_this<cube> {
      * @brief List of cube instances that take this object as input (successors)
      */
     std::vector<std::weak_ptr<cube>> _succ;
+
+
+    /**
+     * @brief Optimization flag defining whether pixel values depend on pixel values located somewhere else
+     */
+    bool _optim_is_local; // TODO
+    bool _optim_is_chunk_local;  // TODO
+    bool _optim_reccomend_cache_input; // TODO
+
 };
 
 }  // namespace gdalcubes

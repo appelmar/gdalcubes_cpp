@@ -409,8 +409,8 @@ class cube_stref_regular : public cube_stref {
 
     virtual void dt(duration dt) {
         //if (dt.dt_unit != _dt.dt_unit) {
-        _t0.unit() = dt.dt_unit;
-        _t1.unit() = dt.dt_unit;
+        _t0.unit(dt.dt_unit);
+        _t1.unit(dt.dt_unit);
         //}
         duration dtotal = _t1 - _t0;  // + 1 if include end date2
         dtotal.dt_interval += 1;
@@ -659,8 +659,8 @@ class cube_stref_labeled_time : public cube_stref_regular {
     }
 
     virtual void dt(duration dt) override {
-        _t0.unit() = dt.dt_unit;
-        _t1.unit() = dt.dt_unit;
+        _t0.unit(dt.dt_unit);
+        _t1.unit(dt.dt_unit);
         _dt = dt;
     }
 

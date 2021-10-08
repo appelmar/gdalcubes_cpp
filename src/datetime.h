@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -231,7 +231,42 @@ class datetime {
     // from standard format with variable precision (
     static datetime from_string(std::string s);
 
-    datetime_unit& unit() { return _unit; }
+    void unit(datetime_unit u) {
+
+        // Reset finer datetime components
+        switch (u) {
+            case datetime_unit::NONE:
+                break;
+            case datetime_unit::SECOND:
+                break;
+            case datetime_unit::MINUTE:
+                _p = date::sys_days{date::year(this->year()) / date::month(this->month()) / date::day(this->dayofmonth())} +
+                    std::chrono::hours{this->hours()} + std::chrono::minutes{this->minutes()} + std::chrono::seconds{0};
+                break;
+            case datetime_unit::HOUR:
+                _p = date::sys_days{date::year(this->year()) / date::month(this->month()) / date::day(this->dayofmonth())} +
+                     std::chrono::hours{this->hours()} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                break;
+            case datetime_unit::DAY:
+                _p = date::sys_days{date::year(this->year()) / date::month(this->month()) / date::day(this->dayofmonth())} +
+                     std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                break;
+            case datetime_unit::WEEK:
+                _p = date::sys_days{date::year(this->year()) / date::month(this->month()) / date::day(this->dayofmonth())} +
+                     std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                break;
+            case datetime_unit::MONTH:
+                _p = date::sys_days{date::year(this->year()) / date::month(this->month()) / date::day(1)} +
+                     std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                break;
+            case datetime_unit::YEAR:
+               _p = date::sys_days{date::year(this->year()) / date::month(1) / date::day(1)} +
+                    std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                break;
+        }
+        _unit = u;
+
+    }
     datetime_unit unit() const { return _unit; }
 
     friend duration operator-(const datetime& l,

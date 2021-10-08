@@ -247,7 +247,6 @@ std::shared_ptr<chunk_data> simple_cube::read_chunk(chunkid_t id) {
     bounds_st cextent = bounds_from_chunk(id);
 
     auto climits = chunk_limits(id);
-
     //////
     /*
      * 1. if each image contains all bands: find out which images are between start and end date,

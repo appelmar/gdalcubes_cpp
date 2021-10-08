@@ -27,6 +27,7 @@
 #ifndef GDALCUBES_H
 #define GDALCUBES_H
 
+#include "aggregate_time.h"
 #include "apply_pixel.h"
 #include "build_info.h"
 #include "config.h"

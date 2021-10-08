@@ -26,6 +26,7 @@
 
 #include <fstream>
 
+#include "aggregate_time.h"
 #include "apply_pixel.h"
 #include "dummy.h"
 #include "external/json11/json11.hpp"
@@ -149,6 +150,12 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "fill_time", [](json11::Json& j) {
             auto x = fill_time_cube::create(instance()->create_from_json(j["in_cube"]), j["method"].string_value());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "aggregate_time", [](json11::Json& j) {
+            auto x = aggregate_time_cube::create(instance()->create_from_json(j["in_cube"]), j["dt"].string_value(), j["func"].string_value());
             return x;
         }));
 

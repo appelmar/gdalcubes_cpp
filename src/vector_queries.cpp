@@ -116,10 +116,10 @@ std::vector<std::vector<double>> vector_queries::query_points(std::shared_ptr<cu
 
                 datetime dt = datetime::from_string(t[i]);
                 if (dt.unit() > cube->st_reference()->dt().dt_unit) {
-                    dt.unit() = cube->st_reference()->dt().dt_unit;
+                    dt.unit(cube->st_reference()->dt().dt_unit);
                     GCBS_WARN("date / time of query point has coarser granularity than the data cube; converting '" + t[i] + "' -> '" + dt.to_string() + "'");
                 } else {
-                    dt.unit() = cube->st_reference()->dt().dt_unit;
+                    dt.unit(cube->st_reference()->dt().dt_unit);
                 }
                 it[i] = cube->st_reference()->index_at_datetime(dt);
 

@@ -67,8 +67,8 @@ class aggregate_time_cube : public cube {
      */
     static std::shared_ptr<aggregate_time_cube> create(std::shared_ptr<cube> in, uint32_t fact, std::string func = "mean") {
         if (!in->st_reference()->has_regular_time()) {
-            GCBS_ERROR("Aggregation of datacubes works only by providing a new datetime duration instrad of fact");
-            throw std::string("Aggregation of datacubes works only by providing a new datetime duration instrad of fact");
+            GCBS_ERROR("Aggregation of data cubes works only by providing a new datetime duration instead of fact");
+            throw std::string("Aggregation of data cubes works only by providing a new datetime duration instead of fact");
         }
         duration dt = in->st_reference()->dt();
         dt.dt_interval = (int32_t)fact * dt.dt_interval;
@@ -112,7 +112,7 @@ class aggregate_time_cube : public cube {
             stref->t0(std::dynamic_pointer_cast<cube_stref_regular>(in->st_reference())->t0());
             stref->t1(std::dynamic_pointer_cast<cube_stref_regular>(in->st_reference())->t1());
         }
-        else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
+        else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
             stref->t0(std::dynamic_pointer_cast<cube_stref_labeled_time>(in->st_reference())->t0());
             stref->t1(std::dynamic_pointer_cast<cube_stref_labeled_time>(in->st_reference())->t1());
         }

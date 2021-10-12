@@ -44,11 +44,35 @@ class aggregate_time_cube : public cube {
      * the constructors will not set connections between cubes properly.
      * @param in input data cube
      * @param func aggregation function
-     * @param dt new temporal duration of a data cube pixel
+     * @param fact number of cells that become aggregated to a new cell
      * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<aggregate_time_cube> create(std::shared_ptr<cube> in, std::string dt, std::string func = "mean") {
         std::shared_ptr<aggregate_time_cube> out = std::make_shared<aggregate_time_cube>(in, dt, func);
+
+        // TODO: labeled time axis?
+        in->add_child_cube(out);
+        out->add_parent_cube(in);
+        return out;
+    }
+
+    /**
+     * @brief Create a data cube that aggregates pixel time series to lower temporal resolution
+     * @note This static creation method should preferably be used instead of the constructors as
+     * the constructors will not set connections between cubes properly.
+     * @param in input data cube
+     * @param func aggregation function
+     * @param dt new temporal duration of a data cube pixel
+     * @return a shared pointer to the created data cube instance
+     */
+    static std::shared_ptr<aggregate_time_cube> create(std::shared_ptr<cube> in, uint32_t fact, std::string func = "mean") {
+        if (!in->st_reference()->has_regular_time()) {
+            GCBS_ERROR("Aggregation of datacubes works only by providing a new datetime duration instrad of fact");
+            throw std::string("Aggregation of datacubes works only by providing a new datetime duration instrad of fact");
+        }
+        duration dt = in->st_reference()->dt();
+        dt.dt_interval = (int32_t)fact * dt.dt_interval;
+        std::shared_ptr<aggregate_time_cube> out = std::make_shared<aggregate_time_cube>(in, dt.to_string(), func);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
@@ -119,7 +143,6 @@ class aggregate_time_cube : public cube {
                 t_next.unit( _in_cube->st_reference()->dt_unit());
 
                 uint32_t first = _in_cube->st_reference()->index_at_datetime(t_cur);
-                uint32_t last = _in_cube->st_reference()->index_at_datetime(t_next);
                 if (_in_cube->st_reference()->datetime_at_index(first) != t_cur) {
                     GCBS_WARN("Some cells of the aggregated cube temporally overlap with two cells of the input cube "
                         "(their boundaries do not align). Aggregation function will select cells of the input cube based on "
@@ -129,9 +152,6 @@ class aggregate_time_cube : public cube {
                 }
             }
         }
-
-
-
     }
 
    public:

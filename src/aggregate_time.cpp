@@ -297,42 +297,6 @@ std::shared_ptr<chunk_data> aggregate_time_cube::read_chunk(chunkid_t id) {
     double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
     std::fill(begin, end, NAN);
 
-
-    /*
-    std::vector<reducer_singleband *> reducers;
-    for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
-        reducer_singleband *r = nullptr;
-        if (_reducer_bands[i].first == "min") {
-            r = new min_reducer_singleband();
-        } else if (_reducer_bands[i].first == "max") {
-            r = new max_reducer_singleband();
-        } else if (_reducer_bands[i].first == "mean") {
-            r = new mean_reducer_singleband();
-        } else if (_reducer_bands[i].first == "median") {
-            r = new median_reducer_singleband();
-        } else if (_reducer_bands[i].first == "sum") {
-            r = new sum_reducer_singleband();
-        } else if (_reducer_bands[i].first == "count") {
-            r = new count_reducer_singleband();
-        } else if (_reducer_bands[i].first == "prod") {
-            r = new prod_reducer_singleband();
-        } else if (_reducer_bands[i].first == "var") {
-            r = new var_reducer_singleband();
-        } else if (_reducer_bands[i].first == "sd") {
-            r = new sd_reducer_singleband();
-        } else if (_reducer_bands[i].first == "which_min") {
-            r = new which_min_reducer_singleband();
-        } else if (_reducer_bands[i].first == "which_max") {
-            r = new which_max_reducer_singleband();
-        } else
-            throw std::string("ERROR in reduce_time_cube::read_chunk(): Unknown reducer given");
-
-        uint16_t band_idx_in = _in_cube->bands().get_index(_reducer_bands[i].second);
-        r->init(out, band_idx_in, i, _in_cube);
-
-        reducers.push_back(r);
-    }*/
-
     auto climits = chunk_limits(id);
     auto ccoords = chunk_coords_from_id(id);
 

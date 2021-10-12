@@ -384,7 +384,13 @@ std::shared_ptr<chunk_data> aggregate_time_cube::read_chunk(chunkid_t id) {
 
         if (cube_stref::type_string(_in_cube->st_reference()) == "cube_stref_regular") {
             first = _in_cube->st_reference()->index_at_datetime(t_cur);
-            last = _in_cube->st_reference()->index_at_datetime(t_next) - 1;
+            if (_in_cube->st_reference()->datetime_at_index(first) < t_cur) {
+                ++first;
+            }
+            last = _in_cube->st_reference()->index_at_datetime(t_next);
+            if (_in_cube->st_reference()->datetime_at_index(last) >= t_next) {
+                --last;
+            }
         }
         else if (cube_stref::type_string(_in_cube->st_reference()) == "cube_stref_labeled_time") {
             auto p = std::dynamic_pointer_cast<cube_stref_labeled_time>(_in_cube->st_reference());

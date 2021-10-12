@@ -107,6 +107,31 @@ class aggregate_time_cube : public cube {
         for (uint16_t i = 0; i < in->bands().count(); ++i) {
             _bands.add(in->bands().get(i));
         }
+
+        // check whether cell boundaries of input cube are aligned with
+        // cell boundaries of result cube
+        if (cube_stref::type_string(_in_cube->st_reference()) == "cube_stref_regular") {
+            for (uint32_t it=0; it<in->size_t(); ++it) {
+                datetime t_cur = _st_ref->datetime_at_index(it);
+                datetime t_next =  _st_ref->datetime_at_index( it + 1);
+
+                t_cur.unit(_in_cube->st_reference()->dt_unit());
+                t_next.unit( _in_cube->st_reference()->dt_unit());
+
+                uint32_t first = _in_cube->st_reference()->index_at_datetime(t_cur);
+                uint32_t last = _in_cube->st_reference()->index_at_datetime(t_next);
+                if (_in_cube->st_reference()->datetime_at_index(first) != t_cur) {
+                    GCBS_WARN("Some cells of the aggregated cube temporally overlap with two cells of the input cube "
+                        "(their boundaries do not align). Aggregation function will select cells of the input cube based on "
+                        "their starting datetime. If this is not desired, please change the temporal resolution and/or "
+                        "aggregation size to yield aligned cell boundaries.");
+                    break; // only once
+                }
+            }
+        }
+
+
+
     }
 
    public:

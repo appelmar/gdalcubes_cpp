@@ -43,7 +43,8 @@ class slice_space_cube : public cube {
      * @note This static creation method should preferably be used instead of the constructors as
      * the constructors will not set connections between cubes properly.
      * @param in input data cube
-     * @param t datetime string of the temporal slice
+     * @param ix integer x coordinate of the requested slice
+     * @param iy integer y coordinate of the requested slice
      * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<slice_space_cube> create(std::shared_ptr<cube> in, int32_t ix, int32_t iy) {
@@ -58,7 +59,8 @@ class slice_space_cube : public cube {
      * @note This static creation method should preferably be used instead of the constructors as
      * the constructors will not set connections between cubes properly.
      * @param in input data cube
-     * @param t integer index of the temporal slice
+     * @param x spatial x coordinate of the requested slice, expected to be in the cube's crs
+     * @param y spatial y coordinate of the requested slice, expected to be in the cube's crs
      * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<slice_space_cube> create(std::shared_ptr<cube> in, double x, double y) {

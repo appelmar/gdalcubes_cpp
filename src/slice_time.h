@@ -1,50 +1,50 @@
 /*
-    MIT License
+MIT License
 
-    Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
+Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                                          copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
-*/
+        */
 
 #ifndef SLICE_TIME_H
 #define SLICE_TIME_H
 
 #include "cube.h"
 
-namespace gdalcubes {
+    namespace gdalcubes {
 
 /**
- * @brief A data cube that applies one or more arithmetic expressions on band values per pixel
- *
- * @note This class either works either with exprtk or with tinyexpr, depending on whether USE_EXPRTK is defined or not.
- * Please notice that the functionality of these libraries (i.e. the amount of functions they support) may vary. tinyexpr
- * seems to work only with lower case symbols, expressions and band names are automatically converted to lower case then.
+* @brief A data cube that applies one or more arithmetic expressions on band values per pixel
+*
+* @note This class either works either with exprtk or with tinyexpr, depending on whether USE_EXPRTK is defined or not.
+* Please notice that the functionality of these libraries (i.e. the amount of functions they support) may vary. tinyexpr
+* seems to work only with lower case symbols, expressions and band names are automatically converted to lower case then.
  */
 class slice_time_cube : public cube {
    public:
     /**
-     * @brief Create a data cube that extracts a time slice from a cube
-     * @note This static creation method should preferably be used instead of the constructors as
-     * the constructors will not set connections between cubes properly.
-     * @param in input data cube
-     * @param t datetime string of the temporal slice
-     * @return a shared pointer to the created data cube instance
+ * @brief Create a data cube that extracts a time slice from a cube
+ * @note This static creation method should preferably be used instead of the constructors as
+ * the constructors will not set connections between cubes properly.
+ * @param in input data cube
+ * @param t datetime string of the temporal slice
+ * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<slice_time_cube> create(std::shared_ptr<cube> in, std::string t) {
         std::shared_ptr<slice_time_cube> out = std::make_shared<slice_time_cube>(in, t);
@@ -54,12 +54,12 @@ class slice_time_cube : public cube {
     }
 
     /**
-     * @brief Create a data cube that extracts a time slice from a cube
-     * @note This static creation method should preferably be used instead of the constructors as
-     * the constructors will not set connections between cubes properly.
-     * @param in input data cube
-     * @param t integer index of the temporal slice
-     * @return a shared pointer to the created data cube instance
+ * @brief Create a data cube that extracts a time slice from a cube
+ * @note This static creation method should preferably be used instead of the constructors as
+ * the constructors will not set connections between cubes properly.
+ * @param in input data cube
+ * @param t integer index of the temporal slice
+ * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<slice_time_cube> create(std::shared_ptr<cube> in, int32_t t) {
         std::shared_ptr<slice_time_cube> out = std::make_shared<slice_time_cube>(in, t);
@@ -82,7 +82,7 @@ class slice_time_cube : public cube {
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
             auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
             stref->t0(_in_cube->st_reference()->datetime_at_index(_t_index));
-            stref->t1(_in_cube->st_reference()->datetime_at_index(_t_index + 1));
+            stref->t1(_in_cube->st_reference()->datetime_at_index(_t_index));
         }
         else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
             auto stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
@@ -108,7 +108,7 @@ class slice_time_cube : public cube {
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
             auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
             stref->t0(_in_cube->st_reference()->datetime_at_index(_t_index));
-            stref->t1(_in_cube->st_reference()->datetime_at_index(_t_index + 1));
+            stref->t1(_in_cube->st_reference()->datetime_at_index(_t_index));
         }
         else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
             auto stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);

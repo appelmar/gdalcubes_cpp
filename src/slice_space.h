@@ -1,51 +1,51 @@
 /*
-    MIT License
+MIT License
 
-    Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
+Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                                          copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
-*/
+        */
 
 #ifndef SLICE_SPACE_H
 #define SLICE_SPACE_H
 
 #include "cube.h"
 
-namespace gdalcubes {
+    namespace gdalcubes {
 
 /**
- * @brief A data cube that applies one or more arithmetic expressions on band values per pixel
- *
- * @note This class either works either with exprtk or with tinyexpr, depending on whether USE_EXPRTK is defined or not.
- * Please notice that the functionality of these libraries (i.e. the amount of functions they support) may vary. tinyexpr
- * seems to work only with lower case symbols, expressions and band names are automatically converted to lower case then.
+* @brief A data cube that applies one or more arithmetic expressions on band values per pixel
+*
+* @note This class either works either with exprtk or with tinyexpr, depending on whether USE_EXPRTK is defined or not.
+* Please notice that the functionality of these libraries (i.e. the amount of functions they support) may vary. tinyexpr
+* seems to work only with lower case symbols, expressions and band names are automatically converted to lower case then.
  */
 class slice_space_cube : public cube {
    public:
     /**
-     * @brief Create a data cube that extracts a time slice from a cube
-     * @note This static creation method should preferably be used instead of the constructors as
-     * the constructors will not set connections between cubes properly.
-     * @param in input data cube
-     * @param ix integer x coordinate of the requested slice
-     * @param iy integer y coordinate of the requested slice
-     * @return a shared pointer to the created data cube instance
+ * @brief Create a data cube that extracts a time slice from a cube
+ * @note This static creation method should preferably be used instead of the constructors as
+ * the constructors will not set connections between cubes properly.
+ * @param in input data cube
+ * @param ix integer x coordinate of the requested slice
+ * @param iy integer y coordinate of the requested slice
+ * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<slice_space_cube> create(std::shared_ptr<cube> in, int32_t ix, int32_t iy) {
         std::shared_ptr<slice_space_cube> out = std::make_shared<slice_space_cube>(in, ix, iy);
@@ -55,13 +55,13 @@ class slice_space_cube : public cube {
     }
 
     /**
-     * @brief Create a data cube that extracts a time slice from a cube
-     * @note This static creation method should preferably be used instead of the constructors as
-     * the constructors will not set connections between cubes properly.
-     * @param in input data cube
-     * @param x spatial x coordinate of the requested slice, expected to be in the cube's crs
-     * @param y spatial y coordinate of the requested slice, expected to be in the cube's crs
-     * @return a shared pointer to the created data cube instance
+ * @brief Create a data cube that extracts a time slice from a cube
+ * @note This static creation method should preferably be used instead of the constructors as
+ * the constructors will not set connections between cubes properly.
+ * @param in input data cube
+ * @param x spatial x coordinate of the requested slice, expected to be in the cube's crs
+ * @param y spatial y coordinate of the requested slice, expected to be in the cube's crs
+ * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<slice_space_cube> create(std::shared_ptr<cube> in, double x, double y) {
         std::shared_ptr<slice_space_cube> out = std::make_shared<slice_space_cube>(in, x, y);
@@ -85,10 +85,12 @@ class slice_space_cube : public cube {
 
 
         auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref); // Notice that this works for labeled time axis too, because labeled st ref inherits from regular
-        stref->left(stref->left() + _x_index * stref->dx());
-        stref->right(stref->left() + (_x_index + 1) * stref->dx());
-        stref->bottom(stref->bottom() + _y_index * stref->dy());
-        stref->top(stref->bottom() + (_y_index+1) * stref->dy());
+        stref->left(in->st_reference()->left() + _x_index * in->st_reference()->dx());
+        stref->right(in->st_reference()->left() + (_x_index + 1) * in->st_reference()->dx());
+        stref->bottom(in->st_reference()->bottom() + _y_index * in->st_reference()->dy());
+        stref->top(in->st_reference()->bottom() + (_y_index+1) * in->st_reference()->dy());
+        stref->nx(1);
+        stref->ny(1);
 
         if (_st_ref->nx() != 1) {
             std::string msg = "Data cube slice has invalid geometry: nx is not equal to 1";
@@ -122,10 +124,12 @@ class slice_space_cube : public cube {
 
 
         auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref); // Notice that this works for labeled time axis too, because labeled st ref inherits from regular
-        stref->left(stref->left() + _x_index * stref->dx());
-        stref->right(stref->left() + (_x_index + 1) * stref->dx());
-        stref->bottom(stref->bottom() + _y_index * stref->dy());
-        stref->top(stref->bottom() + (_y_index+1) * stref->dy());
+        stref->left(in->st_reference()->left() + _x_index * in->st_reference()->dx());
+        stref->right(in->st_reference()->left() + (_x_index + 1) * in->st_reference()->dx());
+        stref->bottom(in->st_reference()->bottom() + _y_index * in->st_reference()->dy());
+        stref->top(in->st_reference()->bottom() + (_y_index+1) * in->st_reference()->dy());
+        stref->nx(1);
+        stref->ny(1);
 
         if (_st_ref->nx() != 1) {
             std::string msg = "Data cube slice has invalid geometry: nx is not equal to 1";

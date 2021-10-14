@@ -42,6 +42,8 @@
 #include "select_bands.h"
 #include "select_time.h"
 #include "simple_cube.h"
+#include "slice_time.h"
+#include "slice_space.h"
 #include "stream.h"
 #include "stream_apply_pixel.h"
 #include "stream_apply_time.h"
@@ -248,6 +250,18 @@ void cube_factory::register_default() {
                 t.push_back(j["t"][i].string_value());
             }
             auto x = select_time_cube::create(instance()->create_from_json(j["in_cube"]), t);
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "slice_time", [](json11::Json& j) {
+            auto x = slice_time_cube::create(instance()->create_from_json(j["in_cube"]), j["t"].int_value());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "slice_space", [](json11::Json& j) {
+            auto x = slice_space_cube::create(instance()->create_from_json(j["in_cube"]), j["ix"].int_value(), j["iy"].int_value());
             return x;
         }));
 

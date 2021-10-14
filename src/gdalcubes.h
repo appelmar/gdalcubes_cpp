@@ -47,6 +47,8 @@
 #include "select_bands.h"
 #include "select_time.h"
 #include "simple_cube.h"
+#include "slice_time.h"
+#include "slice_space.h"
 #include "stream.h"
 #include "stream_apply_pixel.h"
 #include "stream_apply_time.h"

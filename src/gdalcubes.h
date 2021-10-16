@@ -32,6 +32,7 @@
 #include "build_info.h"
 #include "config.h"
 #include "cube.h"
+#include "crop.h"
 #include "dummy.h"
 #include "fill_time.h"
 #include "filter_geom.h"

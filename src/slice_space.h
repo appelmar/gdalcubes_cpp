@@ -30,12 +30,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     namespace gdalcubes {
 
 /**
-* @brief A data cube that applies one or more arithmetic expressions on band values per pixel
-*
-* @note This class either works either with exprtk or with tinyexpr, depending on whether USE_EXPRTK is defined or not.
-* Please notice that the functionality of these libraries (i.e. the amount of functions they support) may vary. tinyexpr
-* seems to work only with lower case symbols, expressions and band names are automatically converted to lower case then.
- */
+* @brief A data cube that extracts a single time series (spatial slice) from a source data cube
+*/
 class slice_space_cube : public cube {
    public:
     /**

@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,7 @@
 
 #include "aggregate_time.h"
 #include "apply_pixel.h"
+#include "crop.h"
 #include "dummy.h"
 #include "external/json11/json11.hpp"
 #include "filesystem.h"
@@ -262,6 +263,15 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "slice_space", [](json11::Json& j) {
             auto x = slice_space_cube::create(instance()->create_from_json(j["in_cube"]), j["ix"].int_value(), j["iy"].int_value());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "crop", [](json11::Json& j) {
+            auto x = crop_cube::create(instance()->create_from_json(j["in_cube"]),
+                                              j["ix_min"].int_value(), j["ix_max"].int_value(),
+                                              j["iy_min"].int_value(), j["iy_max"].int_value(),
+                                              j["it_min"].int_value(), j["it_max"].int_value());
             return x;
         }));
 

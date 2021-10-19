@@ -27,14 +27,14 @@ SOFTWARE.
 
 #include "cube.h"
 
-    namespace gdalcubes {
+namespace gdalcubes {
 
 /**
-* @brief A data cube that crops space and/or time dimensions of a source data cube
-**/
+ * @brief A data cube that crops space and/or time dimensions of a source data cube
+ **/
 class crop_cube : public cube {
    public:
-   /**
+    /**
      * @brief Create a data cube crops a source data cube by spatial and/or temporal ranges
      * @note This static creation method should preferably be used instead of the constructors as
      * the constructors will not set connections between cubes properly.
@@ -48,15 +48,12 @@ class crop_cube : public cube {
      * @return a shared pointer to the created data cube instance
      */
     static std::shared_ptr<crop_cube> create(std::shared_ptr<cube> in, int32_t ix_min, int32_t ix_max,
-                                                    int32_t iy_min, int32_t iy_max, int32_t it_min, int32_t it_max) {
-
-        std::shared_ptr<crop_cube> out = std::make_shared<crop_cube>(in, ix_min, ix_max, iy_min, iy_max,  it_min, it_max);
+                                             int32_t iy_min, int32_t iy_max, int32_t it_min, int32_t it_max) {
+        std::shared_ptr<crop_cube> out = std::make_shared<crop_cube>(in, ix_min, ix_max, iy_min, iy_max, it_min, it_max);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
     }
-
-
 
    public:
     /**
@@ -76,13 +73,12 @@ class crop_cube : public cube {
     static std::shared_ptr<crop_cube> create(std::shared_ptr<cube> in, double left, double right,
                                              double bottom, double top, std::string t0, std::string t1,
                                              std::string snap = "near") {
-
         int32_t ix_min, ix_max, iy_min, iy_max, it_min, it_max;
 
-        double x_min =  (left - in->st_reference()->left()) / (double)in->st_reference()->dx();
-        double x_max =  - 1 + (right - in->st_reference()->left()) / (double)in->st_reference()->dx();
-        double y_min =  (bottom - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
-        double y_max =  - 1 + (top - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
+        double x_min = (left - in->st_reference()->left()) / (double)in->st_reference()->dx();
+        double x_max = -1 + (right - in->st_reference()->left()) / (double)in->st_reference()->dx();
+        double y_min = (bottom - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
+        double y_max = -1 + (top - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
         double t_min, t_max;
 
         if (snap == "near") {
@@ -141,14 +137,14 @@ class crop_cube : public cube {
             std::vector<datetime> labels = stref->get_time_labels();
             // Assuming labels are sorted
 
-            if (dt0 < labels[0] || dt0 > labels[labels.size()-1] ||
-                dt1 < labels[0] || dt1 > labels[labels.size()-1] ) {
+            if (dt0 < labels[0] || dt0 > labels[labels.size() - 1] ||
+                dt1 < labels[0] || dt1 > labels[labels.size() - 1]) {
                 std::string msg = "Temporal range of crop region reaches beyond data cube bounds";
                 GCBS_ERROR(msg);
                 throw std::string(msg);
             }
 
-            int32_t i=0;
+            int32_t i = 0;
             while (i < (int32_t)labels.size()) {
                 if (labels[i] < dt0) {
                     it_min = i;
@@ -161,36 +157,38 @@ class crop_cube : public cube {
 
             if (snap == "near") {
                 // TODO: do we need to check for out-of-bounds cases?
-                if ((dt0 - stref->datetime_at_index(it_min)).dt_interval  >=
+                if ((dt0 - stref->datetime_at_index(it_min)).dt_interval >=
                     (stref->datetime_at_index(it_min + 1) - dt0).dt_interval) {
                     it_min++;
                 }
-                if ((dt1 - stref->datetime_at_index(it_max)).dt_interval  >=
+                if ((dt1 - stref->datetime_at_index(it_max)).dt_interval >=
                     (stref->datetime_at_index(it_max + 1) - dt1).dt_interval) {
                     it_max++;
                 }
             }
             else if (snap == "in") {
-                it_min++; // TODO: do we need to check for out-of-bounds cases?
+                it_min++;  // TODO: do we need to check for out-of-bounds cases?
             }
             else if (snap == "out") {
-                it_max++; // TODO: do we need to check for out-of-bounds cases?
+                it_max++;  // TODO: do we need to check for out-of-bounds cases?
             }
         }
 
-
-        std::shared_ptr<crop_cube> out = std::make_shared<crop_cube>(in, ix_min, ix_max, iy_min, iy_max,  it_min, it_max);
+        std::shared_ptr<crop_cube> out = std::make_shared<crop_cube>(in, ix_min, ix_max, iy_min, iy_max, it_min, it_max);
         in->add_child_cube(out);
         out->add_parent_cube(in);
         return out;
     }
 
-
    public:
     crop_cube(std::shared_ptr<cube> in, int32_t ix_min, int32_t ix_max, int32_t iy_min, int32_t iy_max,
               int32_t it_min, int32_t it_max) : cube(in->st_reference()->copy()),
-                                                _in_cube(in), _x_min(ix_min), _x_max(ix_max),
-                                                _y_min(iy_min), _y_max(iy_max),_t_min(it_min),
+                                                _in_cube(in),
+                                                _x_min(ix_min),
+                                                _x_max(ix_max),
+                                                _y_min(iy_min),
+                                                _y_max(iy_max),
+                                                _t_min(it_min),
                                                 _t_max(it_max) {
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = _in_cube->chunk_size()[1];
@@ -218,14 +216,13 @@ class crop_cube : public cube {
             std::swap(_t_min, _t_max);
         }
 
-
-        auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref); // Notice that this works for labeled time axis too, because labeled st ref inherits from regular
+        auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);  // Notice that this works for labeled time axis too, because labeled st ref inherits from regular
         stref->left(in->st_reference()->left() + _x_min * in->st_reference()->dx());
         stref->right(in->st_reference()->left() + (_x_max + 1) * in->st_reference()->dx());
-        stref->bottom(in->st_reference()->bottom() + _y_min* in->st_reference()->dy());
-        stref->top(in->st_reference()->bottom() + (_y_max+1) * in->st_reference()->dy());
-        stref->dx(in->st_reference()->dx());
-        stref->dy(in->st_reference()->dy());
+        stref->bottom(in->st_reference()->bottom() + _y_min * in->st_reference()->dy());
+        stref->top(in->st_reference()->bottom() + (_y_max + 1) * in->st_reference()->dy());
+        stref->nx(_x_max - _x_min + 1);
+        stref->ny(_y_max - _y_min + 1);
 
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
             stref->t0(_in_cube->st_reference()->datetime_at_index(_t_min));
@@ -233,7 +230,7 @@ class crop_cube : public cube {
         }
         else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
             std::vector<datetime> time_labels = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref)->get_time_labels();
-            std::vector<datetime> time_labels_cropped(&time_labels[_t_min], &time_labels[_t_max+1]);
+            std::vector<datetime> time_labels_cropped(&time_labels[_t_min], &time_labels[_t_max + 1]);
             std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref)->set_time_labels(time_labels_cropped);
         }
 
@@ -241,7 +238,6 @@ class crop_cube : public cube {
             _bands.add(in->bands().get(i));
         }
     }
-
 
    public:
     ~crop_cube() {}
@@ -267,9 +263,8 @@ class crop_cube : public cube {
     int32_t _y_max;
     int32_t _t_min;
     int32_t _t_max;
-
 };
 
 }  // namespace gdalcubes
 
-#endif  //CROP_H
+#endif  // CROP_H

@@ -23,12 +23,12 @@ std::shared_ptr<chunk_data> crop_cube::read_chunk(chunkid_t id) {
     int32_t abs_high_t = abs_low_t + size_tyx[0] - 1; // TODO: check and test for different chunk sizes
 
     chunk_coordinate_tyx input_chunk_coords_low = {abs_low_t /  _in_cube->chunk_size()[0],
-                                   abs_low_y /  _in_cube->chunk_size()[1],
-                                   abs_low_x /  _in_cube->chunk_size()[2]};
+                                                   abs_low_y /  _in_cube->chunk_size()[1],
+                                                   abs_low_x /  _in_cube->chunk_size()[2]};
 
     chunk_coordinate_tyx input_chunk_coords_high = {abs_high_t /  _in_cube->chunk_size()[0],
-                                    abs_high_y /  _in_cube->chunk_size()[1],
-                                    abs_high_x /  _in_cube->chunk_size()[2]};
+                                                    abs_high_y /  _in_cube->chunk_size()[1],
+                                                    abs_high_x /  _in_cube->chunk_size()[2]};
 
 
 
@@ -36,7 +36,6 @@ std::shared_ptr<chunk_data> crop_cube::read_chunk(chunkid_t id) {
         for (uint16_t ch_y = input_chunk_coords_low[1]; ch_y <= input_chunk_coords_high[1]; ++ch_y) {
             for (uint16_t ch_x = input_chunk_coords_low[2]; ch_x <= input_chunk_coords_high[2]; ++ch_x) {
                 chunkid_t input_chunk_id = _in_cube->chunk_id_from_coords({ch_t, ch_y, ch_x});
-
                 std::shared_ptr<chunk_data> in_chunk = _in_cube->read_chunk(input_chunk_id);
 
                 if (in_chunk->empty()) {
@@ -72,10 +71,10 @@ std::shared_ptr<chunk_data> crop_cube::read_chunk(chunkid_t id) {
                         for (int32_t iy=start_y; iy <= end_y; ++iy) {
                             for (int32_t ix=start_x; ix <= end_x; ++ix) {
                                 int32_t out_t = (it - _t_min) % (int32_t)chunk_size()[0];
-                                int32_t out_y = (iy - _y_min) % (int32_t)chunk_size()[1];
+                                int32_t out_y = (size_tyx[1] - 1) - (iy - _y_min) % (int32_t)chunk_size()[1];
                                 int32_t out_x = (ix - _x_min) % (int32_t)chunk_size()[2];
                                 int32_t in_t =  it  % (int32_t)_in_cube->chunk_size()[0];
-                                int32_t in_y =  iy  % (int32_t)_in_cube->chunk_size()[1];
+                                int32_t in_y =  in_chunk->size()[2] - 1 - (iy  % (int32_t)_in_cube->chunk_size()[1]);
                                 int32_t in_x =  ix  % (int32_t)_in_cube->chunk_size()[2];
 
                                 ((double*)out->buf())[ib * size_btyx[1] * size_btyx[2] * size_btyx[3] + out_t * size_btyx[2] * size_btyx[3] + out_y * size_btyx[3] + out_x] =((double*)in_chunk->buf())[ib * in_chunk->size()[1] * in_chunk->size()[2] * in_chunk->size()[3] + in_t * in_chunk->size()[2] * in_chunk->size()[3] + in_y *  in_chunk->size()[3] + in_x];

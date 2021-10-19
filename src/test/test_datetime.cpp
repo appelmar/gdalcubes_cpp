@@ -42,6 +42,11 @@ TEST_CASE("Deriving datetime unit from string", "[datetime]") {
     REQUIRE(duration::from_string("P3D").dt_unit == datetime_unit::DAY);
     REQUIRE(duration::from_string("P3M").dt_unit == datetime_unit::MONTH);
     REQUIRE(duration::from_string("P3Y").dt_unit == datetime_unit::YEAR);
+
+    REQUIRE(datetime::from_string("2021-06-29T10:03:38.494534Z").unit() == datetime_unit::SECOND);
+    REQUIRE(datetime::from_string("2021-06-29T10:03:38.494534").unit() == datetime_unit::SECOND);
+    REQUIRE(datetime::from_string("2021-06-29T10:03:38.494534+01:00").unit() == datetime_unit::SECOND);
+    REQUIRE(datetime::from_string("2021-06-29T10:03:38.494534-01:00").unit() == datetime_unit::SECOND);
 }
 
 TEST_CASE("Datetime arithmetics", "[datetime]") {

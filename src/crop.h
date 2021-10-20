@@ -73,13 +73,17 @@ class crop_cube : public cube {
     static std::shared_ptr<crop_cube> create(std::shared_ptr<cube> in, double left, double right,
                                              double bottom, double top, std::string t0, std::string t1,
                                              std::string snap = "near") {
-        int32_t ix_min, ix_max, iy_min, iy_max, it_min, it_max;
+        int32_t ix_min = 0;
+        int32_t ix_max = 0;
+        int32_t iy_min = 0;
+        int32_t iy_max = 0;
+        int32_t it_min = 0;
+        int32_t it_max = 0;
 
         double x_min = (left - in->st_reference()->left()) / (double)in->st_reference()->dx();
         double x_max = -1 + (right - in->st_reference()->left()) / (double)in->st_reference()->dx();
         double y_min = (bottom - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
         double y_max = -1 + (top - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
-        double t_min, t_max;
 
         if (snap == "near") {
             ix_min = std::round(x_min);
@@ -116,8 +120,8 @@ class crop_cube : public cube {
             auto stref = std::dynamic_pointer_cast<cube_stref_regular>(in->st_reference());
             duration delta1 = (dt0 - stref->t0());
             duration delta2 = (dt1 - stref->t0());
-            t_min = (double)(delta1.dt_interval) / (double)(stref->dt().dt_interval);
-            t_max = (double)(delta2.dt_interval) / (double)(stref->dt().dt_interval);
+            double t_min = (double)(delta1.dt_interval) / (double)(stref->dt().dt_interval);
+            double t_max = (double)(delta2.dt_interval) / (double)(stref->dt().dt_interval);
             if (snap == "near") {
                 it_min = std::round(t_min);
                 it_max = std::round(t_max);

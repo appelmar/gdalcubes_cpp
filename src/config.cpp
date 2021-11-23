@@ -108,6 +108,7 @@ void config::gdalcubes_init() {
     // For GDAL 3, force traditional x, y (lon, lat) order
 #if GDAL_VERSION_MAJOR > 2
     CPLSetConfigOption("OGR_CT_FORCE_TRADITIONAL_GIS_ORDER", "YES");
+    CPLSetConfigOption("OGR_CT_OP_SELECTION", "FIRST_MATCHING");
 #endif
     CPLSetConfigOption("GDAL_DISABLE_READDIR_ON_OPEN", "TRUE");  // avoid directory scans for every opened GDAL dataset
 

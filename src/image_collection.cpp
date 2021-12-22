@@ -293,7 +293,7 @@ void image_collection::add_with_datetime(std::vector<std::string> descriptors, s
 
         double affine_in[6] = {0, 0, 1, 0, 0, 1};
         bounds_2d<double> bbox;
-        char* proj4;
+        std::string srs_str;
         if (dataset->GetGeoTransform(affine_in) != CE_None) {
             GCBS_WARN("GDAL failed to fetch geotransform parameters for '" + descriptors[i] + "'; dataset will be skipped");
             GDALClose(dataset);
@@ -307,8 +307,17 @@ void image_collection::add_with_datetime(std::vector<std::string> descriptors, s
         OGRSpatialReference srs_in;
 
         srs_in.SetFromUserInput(dataset->GetProjectionRef());
-        srs_in.exportToProj4(&proj4);
-        bbox.transform(proj4, "EPSG:4326");
+        if ( srs_in.GetAuthorityName(NULL) != NULL &&  srs_in.GetAuthorityCode(NULL) != NULL) {
+            srs_str = std::string( srs_in.GetAuthorityName(NULL)) + ":" + std::string(srs_in.GetAuthorityCode(NULL));
+        }
+        else {
+            char *tmp;
+            srs_in.exportToWkt(&tmp);
+            srs_str = std::string(tmp);
+            CPLFree(tmp);
+        }
+
+        bbox.transform(srs_str, "EPSG:4326");
 
         if (!collection_contains_bands) {
             // first dataset, bands table is empty
@@ -375,10 +384,10 @@ void image_collection::add_with_datetime(std::vector<std::string> descriptors, s
         std::string image_name = descriptors[i];
         sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);  // what if this fails?!
 
-        // TODO: change from proj4 to WKT
+        // TODO: change from srs_str to WKT
         std::string sql_insert_image = "INSERT INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + image_name + "','" +
                                        d.to_string() + "'," +
-                                       std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
+                                       std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + srs_str + "')";
         if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
             GCBS_WARN("Failed to add image '" + descriptors[i] + "'; dataset will be skipped");
             GDALClose(dataset);
@@ -397,8 +406,6 @@ void image_collection::add_with_datetime(std::vector<std::string> descriptors, s
             }
         }
         sqlite3_exec(_db, "COMMIT TRANSACTION;", NULL, NULL, NULL);  // what if this fails?!
-
-        CPLFree(proj4);
         GDALClose(dataset);
         p->increment(double(1) / double(descriptors.size()));
     }
@@ -552,7 +559,7 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
         // if check = false, the following is not really needed if image is already in the database due to another file.
         double affine_in[6] = {0, 0, 1, 0, 0, 1};
         bounds_2d<double> bbox;
-        char* proj4;
+        std::string srs_str;
         if (dataset->GetGeoTransform(affine_in) != CE_None) {
             // No affine transformation, maybe GCPs?
             if (dataset->GetGCPCount() > 0) {
@@ -602,8 +609,17 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                     bbox.bottom = ymin;
                     OGRSpatialReference srs_in;
                     srs_in.SetFromUserInput(dataset->GetGCPProjection());
-                    srs_in.exportToProj4(&proj4);
-                    bbox.transform(proj4, "EPSG:4326");
+
+                    if ( srs_in.GetAuthorityName(NULL) != NULL &&  srs_in.GetAuthorityCode(NULL) != NULL) {
+                        srs_str = std::string( srs_in.GetAuthorityName(NULL)) + ":" + std::string(srs_in.GetAuthorityCode(NULL));
+                    }
+                    else {
+                        char *tmp;
+                        srs_in.exportToWkt(&tmp);
+                        srs_str = std::string(tmp);
+                        CPLFree(tmp);
+                    }
+                    bbox.transform(srs_str, "EPSG:4326");
                 } else {
                     //approximate extent based on gdalwarp
                     double approx_geo_transform[6];
@@ -611,10 +627,18 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                     double extent[4];
                     OGRSpatialReference srs_in;
                     srs_in.SetFromUserInput(dataset->GetGCPProjection());
-                    srs_in.exportToProj4(&proj4);
+                    if ( srs_in.GetAuthorityName(NULL) != NULL &&  srs_in.GetAuthorityCode(NULL) != NULL) {
+                        srs_str = std::string( srs_in.GetAuthorityName(NULL)) + ":" + std::string(srs_in.GetAuthorityCode(NULL));
+                    }
+                    else {
+                        char *tmp;
+                        srs_in.exportToWkt(&tmp);
+                        srs_str = std::string(tmp);
+                        CPLFree(tmp);
+                    }
 
                     CPLStringList transform_args;
-                    transform_args.AddString(("SRC_SRS=" + std::string(proj4)).c_str());
+                    transform_args.AddString(("SRC_SRS=" + std::string(srs_str)).c_str());
                     transform_args.AddString("DST_SRS=EPSG:4326");
                     transform_args.AddString("GCPS_OK=TRUE");
 
@@ -659,8 +683,16 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                 srs_in = global_srs;
             }
 
-            srs_in.exportToProj4(&proj4);
-            bbox.transform(proj4, "EPSG:4326");
+            if ( srs_in.GetAuthorityName(NULL) != NULL &&  srs_in.GetAuthorityCode(NULL) != NULL) {
+                srs_str = std::string( srs_in.GetAuthorityName(NULL)) + ":" + std::string(srs_in.GetAuthorityCode(NULL));
+            }
+            else {
+                char *tmp;
+                srs_in.exportToWkt(&tmp);
+                srs_str = std::string(tmp);
+                CPLFree(tmp);
+            }
+            bbox.transform(srs_str, "EPSG:4326");
         }
 
         // TODO: check consistency for all files of an image?!
@@ -724,7 +756,7 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                 // Convert to ISO string including separators (boost::to_iso_string or boost::to_iso_extended_string do not work with SQLite datetime functions)
                 std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + res_image[1].str() + "','" +
                                                os.str() + "'," +
-                                               std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
+                                               std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + srs_str + "')";
                 if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                     if (strict) throw std::string("ERROR in image_collection::add(): cannot add image to images table.");
                     GCBS_WARN("Skipping " + *it + " due to failed image table insert");
@@ -734,7 +766,7 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
 
             } else {
                 image_id = sqlite3_column_int(stmt, 0);
-                // TODO: if checks, compare l,r,b,t, datetime,proj4 from images table with current GDAL dataset
+                // TODO: if checks, compare l,r,b,t, datetime,srs_str from images table with current GDAL dataset
             }
             sqlite3_finalize(stmt);
 
@@ -885,7 +917,7 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                 std::string image_name = res_image[1].str() + "_" + t.to_string();
                 std::string sql_insert_image = "INSERT OR IGNORE INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + image_name + "','" +
                                                t.to_string(datetime_unit::SECOND) + "'," +
-                                               std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + proj4 + "')";
+                                               std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + srs_str + "')";
                 if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
                     if (strict) throw std::string("ERROR in image_collection::add(): cannot add image to images table.");
                     GCBS_WARN("Skipping " + *it + " due to failed image table insert");
@@ -903,7 +935,6 @@ void image_collection::add_with_collection_format(std::vector<std::string> descr
                 }
             }
         }
-        CPLFree(proj4);
         GDALClose((GDALDatasetH)dataset);
     }
     p->set(1);

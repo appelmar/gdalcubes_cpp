@@ -364,9 +364,7 @@ gdalwarp_client::gdalcubes_reprojection_info *gdalwarp_client::create_reprojecti
     gdalcubes_reprojection_info *res = new gdalcubes_reprojection_info();
     res->poForwardTransform = poForwardTransform;
     res->poReverseTransform = nullptr;
-
     res->poReverseTransform = OGRCreateCoordinateTransformation(&srs_out, &srs_in);
-
     return (res);
 }
 

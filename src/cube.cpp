@@ -259,6 +259,10 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
             }
         }
 
+        for (uint16_t ib = 0; ib < size_bands(); ++ib) {
+            gdal_out->GetRasterBand(ib + 1)->SetDescription(_bands.get(ib).name.c_str());
+        }
+
         GDALClose((GDALDatasetH)gdal_out);
     }
 

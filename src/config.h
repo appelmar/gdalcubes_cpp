@@ -182,6 +182,10 @@ class config {
     std::vector<std::string> gdal_formats();
     bool gdal_has_geos();
 
+    static void gdal_err_handler_silent(CPLErr eErrClass, int err_no, const char *msg);
+    static void gdal_err_handler_default(CPLErr eErrClass, int err_no, const char *msg);
+
+
    private:
     std::shared_ptr<chunk_processor> _chunk_processor;
     std::shared_ptr<progress> _progress_bar;
@@ -195,9 +199,6 @@ class config {
     bool _gdal_use_overviews;
     std::string _streaming_dir;
     std::vector<std::string> _collection_format_preset_dirs;
-
-    static void gdal_err_handler_silent(CPLErr eErrClass, int err_no, const char *msg);
-    static void gdal_err_handler_default(CPLErr eErrClass, int err_no, const char *msg);
 
    private:
     config();

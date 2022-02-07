@@ -196,6 +196,9 @@ class config {
     std::string _streaming_dir;
     std::vector<std::string> _collection_format_preset_dirs;
 
+    static void gdal_err_handler_silent(CPLErr eErrClass, int err_no, const char *msg);
+    static void gdal_err_handler_default(CPLErr eErrClass, int err_no, const char *msg);
+
    private:
     config();
     ~config() {}

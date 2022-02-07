@@ -92,6 +92,36 @@ void config::set_gdal_num_threads(uint16_t threads) {
     CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
 }
 
+void config::gdal_err_handler_default(CPLErr eErrClass, int err_no, const char *msg) {
+    switch (eErrClass)
+    {
+        case CE_None:
+            break;
+        case CE_Debug:
+            GCBS_DEBUG("GDAL CE_Debug (" + std::to_string(err_no) + "): " + std::string(msg));
+            break;
+        case CE_Warning:
+            GCBS_WARN("GDAL CE_Warning (" + std::to_string(err_no) + "): " + std::string(msg));
+            break;
+        case CE_Failure:
+            GCBS_ERROR("GDAL CE_Failure (" + std::to_string(err_no) + "): " + std::string(msg));
+            break;
+        case CE_Fatal:
+            GCBS_FATAL("GDAL CE_Fatal (" + std::to_string(err_no) + "): " + std::string(msg));
+            break;
+        default:
+            GCBS_DEBUG("GDAL CE_Debug (" + std::to_string(err_no) + "): " + std::string(msg));
+            break;
+    }
+    return;
+}
+
+void config::gdal_err_handler_silent(CPLErr eErrClass, int err_no, const char *msg) {
+    return;
+}
+
+
+
 void config::gdalcubes_init() {
 #ifndef GDALCUBES_NO_SWARM
     curl_global_init(CURL_GLOBAL_ALL);
@@ -103,7 +133,7 @@ void config::gdalcubes_init() {
 
     CPLSetConfigOption("GDAL_NUM_THREADS", std::to_string(_gdal_num_threads).c_str());
     //srand(time(NULL)); // R will complain if calling srand...
-    CPLSetErrorHandler(CPLQuietErrorHandler);
+    CPLSetErrorHandler(config::gdal_err_handler_default);
 
     // For GDAL 3, force traditional x, y (lon, lat) order
 #if GDAL_VERSION_MAJOR > 2

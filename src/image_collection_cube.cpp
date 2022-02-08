@@ -327,7 +327,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     std::vector<image_collection::find_range_st_row> datasets = _collection->find_range_st(cextent, _st_ref->srs(), std::vector<std::string>(), std::vector<std::string>{"gdalrefs.image_id", "gdalrefs.descriptor"});
 
     if (datasets.empty()) {
-        GCBS_DEBUG("Chunk " + std::to_string(id) + " does not intersect with any image from the image_collection_cube");
+        //GCBS_DEBUG("Chunk " + std::to_string(id) + " does not intersect with any image from the image_collection_cube");
         return out;  // empty chunk data
     }
 

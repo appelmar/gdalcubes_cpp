@@ -101,16 +101,16 @@ void config::gdal_err_handler_default(CPLErr eErrClass, int err_no, const char *
             GCBS_DEBUG("GDAL CE_Debug (" + std::to_string(err_no) + "): " + std::string(msg));
             break;
         case CE_Warning:
-            GCBS_WARN("GDAL CE_Warning (" + std::to_string(err_no) + "): " + std::string(msg));
+            GCBS_DEBUG("GDAL CE_Warning (" + std::to_string(err_no) + "): " + std::string(msg));
             break;
         case CE_Failure:
-            GCBS_ERROR("GDAL CE_Failure (" + std::to_string(err_no) + "): " + std::string(msg));
+            GCBS_DEBUG("GDAL CE_Failure (" + std::to_string(err_no) + "): " + std::string(msg));
             break;
         case CE_Fatal:
-            GCBS_FATAL("GDAL CE_Fatal (" + std::to_string(err_no) + "): " + std::string(msg));
+            GCBS_DEBUG("GDAL CE_Fatal (" + std::to_string(err_no) + "): " + std::string(msg));
             break;
         default:
-            GCBS_DEBUG("GDAL CE_Debug (" + std::to_string(err_no) + "): " + std::string(msg));
+            GCBS_DEBUG("GDAL CPLErr (" + std::to_string(err_no) + "): " + std::string(msg));
             break;
     }
     return;

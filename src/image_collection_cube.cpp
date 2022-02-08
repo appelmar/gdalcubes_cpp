@@ -422,7 +422,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
             std::string bandsel_vrt_name = "";
             GDALDataset *g = (GDALDataset *)GDALOpen(it->first.c_str(), GA_ReadOnly);
             if (!g) {
-                GCBS_WARN("GDAL cannot open ' '" + it->first + "', image will be ignored");
+                GCBS_WARN("GDAL cannot open '" + it->first + "', image will be ignored");
                 continue;
             }
 
@@ -529,7 +529,7 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
                 GDALDataset *bandsel_vrt = nullptr;
                 GDALDataset *g = (GDALDataset *)GDALOpen(mask_dataset_band.first.c_str(), GA_ReadOnly);
                 if (!g) {
-                    GCBS_WARN("GDAL cannot open image mask from '" + mask_dataset_band.first + "', corresponding image will be ignored");
+                    GCBS_WARN("GDAL cannot open '" + mask_dataset_band.first + "', mask will be ignored");
                 }
                 else {
                     // If input dataset has more bands than requested

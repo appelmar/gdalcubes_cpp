@@ -12,6 +12,12 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
     if (id >= count_chunks())
         return out;  // chunk is outside of the view, we don't need to read anything.
 
+
+    std::shared_ptr<chunk_data> inbuf = _in_cube->read_chunk(id);
+    // check whether input chunk is empty and if yes, avoid computations
+    if (inbuf->empty()) {
+        return out;
+    }
     coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
     coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
@@ -76,7 +82,6 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
     int str_size = proj.size();
     f_in_stream.write((char *)(&str_size), sizeof(int));
     f_in_stream.write(proj.c_str(), sizeof(char) * str_size);
-    std::shared_ptr<chunk_data> inbuf = _in_cube->read_chunk(id);
     f_in_stream.write(((char *)(inbuf->buf())), sizeof(double) * inbuf->size()[0] * inbuf->size()[1] * inbuf->size()[2] * inbuf->size()[3]);
     f_in_stream.close();
 

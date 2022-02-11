@@ -178,7 +178,12 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
                 for (uint32_t ic = 0; ic < l_chunks[i]->size()[1]; ++ic) {
                     if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {  // read only up to window size even if current chunk is larger
                         for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
-                            cur_ts[ib * cur_ts_length + tsidx] = ((double*)(l_chunks[i]->buf()))[_band_idx_in[ib] * (l_chunks[i]->size()[1] * l_chunks[i]->size()[2] * l_chunks[i]->size()[3]) + (l_chunks[i]->size()[1] - 1 - ic) * (l_chunks[i]->size()[2] * l_chunks[i]->size()[3]) + ixy];
+                            if (l_chunks[i]->empty()) {
+                                cur_ts[ib * cur_ts_length + tsidx] = NAN;
+                            }
+                            else {
+                                cur_ts[ib * cur_ts_length + tsidx] = ((double*)(l_chunks[i]->buf()))[_band_idx_in[ib] * (l_chunks[i]->size()[1] * l_chunks[i]->size()[2] * l_chunks[i]->size()[3]) + (l_chunks[i]->size()[1] - 1 - ic) * (l_chunks[i]->size()[2] * l_chunks[i]->size()[3]) + ixy];
+                            }
                         }
                         tsidx--;
                     }
@@ -191,8 +196,13 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
         for (uint32_t ic = 0; ic < this_chunk->size()[1]; ++ic) {
             if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {  // read only up to window size even if current chunk is larger
                 for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
-                    cur_ts[ib * cur_ts_length + tsidx] = ((double*)(this_chunk->buf()))[_band_idx_in[ib] * (this_chunk->size()[1] * this_chunk->size()[2] * this_chunk->size()[3]) +
-                                                                                        ic * (this_chunk->size()[2] * this_chunk->size()[3]) + ixy];
+                    if (this_chunk->empty()) {
+                        cur_ts[ib * cur_ts_length + tsidx] = NAN;
+                    }
+                    else {
+                        cur_ts[ib * cur_ts_length + tsidx] = ((double*)(this_chunk->buf()))[_band_idx_in[ib] * (this_chunk->size()[1] * this_chunk->size()[2] * this_chunk->size()[3]) +
+                                                                                            ic * (this_chunk->size()[2] * this_chunk->size()[3]) + ixy];
+                    }
                     tsidx++;
                 }
             }
@@ -215,7 +225,12 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
                 for (uint32_t ic = 0; ic < r_chunks[i]->size()[1]; ++ic) {
                     if (tsidx >= 0 && tsidx < (int32_t)cur_ts_length) {  // read only up to window size even if current chunk is larger
                         for (uint16_t ib = 0; ib < _bands.count(); ++ib) {
-                            cur_ts[ib * cur_ts_length + tsidx] = ((double*)(r_chunks[i]->buf()))[_band_idx_in[ib] * (r_chunks[i]->size()[1] * r_chunks[i]->size()[2] * r_chunks[i]->size()[3]) + ic * (r_chunks[i]->size()[2] * r_chunks[i]->size()[3]) + ixy];
+                            if (r_chunks[i]->empty()) {
+                                cur_ts[ib * cur_ts_length + tsidx] = NAN;
+                            }
+                            else {
+                                cur_ts[ib * cur_ts_length + tsidx] = ((double*)(r_chunks[i]->buf()))[_band_idx_in[ib] * (r_chunks[i]->size()[1] * r_chunks[i]->size()[2] * r_chunks[i]->size()[3]) + ic * (r_chunks[i]->size()[2] * r_chunks[i]->size()[3]) + ixy];
+                            }
                         }
                         tsidx++;
                     }
@@ -232,6 +247,11 @@ std::shared_ptr<chunk_data> window_time_cube::read_chunk(chunkid_t id) {
         }
     }
     std::free(cur_ts);
+
+    // check if chunk is completely NAN and if yes, return empty chunk
+    if (out->all_nan()) {
+        out = std::make_shared<chunk_data>();
+    }
     return out;
 }
 

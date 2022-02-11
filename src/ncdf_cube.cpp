@@ -541,6 +541,10 @@ std::shared_ptr<chunk_data> ncdf_cube::read_chunk(chunkid_t id) {
         }
     }
 
+    // check if chunk is completely NAN and if yes, return empty chunk
+    if (out->all_nan()) {
+        out = std::make_shared<chunk_data>();
+    }
     return out;
 }
 

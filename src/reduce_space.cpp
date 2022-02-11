@@ -401,20 +401,27 @@ std::shared_ptr<chunk_data> reduce_space_cube::read_chunk(chunkid_t id) {
     }
 
     // iterate over all chunks that must be read from the input cube to compute this chunk
+    bool empty = true;
     for (chunkid_t i = id * _in_cube->count_chunks_x() * _in_cube->count_chunks_y(); i < (id + 1) * _in_cube->count_chunks_x() * _in_cube->count_chunks_y(); ++i) {
         std::shared_ptr<chunk_data> x = _in_cube->read_chunk(i);
-        for (uint16_t ib = 0; ib < _reducer_bands.size(); ++ib) {
-            reducers[ib]->combine(out, x, i);
+        if (!x->empty()) {
+            for (uint16_t ib = 0; ib < _reducer_bands.size(); ++ib) {
+                reducers[ib]->combine(out, x, i);
+            }
+            empty = false;
         }
     }
-    for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
-        reducers[i]->finalize(out);
+    if (empty) {
+        out = std::make_shared<chunk_data>();
     }
-
+    else {
+        for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
+            reducers[i]->finalize(out);
+        }
+    }
     for (uint16_t i = 0; i < reducers.size(); ++i) {
         if (reducers[i] != nullptr) delete reducers[i];
     }
-
     return out;
 }
 

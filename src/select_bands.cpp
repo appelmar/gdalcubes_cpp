@@ -37,6 +37,9 @@ std::shared_ptr<chunk_data> select_bands_cube::read_chunk(chunkid_t id) {
     }
 
     std::shared_ptr<chunk_data> in = _in_cube->read_chunk(id);
+    if (in->empty()) {
+        return std::shared_ptr<chunk_data>();
+    }
 
     // Fill buffers accordingly
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();

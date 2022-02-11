@@ -34,24 +34,31 @@ std::shared_ptr<chunk_data> stream_apply_time_cube::read_chunk(chunkid_t id) {
     std::fill(inbegin, inend, NAN);
 
     uint32_t ichunk = 0;
+    bool empty = true;
     for (chunkid_t i = id;
          i < _in_cube->count_chunks(); i += _in_cube->count_chunks_x() * _in_cube->count_chunks_y()) {
         std::shared_ptr<chunk_data> x = _in_cube->read_chunk(i);
-        for (uint16_t ib = 0; ib < x->size()[0]; ++ib) {
-            for (uint32_t it = 0; it < x->size()[1]; ++it) {
-                for (uint32_t ixy = 0; ixy < x->size()[2] * x->size()[3]; ++ixy) {
-                    ((double *)inbuf->buf())[ib * _in_cube->size_t() * x->size()[2] * x->size()[3] +
-                                             (it + ichunk * _in_cube->chunk_size()[0]) * x->size()[2] *
-                                                 x->size()[3] +
-                                             ixy] =
-                        ((double *)x->buf())[ib * x->size()[1] * x->size()[2] * x->size()[3] +
-                                             it * x->size()[2] * x->size()[3] + ixy];
+        if (!x->empty()) {
+            for (uint16_t ib = 0; ib < x->size()[0]; ++ib) {
+                for (uint32_t it = 0; it < x->size()[1]; ++it) {
+                    for (uint32_t ixy = 0; ixy < x->size()[2] * x->size()[3]; ++ixy) {
+                        ((double *)inbuf->buf())[ib * _in_cube->size_t() * x->size()[2] * x->size()[3] +
+                                                 (it + ichunk * _in_cube->chunk_size()[0]) * x->size()[2] *
+                                                     x->size()[3] +
+                                                 ixy] =
+                            ((double *)x->buf())[ib * x->size()[1] * x->size()[2] * x->size()[3] +
+                                                 it * x->size()[2] * x->size()[3] + ixy];
+                    }
                 }
             }
+            empty = false;
         }
         ++ichunk;
     }
-
+    // check if inbuf is completely empty and if yes, avoid streaming at all and return empty chunk
+    if (empty) {
+        return std::make_shared<chunk_data>();
+    }
     // generate in and out filename
     std::string f_in = filesystem::join(config::instance()->get_streaming_dir(),
                                         utils::generate_unique_filename(12, ".stream_", "_in"));

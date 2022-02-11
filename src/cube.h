@@ -357,6 +357,20 @@ class chunk_data {
     }
 
     /**
+     * @brief Check if the buffer contains only NAN values
+     * @return true, if all values are NAN, or the chunk is empty
+     */
+    bool all_nan() {
+        if (empty()) return true;
+        for (uint32_t i=0; i< _size[0] * _size[1] * _size[2] * _size[3]; ++i) {
+            if (std::isnan(((double*)_buf)[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * @brief Access the raw buffer where the data is stored in memory
      *
      * This method is dangerous and provides direct access to the data buffer. Use with caution and never free any memory /

@@ -590,8 +590,12 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
     std::free(img_buf);
     if (mask_buf) std::free(mask_buf);
 
-    //    CPLFree(srs_out_str);
+    // check if chunk is completely NAN and if yes, return empty chunk
+    if (out->all_nan()) {
+        out = std::make_shared<chunk_data>();
+    }
 
+    //    CPLFree(srs_out_str);
     return out;
 }
 

@@ -34,26 +34,34 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
     std::fill(inbegin, inend, NAN);
 
     uint32_t nchunks_in_space = _in_cube->count_chunks_x() * _in_cube->count_chunks_x();
+    bool empty = true;
     for (chunkid_t i = 0; i < nchunks_in_space; ++i) {
         uint32_t in_chunk_id = id * nchunks_in_space + i;
         auto in_chunk_coords = _in_cube->chunk_coords_from_id(in_chunk_id);
         std::shared_ptr<chunk_data> x = _in_cube->read_chunk(in_chunk_id);
 
-        for (uint16_t ib = 0; ib < x->size()[0]; ++ib) {
-            for (uint32_t it = 0; it < x->size()[1]; ++it) {
-                for (uint32_t iy = 0; iy < x->size()[2]; ++iy) {
-                    for (uint32_t ix = 0; ix < x->size()[3]; ++ix) {
-                        ((double *)inbuf->buf())[ib * x->size()[1] * _in_cube->size_y() * _in_cube->size_x() +
-                                                 (it * _in_cube->size_y() * _in_cube->size_x()) +
-                                                 (iy + in_chunk_coords[1] * _in_cube->chunk_size()[1]) * _in_cube->size_x() +
-                                                 (ix + in_chunk_coords[2] * _in_cube->chunk_size()[2])] =
-                            ((double *)x->buf())[ib * x->size()[1] * x->size()[2] * x->size()[3] +
-                                                 it * x->size()[2] * x->size()[3] +
-                                                 iy * x->size()[3] + ix];
+        if (!x->empty()) {
+            for (uint16_t ib = 0; ib < x->size()[0]; ++ib) {
+                for (uint32_t it = 0; it < x->size()[1]; ++it) {
+                    for (uint32_t iy = 0; iy < x->size()[2]; ++iy) {
+                        for (uint32_t ix = 0; ix < x->size()[3]; ++ix) {
+                            ((double *)inbuf->buf())[ib * x->size()[1] * _in_cube->size_y() * _in_cube->size_x() +
+                                                     (it * _in_cube->size_y() * _in_cube->size_x()) +
+                                                     (iy + in_chunk_coords[1] * _in_cube->chunk_size()[1]) * _in_cube->size_x() +
+                                                     (ix + in_chunk_coords[2] * _in_cube->chunk_size()[2])] =
+                                ((double *)x->buf())[ib * x->size()[1] * x->size()[2] * x->size()[3] +
+                                                     it * x->size()[2] * x->size()[3] +
+                                                     iy * x->size()[3] + ix];
+                        }
                     }
                 }
             }
+            empty = false;
         }
+    }
+    // check if inbuf is completely empty and if yes, avoid streaming at all and return empty chunk
+    if (empty) {
+        return std::make_shared<chunk_data>();
     }
 
     // generate in and out filename

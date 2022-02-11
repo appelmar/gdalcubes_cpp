@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2019 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2021 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -25,67 +25,28 @@
 #include <string>
 
 #include "../external/catch.hpp"
-#include "../view.h"
+#include "../gdalcubes.h"
 
 using namespace gdalcubes;
 
-TEST_CASE("Create", "[view]") {
-    cube_view v;
-    v.srs("EPSG:4326");
-    v.left(-110);
-    v.right(110);
+TEST_CASE("aggregate_time_create", "[aggregate_time]") {
 
-    v.dx(0.5);
-    REQUIRE(v.nx() == 2 * 110 / 0.5);
-    REQUIRE(v.left() == -110);
-    REQUIRE(v.right() == 110);
+    cube_view r;
+    r.srs("EPSG:3857");
+    r.left(-6180000);
+    r.right(-6080000);
+    r.top(-450000);
+    r.bottom(-550000);
+    r.dx(1000);
+    r.dy(1000);
+    r.t0(datetime::from_string("2014-01-01"));
+    r.t1(datetime::from_string("2014-12-31"));
+    r.dt(duration::from_string("P1D"));
 
-    v.nx(440);
-    REQUIRE(v.dx() == 0.5);
-    REQUIRE(v.left() == -110);
-    REQUIRE(v.right() == 110);
+    auto c = dummy_cube::create(r, 1, 1.0);
+    auto ca = aggregate_time_cube::create(c, "P1M", "mean");
+    REQUIRE(ca->st_reference()->nt() == 12);
 
-    v.bottom(-50);
-    v.top(50);
 
-    v.ny(200);
-    REQUIRE(v.dy() == 0.5);
-    REQUIRE(v.bottom() == -50);
-    REQUIRE(v.top() == 50);
 
-    v.dy(0.5);
-    REQUIRE(v.ny() == 200);
-    REQUIRE(v.bottom() == -50);
-    REQUIRE(v.top() == 50);
-
-    v.t0(datetime::from_string("2018-01-01"));
-    v.t1(datetime::from_string("2018-01-10"));
-
-    v.nt(10);
-    REQUIRE(v.t0() == datetime::from_string("2018-01-01"));
-    REQUIRE(v.t1() == datetime::from_string("2018-01-10"));
-    REQUIRE(v.nt() == 10);
-    REQUIRE(v.dt() == duration::from_string("P1D"));
-
-    v.dt(duration::from_string("P3D"));
-    REQUIRE(v.t0() == datetime::from_string("2018-01-01"));
-    REQUIRE(v.t1() == datetime::from_string("2018-01-12"));
-    REQUIRE(v.nt() == 4);
-    REQUIRE(v.dt() == duration::from_string("P3D"));
-
-    cube_view v1;
-    v1.srs("EPSG:3857");
-    v1.bottom(6831918);
-    v1.top(7027881);
-    v1.left(2500790);
-    v1.right(2858522);
-    v1.t0(datetime::from_string("2018-03-26T09:40:29"));
-    v1.t1(datetime::from_string("2018-11-08T09:32:09"));
-    v1.nx(700);
-    v1.ny(700);
-    v1.nt(4);
-
-    datetime t0 = v1.t0();
-    datetime t1 = v1.t1();
-    REQUIRE((t1 - t0).dt_interval > 0);
 }

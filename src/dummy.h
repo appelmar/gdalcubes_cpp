@@ -133,8 +133,6 @@ class empty_cube : public cube {
         return out;
     }
 
-   private:
-    double _fill;
 };
 
 

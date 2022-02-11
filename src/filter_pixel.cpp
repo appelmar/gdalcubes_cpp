@@ -93,6 +93,10 @@ std::shared_ptr<chunk_data> filter_pixel_cube::read_chunk(chunkid_t id) {
     for (uint16_t i = 0; i < _in_cube->bands().count(); ++i) {  // only free name of actual variables (not functions)
         delete[] vars[i].name;
     }
+    // check if chunk is completely NAN and if yes, return empty chunk
+    if (out->all_nan()) {
+        out = std::make_shared<chunk_data>();
+    }
 
     return out;
 }

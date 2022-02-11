@@ -316,6 +316,13 @@ void cube_factory::register_default() {
             x->set_chunk_size(j["chunk_size"][0].int_value(), j["chunk_size"][1].int_value(), j["chunk_size"][2].int_value());
             return x;
         }));
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "empty", [](json11::Json& j) {
+            cube_view v = cube_view::read_json_string(j["view"].dump());
+            auto x = empty_cube::create(v, j["nbands"].int_value());
+            x->set_chunk_size(j["chunk_size"][0].int_value(), j["chunk_size"][1].int_value(), j["chunk_size"][2].int_value());
+            return x;
+        }));
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "stream_reduce_time", [](json11::Json& j) {

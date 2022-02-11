@@ -45,4 +45,19 @@ std::shared_ptr<chunk_data> dummy_cube::read_chunk(chunkid_t id) {
     return out;
 }
 
+std::shared_ptr<chunk_data> empty_cube::read_chunk(chunkid_t id) {
+    GCBS_TRACE("dummy_cube::read_chunk(" + std::to_string(id) + ")");
+    std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
+    if (id >= count_chunks())
+        return out;  // chunk is outside of the view, we don't need to read anything.
+
+    if (id % 2 == 0) {
+        // Set size attributes (but do not allocate buffer) for every second chunk
+        coords_nd<uint32_t, 3> size_tyx = chunk_size(id);
+        coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_tyx[0], size_tyx[1], size_tyx[2]};
+        out->size(size_btyx);
+    }
+    return out;
+}
+
 }  // namespace gdalcubes

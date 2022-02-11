@@ -81,6 +81,66 @@ class dummy_cube : public cube {
    private:
     double _fill;
 };
+
+
+
+/**
+     * @brief A dummy data cube with n bands ithout any data
+     *
+     * This cube is primarily used for testing data cube operations and whether they handle
+     * empty chunks appropriately
+ */
+class empty_cube : public cube {
+   public:
+    /**
+         * @brief Create a dummy data cube with empty chunks
+         * @note This static creation method should preferably be used instead of the constructors as
+         * the constructors will not set connections between cubes properly.
+         * @param v shape of the cube
+         * @param nbands number of bands
+         * @return a shared pointer to the created data cube instance
+     */
+    static std::shared_ptr<empty_cube> create(cube_view v, uint16_t nbands = 1) {
+        std::shared_ptr<empty_cube> out = std::make_shared<empty_cube>(v, nbands);
+        return out;
+    }
+
+   public:
+    empty_cube(cube_view v, uint16_t nbands = 1) : cube(std::make_shared<cube_view>(v)){
+        for (uint16_t ib = 0; ib < nbands; ++ib) {
+            band b("band" + std::to_string(ib + 1));
+            b.scale = 1.0;
+            b.offset = 0.0;
+            _bands.add(b);
+        }
+    }
+
+    void set_chunk_size(uint32_t t, uint32_t y, uint32_t x) {
+        _chunk_size = {t, y, x};
+    }
+
+   public:
+    ~empty_cube() {}
+
+    std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
+
+    json11::Json make_constructible_json() override {
+        json11::Json::object out;
+        out["cube_type"] = "empty";
+        std::string err;  // TODO: do something with err
+        out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
+        out["chunk_size"] = json11::Json::array{(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]};
+        return out;
+    }
+
+   private:
+    double _fill;
+};
+
+
+
+
+
 }  // namespace gdalcubes
 
 #endif  //DUMMY_H

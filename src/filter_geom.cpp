@@ -211,6 +211,7 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
 
     if (chunk_within_polygon) {
         //  special case: chunk is completely within polygon -> do not rasterize but simply copy buffers
+        // TODO: possible without copy?
         std::memcpy(out->buf(), in->buf(), _bands.count() * in->size()[1] * in->size()[2] * in->size()[3] * sizeof(double));
     } else {
         double *begin = (double *)out->buf();

@@ -363,7 +363,7 @@ class chunk_data {
     bool all_nan() {
         if (empty()) return true;
         for (uint32_t i=0; i< _size[0] * _size[1] * _size[2] * _size[3]; ++i) {
-            if (std::isnan(((double*)_buf)[i])) {
+            if (!std::isnan(((double*)_buf)[i])) {
                 return false;
             }
         }

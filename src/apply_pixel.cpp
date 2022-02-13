@@ -32,7 +32,7 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
     GCBS_TRACE("apply_pixel_cube::read_chunk(" + std::to_string(id) + ")");
 
     if (id >= count_chunks())
-        return std::shared_ptr<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
+        return std::make_shared<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
 
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
 

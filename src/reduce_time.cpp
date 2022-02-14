@@ -470,8 +470,6 @@ std::shared_ptr<chunk_data> reduce_time_cube::read_chunk(chunkid_t id) {
     coords_nd<uint32_t, 4> size_btyx = {uint32_t(_reducer_bands.size()), 1, size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
-
-
     std::vector<reducer_singleband *> reducers;
     for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
         reducer_singleband *r = nullptr;

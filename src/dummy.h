@@ -50,7 +50,7 @@ class dummy_cube : public cube {
 
    public:
     dummy_cube(cube_view v, uint16_t nbands = 1, double fill = 1.0) : cube(std::make_shared<cube_view>(v)),
-                                                                      _fill(fill) {
+                                                                      _fill(fill), _nbands(nbands) {
         for (uint16_t ib = 0; ib < nbands; ++ib) {
             band b("band" + std::to_string(ib + 1));
             b.scale = 1.0;
@@ -74,12 +74,14 @@ class dummy_cube : public cube {
         std::string err;  // TODO: do something with err
         out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
         out["fill"] = _fill;
+        out["nbands"] = _nbands;
         out["chunk_size"] = json11::Json::array{(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]};
         return out;
     }
 
    private:
     double _fill;
+    uint16_t _nbands;
 };
 
 
@@ -106,7 +108,7 @@ class empty_cube : public cube {
     }
 
    public:
-    empty_cube(cube_view v, uint16_t nbands = 1) : cube(std::make_shared<cube_view>(v)){
+    empty_cube(cube_view v, uint16_t nbands = 1) : cube(std::make_shared<cube_view>(v)), _nbands(nbands) {
         for (uint16_t ib = 0; ib < nbands; ++ib) {
             band b("band" + std::to_string(ib + 1));
             b.scale = 1.0;
@@ -127,11 +129,16 @@ class empty_cube : public cube {
     json11::Json make_constructible_json() override {
         json11::Json::object out;
         out["cube_type"] = "empty";
+        out["nbands"] = _nbands;
         std::string err;  // TODO: do something with err
         out["view"] = json11::Json::parse(std::dynamic_pointer_cast<cube_view>(_st_ref)->write_json_string(), err);
         out["chunk_size"] = json11::Json::array{(int)_chunk_size[0], (int)_chunk_size[1], (int)_chunk_size[2]};
         return out;
     }
+
+   private:
+
+    uint16_t _nbands;
 
 };
 

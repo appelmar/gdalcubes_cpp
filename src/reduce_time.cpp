@@ -358,7 +358,8 @@ struct median_reducer_singleband : public reducer_singleband {
     void init(std::shared_ptr<chunk_data> a, uint16_t band_idx_in, uint16_t band_idx_out, std::shared_ptr<cube> in_cube) override {
         _band_idx_in = band_idx_in;
         _band_idx_out = band_idx_out;
-        _m_buckets.resize(a->size()[2] * a->size()[3], std::vector<double>());
+        _m_buckets = std::vector< std::vector<double> > (a->size()[2] * a->size()[3],std::vector<double>(0));
+        //_m_buckets.resize(a->size()[2] * a->size()[3], std::vector<double>());
     }
 
     void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b, chunkid_t chunk_id) override {
@@ -469,11 +470,7 @@ std::shared_ptr<chunk_data> reduce_time_cube::read_chunk(chunkid_t id) {
     coords_nd<uint32_t, 4> size_btyx = {uint32_t(_reducer_bands.size()), 1, size_tyx[1], size_tyx[2]};
     out->size(size_btyx);
 
-    // Fill buffers accordingly
-    out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
-    double *begin = (double *)out->buf();
-    double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
-    std::fill(begin, end, NAN);
+
 
     std::vector<reducer_singleband *> reducers;
     for (uint16_t i = 0; i < _reducer_bands.size(); ++i) {
@@ -503,18 +500,26 @@ std::shared_ptr<chunk_data> reduce_time_cube::read_chunk(chunkid_t id) {
         } else
             throw std::string("ERROR in reduce_time_cube::read_chunk(): Unknown reducer given");
 
-        uint16_t band_idx_in = _in_cube->bands().get_index(_reducer_bands[i].second);
-        r->init(out, band_idx_in, i, _in_cube);
-
         reducers.push_back(r);
     }
 
     // iterate over all chunks that must be read from the input cube to compute this chunk
     bool empty = true;
+    bool reducers_initialized = false; // lazy initialization after the first non-empty chunk
     for (chunkid_t i = id; i < _in_cube->count_chunks(); i += _in_cube->count_chunks_x() * _in_cube->count_chunks_y()) {
         std::shared_ptr<chunk_data> x = _in_cube->read_chunk(i);
         if (!x->empty()) {
             for (uint16_t ib = 0; ib < _reducer_bands.size(); ++ib) {
+                if (!reducers_initialized) {
+                    // Fill buffers with NAN
+                    out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+                    double *begin = (double *)out->buf();
+                    double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
+                    std::fill(begin, end, NAN);
+                    uint16_t band_idx_in = _in_cube->bands().get_index(_reducer_bands[ib].second);
+                    reducers[ib]->init(out, band_idx_in, ib, _in_cube);
+                    reducers_initialized = true;
+                }
                 reducers[ib]->combine(out, x, i);
             }
             empty = false;
@@ -529,7 +534,7 @@ std::shared_ptr<chunk_data> reduce_time_cube::read_chunk(chunkid_t id) {
         }
     }
     for (uint16_t i = 0; i < reducers.size(); ++i) {
-        if (reducers[i] != nullptr) delete reducers[i];
+        if (reducers[i]) delete reducers[i];
     }
     return out;
 }

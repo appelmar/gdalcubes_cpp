@@ -16,31 +16,39 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
     coords_nd<uint32_t, 4> size_btyx = {_nbands, size_tyx[0], 1, 1};
     out->size(size_btyx);
 
-    // Fill buffers accordingly
-    out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
-    double *begin = (double *)out->buf();
-    double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
-    std::fill(begin, end, NAN);
+
 
     // 1. read everything to input buffer (for first version, can be memory-intensive, same as rechunk_merge_time)
     std::shared_ptr<chunk_data> inbuf = std::make_shared<chunk_data>();
     coords_nd<uint32_t, 4> in_size_btyx = {uint32_t(_in_cube->size_bands()), size_tyx[0], _in_cube->size_y(),
                                            _in_cube->size_x()};
     inbuf->size(in_size_btyx);
-    inbuf->buf(std::calloc(in_size_btyx[0] * in_size_btyx[1] * in_size_btyx[2] * in_size_btyx[3], sizeof(double)));
-    double *inbegin = (double *)inbuf->buf();
-    double *inend =
-        ((double *)inbuf->buf()) + in_size_btyx[0] * in_size_btyx[1] * in_size_btyx[2] * in_size_btyx[3];
-    std::fill(inbegin, inend, NAN);
 
     uint32_t nchunks_in_space = _in_cube->count_chunks_x() * _in_cube->count_chunks_x();
     bool empty = true;
+    bool initialized = false;
     for (chunkid_t i = 0; i < nchunks_in_space; ++i) {
         uint32_t in_chunk_id = id * nchunks_in_space + i;
         auto in_chunk_coords = _in_cube->chunk_coords_from_id(in_chunk_id);
         std::shared_ptr<chunk_data> x = _in_cube->read_chunk(in_chunk_id);
 
         if (!x->empty()) {
+            if (!initialized) {
+                // Fill buffers with NAN
+                out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+                double *begin = (double *)out->buf();
+                double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
+                std::fill(begin, end, NAN);
+
+                inbuf->buf(std::calloc(in_size_btyx[0] * in_size_btyx[1] * in_size_btyx[2] * in_size_btyx[3], sizeof(double)));
+                double *inbegin = (double *)inbuf->buf();
+                double *inend =
+                    ((double *)inbuf->buf()) + in_size_btyx[0] * in_size_btyx[1] * in_size_btyx[2] * in_size_btyx[3];
+                std::fill(inbegin, inend, NAN);
+
+                initialized = true;
+            }
+
             for (uint16_t ib = 0; ib < x->size()[0]; ++ib) {
                 for (uint32_t it = 0; it < x->size()[1]; ++it) {
                     for (uint32_t iy = 0; iy < x->size()[2]; ++iy) {

@@ -393,22 +393,24 @@ std::shared_ptr<chunk_data> reduce_space_cube::read_chunk(chunkid_t id) {
 
     // iterate over all chunks that must be read from the input cube to compute this chunk
     bool empty = true;
-    bool reducers_initialized = false; // lazy initialization after the first non-empty chunk
+    bool initialized = false; // lazy initialization after the first non-empty chunk
     for (chunkid_t i = id * _in_cube->count_chunks_x() * _in_cube->count_chunks_y(); i < (id + 1) * _in_cube->count_chunks_x() * _in_cube->count_chunks_y(); ++i) {
         std::shared_ptr<chunk_data> x = _in_cube->read_chunk(i);
         if (!x->empty()) {
-            for (uint16_t ib = 0; ib < _reducer_bands.size(); ++ib) {
-                if (!reducers_initialized) {
-                    // Fill buffers with NAN
-                    out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
-                    double *begin = (double *)out->buf();
-                    double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
-                    std::fill(begin, end, NAN);
+            if (!initialized) {
+                // Fill buffers with NAN
+                out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+                double *begin = (double *)out->buf();
+                double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
+                std::fill(begin, end, NAN);
+                for (uint16_t ib = 0; ib < _reducer_bands.size(); ++ib) {
                     uint16_t band_idx_in = _in_cube->bands().get_index(_reducer_bands[ib].second);
                     reducers[ib]->init(out, band_idx_in, ib, _in_cube);
-                    reducers_initialized = true;
                 }
-                reducers[ib]->combine(out, x, ib);
+                initialized = true;
+            }
+            for (uint16_t ib = 0; ib < _reducer_bands.size(); ++ib) {
+                reducers[ib]->combine(out, x, i);
             }
             empty = false;
         }

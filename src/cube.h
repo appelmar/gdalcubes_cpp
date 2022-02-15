@@ -350,7 +350,7 @@ class chunk_data {
      * @brief Check whether there is data in the buffer
      * @return true, if there is no data in the buffer (either size == 0, or buf == nullptr)
      */
-    inline bool empty() {
+    bool empty() {
         if (_size[0] * _size[1] * _size[2] * _size[3] == 0) return true;
         if (!_buf) return true;
         return false;

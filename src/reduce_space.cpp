@@ -408,7 +408,7 @@ std::shared_ptr<chunk_data> reduce_space_cube::read_chunk(chunkid_t id) {
                     reducers[ib]->init(out, band_idx_in, ib, _in_cube);
                     reducers_initialized = true;
                 }
-                reducers[ib]->combine(out, x, i);
+                reducers[ib]->combine(out, x, ib);
             }
             empty = false;
         }

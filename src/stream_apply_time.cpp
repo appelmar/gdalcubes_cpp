@@ -46,10 +46,11 @@ std::shared_ptr<chunk_data> stream_apply_time_cube::read_chunk(chunkid_t id) {
 
                 initialized  = true;
             }
+            uint32_t nt = _in_cube->size_t();
             for (uint16_t ib = 0; ib < x->size()[0]; ++ib) {
                 for (uint32_t it = 0; it < x->size()[1]; ++it) {
                     for (uint32_t ixy = 0; ixy < x->size()[2] * x->size()[3]; ++ixy) {
-                        ((double *)inbuf->buf())[ib * _in_cube->size_t() * x->size()[2] * x->size()[3] +
+                        ((double *)inbuf->buf())[ib * nt * x->size()[2] * x->size()[3] +
                                                  (it + ichunk * _in_cube->chunk_size()[0]) * x->size()[2] *
                                                      x->size()[3] +
                                                  ixy] =

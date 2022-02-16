@@ -39,6 +39,7 @@
 #include "join_bands.h"
 #include "ncdf_cube.h"
 #include "reduce_time.h"
+#include "reduce_space.h"
 #include "rename_bands.h"
 #include "select_bands.h"
 #include "select_time.h"
@@ -97,7 +98,7 @@ void cube_factory::register_default() {
             for (uint16_t i = 0; i < j["reducer_bands"].array_items().size(); ++i) {
                 band_reducers.push_back(std::make_pair(j["reducer_bands"][i][0].string_value(), j["reducer_bands"][i][1].string_value()));
             }
-            auto x = reduce_time_cube::create(instance()->create_from_json(j["in_cube"]), band_reducers);
+            auto x = reduce_space_cube::create(instance()->create_from_json(j["in_cube"]), band_reducers);
             return x;
         }));
 

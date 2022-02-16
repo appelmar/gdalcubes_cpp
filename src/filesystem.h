@@ -61,6 +61,7 @@ class filesystem {
     static bool is_absolute(std::string p);
     static std::string get_tempdir();
     static uint32_t file_size(std::string p);
+    static void move(std::string src, std::string dest);
 };
 
 }  // namespace gdalcubes

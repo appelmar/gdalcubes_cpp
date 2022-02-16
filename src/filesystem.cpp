@@ -190,4 +190,8 @@ uint32_t filesystem::file_size(std::string p) {
     return s.st_size;
 }
 
+void filesystem::move(std::string src, std::string dest) {
+    CPLMoveFile(dest.c_str(), src.c_str());
+}
+
 }  // namespace gdalcubes

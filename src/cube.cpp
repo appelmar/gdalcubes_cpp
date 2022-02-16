@@ -1731,4 +1731,118 @@ void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
     }
 }
 
+void chunk_data::write_ncdf(std::string path, uint8_t compression_level, bool force) {
+    if (filesystem::exists(path)) {
+        GCBS_ERROR("File already exists");
+        return;
+    }
+
+    if (!force) {
+        if (empty() || all_nan()) {
+            GCBS_WARN("Requested chunk is completely empty (NAN), and will not be written to a netCDF file on disk");
+            return;
+        }
+    }
+
+
+    int ncout;
+#if USE_NCDF4 == 1
+    nc_create(path.c_str(), NC_NETCDF4, &ncout);
+#else
+    nc_create(fname.c_str(), NC_CLASSIC_MODEL, &ncout);
+#endif
+
+    int d_b, d_t, d_y, d_x;
+    nc_def_dim(ncout, "b", this->size()[0], &d_b);
+    nc_def_dim(ncout, "t", this->size()[1], &d_t);
+    nc_def_dim(ncout, "y", this->size()[2], &d_y);
+    nc_def_dim(ncout, "x", this->size()[3], &d_x);
+
+    std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
+    nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+
+    int d_all[] = {d_b, d_t, d_y, d_x};
+    int v;
+    nc_def_var(ncout, "value", NC_DOUBLE, 4, d_all, &v);
+
+    if (compression_level > 0) {
+#if USE_NCDF4 == 1
+        nc_def_var_deflate(ncout, v, 1, 1, compression_level);  // TODO: experiment with shuffling
+#else
+        GCBS_WARN("gdalcubes has been built to write netCDF-3 classic model files, compression will be ignored.");
+#endif
+    }
+    nc_enddef(ncout);  ////////////////////////////////////////////////////
+
+    // write data
+    if (!empty()) {
+        std::size_t startp[] = {0, 0, 0, 0};
+        std::size_t countp[] = {this->size()[0], this->size()[1], this->size()[2], this->size()[3]};
+        nc_put_vara(ncout, v, startp, countp, this->buf()) ;
+    }
+    nc_close(ncout);
+}
+
+void chunk_data::read_ncdf(std::string path) {
+    int ncfile;
+    int retval = nc_open(path.c_str(), NC_NOWRITE, &ncfile);
+    if (retval != NC_NOERR) {
+        GCBS_ERROR("Failed to open netCDF file '" + path + "'; nc_open() returned " + std::to_string(retval));
+        return;
+    }
+
+    int dim_id_x = -1;
+    int dim_id_y = -1;
+    int dim_id_t = -1;
+    int dim_id_b = -1;
+
+    retval = nc_inq_dimid(ncfile, "x", &dim_id_x);
+    retval = nc_inq_dimid(ncfile, "y", &dim_id_y);
+    retval = nc_inq_dimid(ncfile, "t", &dim_id_t);
+    retval = nc_inq_dimid(ncfile, "b", &dim_id_b);
+
+    if (dim_id_x < 0 || dim_id_y < 0 || dim_id_t < 0 || dim_id_b < 0 ) {
+        GCBS_ERROR("Failed to identify dimensions in netCDF file '" + path + "'");
+        retval = nc_close(ncfile);
+        if (retval != NC_NOERR) {
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
+        }
+        return;
+    }
+
+    int vid = -1;
+    retval = nc_inq_varid(ncfile, "value", &vid);
+    if (vid < 0) {
+        GCBS_ERROR("Failed to identify variable in netCDF file '" + path + "'");
+        retval = nc_close(ncfile);
+        if (retval != NC_NOERR) {
+            GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
+        }
+       return;
+    }
+    std::size_t nx = -1;
+    std::size_t ny = -1;
+    std::size_t nt = -1;
+    std::size_t nb = -1;
+
+    retval = nc_inq_dimlen(ncfile, dim_id_x, &nx);
+    retval = nc_inq_dimlen(ncfile, dim_id_y, &ny);
+    retval = nc_inq_dimlen(ncfile, dim_id_t, &nt);
+    retval = nc_inq_dimlen(ncfile, dim_id_b, &nb);
+
+    if (nx <= 0 || ny <= 0 || nt <= 0 || nb <= 0) {
+        return; // chunk is empty
+    }
+
+    this->size({uint32_t(nb),uint32_t(nt),uint32_t(ny),uint32_t(nx)});
+    this->buf(std::malloc(sizeof(double) * nx * ny * nt * nb));
+    nc_get_var_double(ncfile, vid, (double*)(this->buf()));
+
+    retval = nc_close(ncfile);
+    if (retval != NC_NOERR) {
+        GCBS_DEBUG("Failed to properly close netCDF file '" + path + "'; nc_close() returned " + std::to_string(retval));
+    }
+}
+
+
 }  // namespace gdalcubes

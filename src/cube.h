@@ -409,6 +409,24 @@ class chunk_data {
      */
     inline void size(coords_nd<uint32_t, 4> s) { _size = s; }
 
+    /**
+     * @brief Write a single chunk to a netCDF file
+     *
+     * @details
+     * The produced netCDF file will NOT contain the spatial reference
+     * and dimension metadata, i.e. only the size of dimensions and the actual data
+     * @param path output path
+     * @param netCDF compression level (0 = no compression, 1 = fastest, 9 = smallest)
+     * @force force creation of a netCDF file even if the chunk is empty or NaN only
+     */
+    void write_ncdf(std::string path, uint8_t compression_level = 0, bool force = false);
+
+    /**
+     * @brief Read a single chunk from a netCDF file
+     * @param path input path
+     */
+    void read_ncdf(std::string path);
+
    private:
     void *_buf;
     chunk_size_btyx _size;

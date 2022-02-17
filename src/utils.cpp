@@ -124,4 +124,50 @@ std::string utils::hash(std::string in) {
     return std::to_string(str_hash);
 }
 
+void utils::env::set(std::map<std::string, std::string> vars) {
+    for (auto it = vars.begin(); it != vars.end(); ++it) {
+#ifdef _WIN32
+        _putenv((it->first + "=" + it->second).c_str());
+#else
+        setenv(it->first.c_str(), it->second.c_str(), 1);
+#endif
+        _vars[it->first] = it->second;
+    }
+}
+
+void utils::env::unset(std::set<std::string> var_names) {
+    for (auto it = var_names.begin(); it != var_names.end(); ++it) {
+#ifdef _WIN32
+        _putenv((*it + "=").c_str());
+#else
+        unsetenv((*it).c_str());
+#endif
+        auto i = _vars.find(*it);
+        if (i != _vars.end()) {
+            _vars.erase(i);
+        }
+    }
+}
+
+void utils::env::unset_all() {
+    for (auto it = _vars.begin(); it != _vars.end(); ++it) {
+#ifdef _WIN32
+        _putenv((it->first + "=").c_str());
+#else
+        unsetenv(it->first.c_str());
+#endif
+    }
+    _vars.clear();
+}
+
+std::string utils::env::to_string() {
+    std::string out;
+    out = "{";
+    for (auto it = _vars.begin(); it != _vars.end(); ++it) {
+        out += "{\"" + it->first + "\":\"" + it->second + "\"},";
+    }
+    out[out.length()-1] = '}';
+    return out;
+}
+
 }  // namespace gdalcubes

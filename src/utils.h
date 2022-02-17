@@ -25,6 +25,8 @@
 #define UTILS_H
 
 #include <gdal_priv.h>
+#include <set>
+#include <map>
 
 namespace gdalcubes {
 
@@ -77,6 +79,36 @@ class utils {
      * @return hashed string
      */
     static std::string hash(std::string in);
+
+    /**
+     * A simple class to manage setting / unsetting environment variables,
+     * mainly used to set variables for child processes.
+     */
+    class env {
+       public:
+        static env& instance() {
+            static env _instance;
+            return _instance;
+        }
+        ~env() {}
+
+        void set(std::map<std::string, std::string> vars);
+        void unset(std::set<std::string> var_names);
+        void unset_all();
+
+        // Convert environment variable map to a JSON string
+        std::string to_string();
+
+       private:
+
+        std::map<std::string, std::string> _vars;
+
+        env() : _vars() {}
+        env( const env& );
+        env & operator = (const env &);
+    };
+
+
 };
 
 }  // namespace gdalcubes

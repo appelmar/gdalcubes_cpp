@@ -250,7 +250,7 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
         GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
         if (rasterize_opts == NULL) {
             GDALRasterizeOptionsFree(rasterize_opts);
-            throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create gdal_rasterize options.");
+            throw std::string("ERROR in filter_geom_cub::read_chunk(): cannot create gdal_rasterize options.");
         }
         int err = 0;
         GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);

@@ -50,14 +50,14 @@ class stream_cube : public cube {
      * @param file_streaming boolean, shall chunk data be shared as files (e.g. on /dev/shm) instead of using std streams?
      * @return a shared pointer to the created data cube instance
      */
-    static std::shared_ptr<stream_cube> create(std::shared_ptr<cube> in_cube, std::string cmd, bool file_streaming = false) {
-        std::shared_ptr<stream_cube> out = std::make_shared<stream_cube>(in_cube, cmd, file_streaming);
+    static std::shared_ptr<stream_cube> create(std::shared_ptr<cube> in_cube, std::string cmd) {
+        std::shared_ptr<stream_cube> out = std::make_shared<stream_cube>(in_cube, cmd);
         in_cube->add_child_cube(out);
         out->add_parent_cube(in_cube);
         return out;
     }
 
-    stream_cube(std::shared_ptr<cube> in_cube, std::string cmd, bool file_streaming = false) : cube(in_cube->st_reference()->copy()), _in_cube(in_cube), _cmd(cmd), _file_streaming(file_streaming), _keep_input_nt(false), _keep_input_ny(false), _keep_input_nx(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
+    stream_cube(std::shared_ptr<cube> in_cube, std::string cmd, bool file_streaming = false) : cube(in_cube->st_reference()->copy()), _in_cube(in_cube), _cmd(cmd), _keep_input_nt(false), _keep_input_ny(false), _keep_input_nx(false) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         // Test CMD and find out what size comes out.
         cube_size_tyx tmp = _in_cube->chunk_size(0);
         cube_size_btyx csize_in = {_in_cube->bands().count(), tmp[0], tmp[1], tmp[2]};
@@ -74,11 +74,8 @@ class stream_cube : public cube {
         dummy_chunk->buf(std::calloc(csize_in[0] * csize_in[1] * csize_in[2] * csize_in[3], sizeof(double)));
 
         std::shared_ptr<chunk_data> c0;
-        if (_file_streaming) {
-            c0 = stream_chunk_file(dummy_chunk, 0);
-        } else {
-            c0 = stream_chunk_stdin(dummy_chunk, 0);
-        }
+        c0 = stream_chunk_file(dummy_chunk, 0);
+
 
         for (uint16_t ib = 0; ib < c0->size()[0]; ++ib) {
             band b("band" + std::to_string(ib + 1));
@@ -136,14 +133,12 @@ class stream_cube : public cube {
         out["cube_type"] = "stream";
         out["command"] = _cmd;
         out["in_cube"] = _in_cube->make_constructible_json();
-        out["file_streaming"] = _file_streaming;
         return out;
     }
 
    private:
     std::shared_ptr<cube> _in_cube;
     std::string _cmd;
-    bool _file_streaming;
 
     // Variables to help deriving the size when view changes without testing with a dummy chunk
     bool _keep_input_nt;
@@ -151,8 +146,6 @@ class stream_cube : public cube {
     bool _keep_input_nx;
 
    private:
-    std::shared_ptr<chunk_data> stream_chunk_stdin(std::shared_ptr<chunk_data> data, chunkid_t id);
-
     std::shared_ptr<chunk_data> stream_chunk_file(std::shared_ptr<chunk_data> data, chunkid_t id);
 };
 

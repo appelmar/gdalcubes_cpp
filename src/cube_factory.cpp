@@ -241,7 +241,7 @@ void cube_factory::register_default() {
 
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "stream", [](json11::Json& j) {
-            auto x = stream_cube::create(instance()->create_from_json(j["in_cube"]), j["command"].string_value(), j["file_streaming"].bool_value());
+            auto x = stream_cube::create(instance()->create_from_json(j["in_cube"]), j["command"].string_value());
             return x;
         }));
 

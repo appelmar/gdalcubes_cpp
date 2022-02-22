@@ -138,8 +138,8 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
     TinyProcessLib::Process process(
         _cmd, "", [](const char *bytes, std::size_t n) {},
         [&errstr](const char *bytes, std::size_t n) {
-            errstr = std::string(bytes, n);
-            GCBS_DEBUG(errstr);
+            std::string s(bytes, n);
+            errstr = errstr + s;
         },
         false);
     utils::env::instance().unset_all();
@@ -155,6 +155,7 @@ std::shared_ptr<chunk_data> stream_reduce_space_cube::read_chunk(chunkid_t id) {
         throw std::string("ERROR in stream_reduce_space_cube::read_chunk(): external program returned exit code " +
                           std::to_string(exit_status));
     }
+    GCBS_DEBUG(errstr);
 
     // read output data
     std::ifstream f_out_stream(f_out, std::ios::in | std::ios::binary);

@@ -194,4 +194,8 @@ void filesystem::move(std::string src, std::string dest) {
     CPLMoveFile(dest.c_str(), src.c_str());
 }
 
+void filesystem::copy(std::string src, std::string dest) {
+    CPLCopyFile(dest.c_str(), src.c_str());
+}
+
 }  // namespace gdalcubes

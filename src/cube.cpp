@@ -1731,6 +1731,58 @@ void chunk_processor_multithread::apply(std::shared_ptr<cube> c,
     }
 }
 
+
+std::shared_ptr<chunk_data> cube::to_double_array(std::shared_ptr<chunk_processor> p) {
+
+
+    // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
+    std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
+
+    std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
+    coords_nd<uint32_t, 4> size_btyx = {_bands.count(), size_t(), size_y(), size_x()};
+    out->size(size_btyx);
+
+    if (size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3] == 0)
+        return out;
+
+    // Fill buffers accordingly
+    out->buf(std::calloc(size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3], sizeof(double)));
+    double *begin = (double *)out->buf();
+    double *end = ((double *)out->buf()) + size_btyx[0] * size_btyx[1] * size_btyx[2] * size_btyx[3];
+    std::fill(begin, end, NAN);
+
+
+    std::shared_ptr<progress> prg = config::instance()->get_default_progress_bar()->get();
+    prg->set(0);  // explicitly set to zero to show progress bar immediately
+
+    std::function<void(chunkid_t, std::shared_ptr<chunk_data>, std::mutex &)> f = [this, out, prg](chunkid_t id, std::shared_ptr<chunk_data> dat, std::mutex &m) {
+
+        if (!dat->empty()) {
+            chunk_size_btyx csize = dat->size();
+            bounds_nd<uint32_t, 3> climits = chunk_limits(id);
+
+            for (uint16_t ib = 0; ib < dat->size()[0]; ++ib) {
+                for (uint32_t it = 0; it < dat->size()[1]; ++it) {
+                    for (uint32_t iy = 0; iy < dat->size()[2]; ++iy) {
+                        for (uint32_t ix = 0; ix < dat->size()[3]; ++ix) {
+                            ((double*)(out->buf()))[(ib) * (size_t()*size_y()*size_x()) +
+                                (climits.low[0]) * (size_y()*size_x()) + (size_y() - climits.high[1] - 1) * (size_x()) +
+                                (climits.low[2])] = ((double*)(dat->buf()))[ib * (csize[1]*csize[2]*csize[3]) + it * (csize[2]*csize[3]) + iy * (csize[3]) +  ix];
+                        }
+                    }
+                }
+            }
+        }
+        prg->increment((double)1 / (double)this->count_chunks());
+    };
+
+    p->apply(shared_from_this(), f);
+    prg->finalize();
+
+    return out;
+
+}
+
 void chunk_data::write_ncdf(std::string path, uint8_t compression_level, bool force) {
     if (filesystem::exists(path)) {
         GCBS_ERROR("File already exists");

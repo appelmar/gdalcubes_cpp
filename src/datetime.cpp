@@ -233,6 +233,74 @@ date::sys_seconds datetime::tryparse(std::string format, std::string d) {
     return out;
 }
 
+
+
+
+datetime datetime::from_YmdHMS_digits(std::string s) {
+
+    std::vector<uint8_t> digits;
+    for(uint32_t i=0; i < s.length(); ++i) {
+        if (std::isdigit(s[i]))
+            digits.push_back(s[i] - '0');
+    }
+    datetime out;
+
+    //YYYYMMDD HHMMSS
+    if (digits.size() >= 14) {
+        uint32_t Y = digits[0] * 1000 + digits[1] * 100 + digits[2] * 10 + digits[3];
+        uint32_t m = digits[4] * 10 + digits[5];
+        uint32_t d = digits[6] * 10 + digits[7];
+        uint32_t H = digits[8] * 10 + digits[9];
+        uint32_t M = digits[10] * 10 + digits[11];
+        uint32_t S = digits[12] * 10 + digits[13];
+        out._p = date::sys_days{date::year(Y) / date::month(m) / date::day(d)} +
+                 std::chrono::hours{H} + std::chrono::minutes{M} + std::chrono::seconds{S};
+        out._unit = datetime_unit::SECOND;
+    }
+    else if (digits.size() >= 12) {
+        uint32_t Y = digits[0] * 1000 + digits[1] * 100 + digits[2] * 10 + digits[3];
+        uint32_t m = digits[4] * 10 + digits[5];
+        uint32_t d = digits[6] * 10 + digits[7];
+        uint32_t H = digits[8] * 10 + digits[9];
+        uint32_t M = digits[10] * 10 + digits[11];
+        out._p = date::sys_days{date::year(Y) / date::month(m) / date::day(d)} +
+                 std::chrono::hours{H} + std::chrono::minutes{M};
+        out._unit = datetime_unit::MINUTE;
+    }
+    else if (digits.size() >= 10) {
+        uint32_t Y = digits[0] * 1000 + digits[1] * 100 + digits[2] * 10 + digits[3];
+        uint32_t m = digits[4] * 10 + digits[5];
+        uint32_t d = digits[6] * 10 + digits[7];
+        uint32_t H = digits[8] * 10 + digits[9];
+        out._p = date::sys_days{date::year(Y) / date::month(m) / date::day(d)} +
+                 std::chrono::hours{H} ;
+        out._unit = datetime_unit::HOUR;
+    }
+    else if (digits.size() >= 8) {
+        uint32_t Y = digits[0] * 1000 + digits[1] * 100 + digits[2] * 10 + digits[3];
+        uint32_t m = digits[4] * 10 + digits[5];
+        uint32_t d = digits[6] * 10 + digits[7];
+        out._p = date::sys_days{date::year(Y) / date::month(m) / date::day(d)};
+        out._unit = datetime_unit::DAY;
+    }
+    else if (digits.size() >= 6) {
+        uint32_t Y = digits[0] * 1000 + digits[1] * 100 + digits[2] * 10 + digits[3];
+        uint32_t m = digits[4] * 10 + digits[5];
+        out._p = date::sys_days{date::year(Y) / date::month(m) / date::day(1)};
+        out._unit = datetime_unit::MONTH;
+    }
+    else if (digits.size() >= 4) {
+        uint32_t Y = digits[0] * 1000 + digits[1] * 100 + digits[2] * 10 + digits[3];
+        out._p = date::sys_days{date::year(Y) / date::month(1) / date::day(1)};
+        out._unit = datetime_unit::YEAR;
+    }
+    else {
+        GCBS_DEBUG("Failed to parse dateetime from string '" + s + "'");
+        out._unit = datetime_unit::NONE;
+    }
+    return out;
+}
+
 datetime datetime::from_string(std::string s) {
     std::istringstream is(s);
 

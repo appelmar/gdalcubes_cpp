@@ -228,8 +228,18 @@ class datetime {
     // tries date::parse first and if this does not work std::get_time
     static date::sys_seconds tryparse(std::string format, std::string d);
 
-    // from standard format with variable precision (
+    // from standard format with variable precision
     static datetime from_string(std::string s);
+
+    /**
+     * Optimistic string parser assuming
+     * year is given by the first four digits and other (optional)
+     * fields are given by two digits in the order YmdHMS. Any kind of separators as well
+     * as time zones will simply be skipped.
+     * @param s string
+     * @return
+     */
+    static datetime from_YmdHMS_digits(std::string s) ;
 
     void unit(datetime_unit u) {
 

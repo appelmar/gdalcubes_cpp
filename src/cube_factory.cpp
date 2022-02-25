@@ -31,6 +31,7 @@
 #include "crop.h"
 #include "dummy.h"
 #include "external/json11/json11.hpp"
+#include "extract_geom.h"
 #include "filesystem.h"
 #include "fill_time.h"
 #include "filter_geom.h"
@@ -273,6 +274,14 @@ void cube_factory::register_default() {
                                               j["ix_min"].int_value(), j["ix_max"].int_value(),
                                               j["iy_min"].int_value(), j["iy_max"].int_value(),
                                               j["it_min"].int_value(), j["it_max"].int_value());
+            return x;
+        }));
+
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "extract", [](json11::Json& j) {
+            auto x = extract_geom::create(instance()->create_from_json(j["in_cube"]),
+                                          j["ogr_dataset"].string_value(), j["time_column"].string_value(),
+                                          j["ogr_layer"].string_value());
             return x;
         }));
 

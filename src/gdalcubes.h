@@ -34,6 +34,7 @@
 #include "cube.h"
 #include "crop.h"
 #include "dummy.h"
+#include "extract_geom.h"
 #include "fill_time.h"
 #include "filter_geom.h"
 #include "filter_pixel.h"

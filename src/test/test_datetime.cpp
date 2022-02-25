@@ -36,12 +36,24 @@ TEST_CASE("Deriving datetime unit from string", "[datetime]") {
     REQUIRE(datetime::from_string("2002-03").unit() == datetime_unit::MONTH);
     REQUIRE(datetime::from_string("2002").unit() == datetime_unit::YEAR);
 
+    REQUIRE(datetime::from_YmdHMS_digits("2002-03-04 12:13:14").unit() == datetime_unit::SECOND);
+    REQUIRE(datetime::from_YmdHMS_digits("2002-03-04 12:13").unit() == datetime_unit::MINUTE);
+    REQUIRE(datetime::from_YmdHMS_digits("2002-03-04 12").unit() == datetime_unit::HOUR);
+    REQUIRE(datetime::from_YmdHMS_digits("2002-03-04").unit() == datetime_unit::DAY);
+    REQUIRE(datetime::from_YmdHMS_digits("2002-03").unit() == datetime_unit::MONTH);
+    REQUIRE(datetime::from_YmdHMS_digits("2002").unit() == datetime_unit::YEAR);
+
     REQUIRE(duration::from_string("PT3S").dt_unit == datetime_unit::SECOND);
     REQUIRE(duration::from_string("PT3M").dt_unit == datetime_unit::MINUTE);
     REQUIRE(duration::from_string("PT3H").dt_unit == datetime_unit::HOUR);
     REQUIRE(duration::from_string("P3D").dt_unit == datetime_unit::DAY);
     REQUIRE(duration::from_string("P3M").dt_unit == datetime_unit::MONTH);
     REQUIRE(duration::from_string("P3Y").dt_unit == datetime_unit::YEAR);
+
+    REQUIRE(datetime::from_YmdHMS_digits("2021-06-29T10:03:38.494534Z").unit() == datetime_unit::SECOND);
+    REQUIRE(datetime::from_YmdHMS_digits("2021-06-29T10:03:38.494534").unit() == datetime_unit::SECOND);
+    REQUIRE(datetime::from_YmdHMS_digits("2021-06-29T10:03:38.494534+01:00").unit() == datetime_unit::SECOND);
+    REQUIRE(datetime::from_YmdHMS_digits("2021-06-29T10:03:38.494534-01:00").unit() == datetime_unit::SECOND);
 
     REQUIRE(datetime::from_string("2021-06-29T10:03:38.494534Z").unit() == datetime_unit::SECOND);
     REQUIRE(datetime::from_string("2021-06-29T10:03:38.494534").unit() == datetime_unit::SECOND);
@@ -83,6 +95,8 @@ TEST_CASE("Datetime Access Functions", "[datetime]") {
     REQUIRE(x.month() == 03);
     REQUIRE(x.year() == 2002);
 
+    datetime xx = datetime::from_YmdHMS_digits("2002-03-04T13:40:21");
+    REQUIRE(xx == x);
     // REQUIRE(x.epoch_time() == 1015249221); // might depend on OS
 
     datetime y = datetime::from_string("2005-06");
@@ -95,6 +109,11 @@ TEST_CASE("Datetime Access Functions", "[datetime]") {
     REQUIRE(y.dayofweek() == 3);  // WED
     REQUIRE(y.month() == 6);
     REQUIRE(y.year() == 2005);
+
+    datetime yy = datetime::from_YmdHMS_digits("2005-06");
+    REQUIRE(yy == y);
+
+
 
     REQUIRE(datetime::from_string("2001-03-01").dayofyear() == 60);  // no leap year
     REQUIRE(datetime::from_string("2000-03-01").dayofyear() == 61);  // leap year

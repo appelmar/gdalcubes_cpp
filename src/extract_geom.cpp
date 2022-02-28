@@ -347,15 +347,26 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
                     // if mask is 1
                     if (geom_mask[(iy - y_start) * (x_end - x_start) + ix - x_start] == 1) {
                         for (uint32_t it = 0; it < csize[0]; ++it) {
+                            bool allna = true;
+                            std::vector<double> vv(dat->count_bands());
                             for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
                                 double v = ((double *)dat->buf())[ib * csize[0] * csize[1] * csize[2] +
                                                                   it * csize[1] * csize[2] +
                                                                   iy * csize[2] +
                                                                   ix];
-                                data_frame_out[2+ib].push_back(v);
+                                vv.push_back(v);
+                                if (!std::isnan(v)) {
+                                    allna = false;
+                                }
+
                             }
-                            data_frame_out[0].push_back(fids[ifeature]); // fid
-                            data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
+                            if (!allna) {
+                                data_frame_out[0].push_back(fids[ifeature]); // fid
+                                data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
+                                for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
+                                    data_frame_out[2+ib].push_back(vv[ib]);
+                                }
+                            }
                         }
                     }
                 }
@@ -372,15 +383,26 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
                     for (int32_t ix = x_start; ix < x_end; ++ix) {
                         // if mask is 1
                         if (geom_mask[(iy - y_start) * (x_end - x_start) + ix - x_start] == 1) {
+                            bool allna = true;
+                            std::vector<double> vv(dat->count_bands());
                             for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
                                 double v = ((double *)dat->buf())[ib * csize[0] * csize[1] * csize[2] +
                                                                   it * csize[1] * csize[2] +
                                                                   iy * csize[2] +
                                                                   ix];
-                                data_frame_out[2+ib].push_back(v);
+                                vv.push_back(v);
+                                if (!std::isnan(v)) {
+                                    allna = false;
+                                }
                             }
-                            data_frame_out[0].push_back(fids[ifeature]); // fid
-                            data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
+                            if (!allna) {
+                                data_frame_out[0].push_back(fids[ifeature]); // fid
+                                data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
+                                for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
+                                    data_frame_out[2+ib].push_back(vv[ib]);
+                                }
+                            }
+
                         }
                     }
                 }

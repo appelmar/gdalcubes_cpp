@@ -354,7 +354,7 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
                                                                   it * csize[1] * csize[2] +
                                                                   iy * csize[2] +
                                                                   ix];
-                                vv.push_back(v);
+                                vv[ib] = v;
                                 if (!std::isnan(v)) {
                                     allna = false;
                                 }
@@ -390,7 +390,7 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
                                                                   it * csize[1] * csize[2] +
                                                                   iy * csize[2] +
                                                                   ix];
-                                vv.push_back(v);
+                                vv[ib] = v;
                                 if (!std::isnan(v)) {
                                     allna = false;
                                 }

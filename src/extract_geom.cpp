@@ -1,41 +1,41 @@
 /*
-    MIT License
+MIT License
 
-    Copyright (c) 2022 Marius Appel <marius.appel@uni-muenster.de>
+Copyright (c) 2022 Marius Appel <marius.appel@uni-muenster.de>
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+                                                          copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
     SOFTWARE.
-*/
+        */
 
 #include "extract_geom.h"
 
 #include <gdal_utils.h>
 #include <ogrsf_frmts.h>
 
-namespace gdalcubes {
+    namespace gdalcubes {
 
 extract_geom::extract_geom(std::shared_ptr<cube> in, std::string ogr_dataset,
                            std::string time_column, std::string ogr_layer) : cube(in->st_reference()->copy()),
-                                                    _in_cube(in), _in_ogr_dataset(ogr_dataset),
-                                                    _in_time_column(time_column),
-                                                    _in_ogr_layer(ogr_layer), _ogr_dataset(ogr_dataset),
-                                                    _ogr_layer(ogr_layer), _fid_column(""),
-                                                    _in_ogr_was_transformed(false), _is_point(false) {
+                                                                             _in_cube(in), _in_ogr_dataset(ogr_dataset),
+                                                                             _in_time_column(time_column),
+                                                                             _in_ogr_layer(ogr_layer), _ogr_dataset(ogr_dataset),
+                                                                             _ogr_layer(ogr_layer), _fid_column(""),
+                                                                             _in_ogr_was_transformed(false), _is_point(false) {
     _chunk_size[0] = _in_cube->chunk_size()[0];
     _chunk_size[1] = _in_cube->chunk_size()[1];
     _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -100,7 +100,6 @@ extract_geom::extract_geom(std::shared_ptr<cube> in, std::string ogr_dataset,
 
     if (!srs_cube.IsSame(&srs_features)) {
         // Transform features to srs of cube
-        GCBS_DEBUG("TRANSFORM");
 
         CPLStringList translate_args;
         translate_args.AddString("-f");
@@ -170,7 +169,7 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
     bounds_st cbounds = bounds_from_chunk(id);
     auto csize = chunk_size(id);
     auto ccoords = chunk_coords_from_id(id);
-     // gdal_rasterize -a "feat_id" -sql "SELECT FID as feat_id,* FROM nrw" -tr 500 500 nrw.gpkg test.tif
+    // gdal_rasterize -a "feat_id" -sql "SELECT FID as feat_id,* FROM nrw" -tr 500 500 nrw.gpkg test.tif
 
     // 1. Rasterize feature dataset with regard to current chunk, using FID as burn value
     GDALDataset *in_ogr_dataset;
@@ -217,7 +216,7 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
                 // even if they do not intersect in the time dimension.
                 // A more efficient way would be to apply an additional attribute filter before, but
                 // since the time unit of the cube might be different, this might be less reliable.
-                datetime tt = datetime::from_YmdHMS_digits(cur_feature->GetFieldAsString(_in_time_column.c_str())); // TODO: do this only once for all features
+                datetime tt = datetime::from_YmdHMS_digits(cur_feature->GetFieldAsString(_in_time_column.c_str()));
                 tt.unit(st_reference()->dt_unit());
                 // if outside chunk
                 if (tt < cbounds.t0 || tt > cbounds.t1) {
@@ -258,128 +257,136 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
             initialized = true;
         }
 
-//        if (_is_point) {
-//            // no need to rasterize
-//
-//            // TODO
-//
-//        }
-//        else { // rasterize needed
 
-            int32_t x_start = std::max((int32_t)std::floor((fbbox[ifeature].MinX - cbounds.s.left) /st_reference()->dx()),0);
-            int32_t x_end = std::min((int32_t)std::ceil((fbbox[ifeature].MaxX - cbounds.s.left) / st_reference()->dx()), (int32_t)csize[2] - 1);
-            int32_t y_start = std::max((int32_t)std::floor((cbounds.s.top - fbbox[ifeature].MaxY) / st_reference()->dy()), 0);
-            int32_t y_end = std::min((int32_t)std::ceil((cbounds.s.top - fbbox[ifeature].MinY) / st_reference()->dy()),(int32_t)csize[1] - 1);
+        int32_t x_start = (int32_t)std::floor((fbbox[ifeature].MinX - cbounds.s.left) /st_reference()->dx());
+        int32_t x_end   = (int32_t)std::ceil((fbbox[ifeature].MaxX - cbounds.s.left) / st_reference()->dx());
+        int32_t y_start = (int32_t)std::floor((cbounds.s.top - fbbox[ifeature].MaxY) / st_reference()->dy());
+        int32_t y_end   = (int32_t)std::ceil((cbounds.s.top - fbbox[ifeature].MinY) / st_reference()->dy());
+        if (x_end == x_start) { // point exactly on cell boundary (unlikely!)
+            ++x_end;
+        }
+        if (y_end == y_start) { // point exactly on cell boundary (unlikely!)
+            ++y_end;
+        }
 
-            // rasterize
-            CPLStringList rasterize_args;
-            rasterize_args.AddString("-burn");
-            rasterize_args.AddString("1");
-            rasterize_args.AddString("-ot");
-            rasterize_args.AddString("Byte");
-            rasterize_args.AddString("-of");
-            rasterize_args.AddString("MEM");
-            rasterize_args.AddString("-init");
-            rasterize_args.AddString("0");
-            rasterize_args.AddString("-tr");
-            rasterize_args.AddString(std::to_string(st_reference()->dx()).c_str());
-            rasterize_args.AddString(std::to_string(st_reference()->dy()).c_str());
-//            rasterize_args.AddString("-te");
-//            rasterize_args.AddString(std::to_string(cbounds.s.left).c_str());  // xmin
-//            rasterize_args.AddString(std::to_string(cbounds.s.bottom).c_str());  // ymin
-//            rasterize_args.AddString(std::to_string(cbounds.s.right).c_str()); // xmax
-//            rasterize_args.AddString(std::to_string(cbounds.s.top).c_str());// ymax
-            rasterize_args.AddString("-te");
-            rasterize_args.AddString(std::to_string(cbounds.s.left + x_start * st_reference()->dx()).c_str());  // xmin
-            rasterize_args.AddString(std::to_string(cbounds.s.top - (y_end + 1) * st_reference()->dy()).c_str());  // ymin
-            rasterize_args.AddString(std::to_string(cbounds.s.left + (x_end + 1) * st_reference()->dx()).c_str());  // xmax
-            rasterize_args.AddString(std::to_string(cbounds.s.top - y_start * st_reference()->dy()).c_str());  // ymax
-            rasterize_args.AddString("-where");
-            std::string where = _fid_column + "=" + std::to_string(fids[ifeature]);
-            rasterize_args.AddString(where.c_str());
-            rasterize_args.AddString("-l");
-            rasterize_args.AddString(layer->GetName());
 
-            // log gdal_rasterize call
-//            std::stringstream ss;
-//            ss << "Running gdal_rasterize ";
-//            for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
-//                ss << rasterize_args[iws] << " ";
-//            }
-//            ss << _ogr_dataset;
-//            GCBS_DEBUG(ss.str());
+        x_start = std::min(std::max(x_start, 0),(int32_t)csize[2] - 1);
+        x_end = std::min(std::max(x_end, 0),(int32_t)csize[2]);
+        y_start = std::min(std::max(y_start, 0),(int32_t)csize[1] - 1);
+        y_end = std::min(std::max(y_end, 0),(int32_t)csize[1]);
 
-            GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
-            if (rasterize_opts == NULL) {
-                GDALRasterizeOptionsFree(rasterize_opts);
-                GDALClose(in_ogr_dataset);
-                throw std::string("ERROR in vector_queries::zonal_statistics(): cannot create gdal_rasterize options.");
-            }
+        assert(y_end > y_start);
+        assert(x_end > x_start);
 
-            int err = 0;
-            GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);
-            if (gdal_rasterized == NULL) {
-                GDALRasterizeOptionsFree(rasterize_opts);
-                GDALClose(in_ogr_dataset);
-                GCBS_ERROR("gdal_rasterize failed for feature with FID " + std::to_string(fids[ifeature]));
-                throw std::string("gdal_rasterize failed for feature with FID " + std::to_string(fids[ifeature]));
-            }
+        // rasterize
+        CPLStringList rasterize_args;
+        rasterize_args.AddString("-burn");
+        rasterize_args.AddString("1");
+        rasterize_args.AddString("-ot");
+        rasterize_args.AddString("Byte");
+        rasterize_args.AddString("-of");
+        rasterize_args.AddString("MEM");
+        rasterize_args.AddString("-init");
+        rasterize_args.AddString("0");
+        rasterize_args.AddString("-tr");
+        rasterize_args.AddString(utils::dbl_to_string(st_reference()->dx()).c_str());
+        rasterize_args.AddString(utils::dbl_to_string(st_reference()->dy()).c_str());
+        //            rasterize_args.AddString("-te");
+        //            rasterize_args.AddString(std::to_string(cbounds.s.left).c_str());  // xmin
+        //            rasterize_args.AddString(std::to_string(cbounds.s.bottom).c_str());  // ymin
+        //            rasterize_args.AddString(std::to_string(cbounds.s.right).c_str()); // xmax
+        //            rasterize_args.AddString(std::to_string(cbounds.s.top).c_str());// ymax
+        rasterize_args.AddString("-te");
+        rasterize_args.AddString(utils::dbl_to_string((cbounds.s.left + x_start * st_reference()->dx())).c_str());  // xmin
+        rasterize_args.AddString(utils::dbl_to_string((cbounds.s.top - (y_end) * st_reference()->dy())).c_str());  // ymin
+        rasterize_args.AddString(utils::dbl_to_string((cbounds.s.left + (x_end) * st_reference()->dx())).c_str());  // xmax
+        rasterize_args.AddString(utils::dbl_to_string((cbounds.s.top - y_start * st_reference()->dy())).c_str());  // ymax
+        rasterize_args.AddString("-where");
+        std::string where = _fid_column + "=" + std::to_string(fids[ifeature]);
+        rasterize_args.AddString(where.c_str());
+        rasterize_args.AddString("-l");
+        rasterize_args.AddString(layer->GetName());
+
+          // log gdal_rasterize call
+//         std::stringstream ss;
+//         ss << "Running gdal_rasterize ";
+//         for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
+//             ss << rasterize_args[iws] << " ";
+//         }
+//         ss << _ogr_dataset;
+//         GCBS_DEBUG(ss.str());
+
+        GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
+        if (rasterize_opts == NULL) {
             GDALRasterizeOptionsFree(rasterize_opts);
-            uint8_t *geom_mask = (uint8_t *)std::malloc(sizeof(uint8_t) * csize[1] * csize[2]);
-            if (gdal_rasterized->GetRasterBand(1)->RasterIO(GF_Read, 0, 0, x_end - x_start + 1, y_end - y_start + 1, geom_mask, x_end - x_start + 1, y_end - y_start + 1, GDT_Byte, 0, 0, NULL) != CE_None) {
-                GDALClose(gdal_rasterized);
-                GDALClose(in_ogr_dataset);
-                GCBS_ERROR("RasterIO failed" ); // TODO improve error message
-                throw std::string("RasterIO failed" ); // TODO improve error message
-            }
+            GDALClose(in_ogr_dataset);
+            throw std::string("ERROR in extract_geom::read_chunk(): cannot create gdal_rasterize options.");
+        }
+
+        int err = 0;
+        GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize("", NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);
+        if (gdal_rasterized == NULL) {
+            GDALRasterizeOptionsFree(rasterize_opts);
+            GDALClose(in_ogr_dataset);
+            GCBS_ERROR("gdal_rasterize failed for feature with FID " + std::to_string(fids[ifeature]) + "(error code " + std::to_string(err) + ")");
+            throw std::string("gdal_rasterize failed for feature with FID " + std::to_string(fids[ifeature]));
+        }
+        GDALRasterizeOptionsFree(rasterize_opts);
+        uint8_t *geom_mask = (uint8_t *)std::malloc(sizeof(uint8_t) * (x_end - x_start) * (y_end - y_start));
+        if (gdal_rasterized->GetRasterBand(1)->RasterIO(GF_Read, 0, 0, x_end - x_start, y_end - y_start, geom_mask, x_end - x_start, y_end - y_start, GDT_Byte, 0, 0, NULL) != CE_None) {
             GDALClose(gdal_rasterized);
+            GDALClose(in_ogr_dataset);
+            GCBS_ERROR("RasterIO failed" ); // TODO improve error message
+            throw std::string("RasterIO failed" ); // TODO improve error message
+        }
+        GDALClose(gdal_rasterized);
 
-            if (_in_time_column.empty()) { // full time series
-                for (int32_t iy = y_start; iy <= y_end; ++iy) {
-                    for (int32_t ix = x_start; ix <= x_end; ++ix) {
+        if (_in_time_column.empty()) { // full time series
+            for (int32_t iy = y_start; iy < y_end; ++iy) {
+                for (int32_t ix = x_start; ix < x_end; ++ix) {
+                    // if mask is 1
+                    if (geom_mask[(iy - y_start) * (x_end - x_start) + ix - x_start] == 1) {
+                        for (uint32_t it = 0; it < csize[0]; ++it) {
+                            for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
+                                double v = ((double *)dat->buf())[ib * csize[0] * csize[1] * csize[2] +
+                                                                  it * csize[1] * csize[2] +
+                                                                  iy * csize[2] +
+                                                                  ix];
+                                data_frame_out[2+ib].push_back(v);
+                            }
+                            data_frame_out[0].push_back(fids[ifeature]); // fid
+                            data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
+                        }
+                    }
+                }
+            }
+        }
+        else {
+
+            // Derive it
+            uint32_t it = st_reference()->index_at_datetime(t[ifeature]);
+            // Make sure, t is inside chunk
+            if (it >= ccoords[0] * _chunk_size[0] && it < ccoords[0] * _chunk_size[0] + csize[0]) {
+                it = it % _chunk_size[0];
+                for (int32_t iy = y_start; iy < y_end; ++iy) {
+                    for (int32_t ix = x_start; ix < x_end; ++ix) {
                         // if mask is 1
-                        if (geom_mask[(iy - y_start) * (x_end - x_start + 1) + ix - x_start] == 1) {
-                            for (uint32_t it = 0; it < csize[0]; ++it) {
-                                for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
-                                    double v = ((double *)dat->buf())[ib * csize[0] * csize[1] * csize[2] +
-                                                                      it * csize[1] * csize[2] +
-                                                                      iy * csize[2] +
-                                                                      ix];
-                                    data_frame_out[2+ib].push_back(v);
-                                }
-                                data_frame_out[0].push_back(fids[ifeature]); // fid
-                                data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
+                        if (geom_mask[(iy - y_start) * (x_end - x_start) + ix - x_start] == 1) {
+                            for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
+                                double v = ((double *)dat->buf())[ib * csize[0] * csize[1] * csize[2] +
+                                                                  it * csize[1] * csize[2] +
+                                                                  iy * csize[2] +
+                                                                  ix];
+                                data_frame_out[2+ib].push_back(v);
                             }
+                            data_frame_out[0].push_back(fids[ifeature]); // fid
+                            data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
                         }
                     }
                 }
             }
-            else {
-
-                // Derive it
-                uint32_t it = st_reference()->index_at_datetime(t[ifeature]);
-                // Make sure, t is inside chunk
-                if (it >= ccoords[0] * _chunk_size[0] && it < ccoords[0] * _chunk_size[0] + csize[0]) {
-                    it = it % _chunk_size[0];
-                    for (int32_t iy = y_start; iy <= y_end; ++iy) {
-                        for (int32_t ix = x_start; ix <= x_end; ++ix) {
-                            // if mask is 1
-                            if (geom_mask[(iy - y_start) * (x_end - x_start + 1) + ix - x_start] == 1) {
-                                for (uint16_t ib = 0; ib < dat->count_bands(); ++ib) {
-                                    double v = ((double *)dat->buf())[ib * csize[0] * csize[1] * csize[2] +
-                                                                      it * csize[1] * csize[2] +
-                                                                      iy * csize[2] +
-                                                                      ix];
-                                    data_frame_out[2+ib].push_back(v);
-                                }
-                                data_frame_out[0].push_back(fids[ifeature]); // fid
-                                data_frame_out[1].push_back(ccoords[0] * _chunk_size[0] + it); // t
-                            }
-                        }
-                    }
-                }
-            }
-            std::free(geom_mask);
+        }
+        std::free(geom_mask);
         //}
     }
     GDALClose(in_ogr_dataset);
@@ -393,9 +400,8 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
         }
     }
 
-
-    // WARNING: This mis-using the chunk idea, because every chunk may produce
-    // a buffer if different size...
+    // WARNING: The following approach misuses the chunk idea, because every chunk may produce
+    // a buffer of different size...
     // Make sure to NEVER export result as a cube (e.g. using write_tif_collection or write_netcdf_file)
     if (nrow > 0) {
         out->size({(uint32_t)data_frame_out.size(), nrow, 1, 1});
@@ -405,8 +411,6 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
             std::memcpy(&((double*)out->buf())[i * nrow], data_frame_out[i].data(), sizeof(double) * nrow);
         }
     }
-
-
 
     // TODO: can we always output an empty chunk and write results somehwere else?!
     // This would make sure that the result is not "mis-used"

@@ -95,13 +95,15 @@ std::shared_ptr<chunk_data> stream_apply_pixel_cube::read_chunk(chunkid_t id) {
     mtx.lock();
 
     // start process
+    TinyProcessLib::Config pconf;
+    pconf.show_window = TinyProcessLib::Config::ShowWindow::hide;
     TinyProcessLib::Process process(
         _cmd, "", [](const char *bytes, std::size_t n) {},
         [&errstr](const char *bytes, std::size_t n) {
             std::string s(bytes, n);
             errstr = errstr + s;
         },
-        false);
+        false, pconf);
     utils::env::instance().unset_all();
     mtx.unlock();
     auto exit_status = process.get_exit_status();

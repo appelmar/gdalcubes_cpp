@@ -1,6 +1,11 @@
 #include "process.hpp"
 #include <algorithm>
 #include <bitset>
+/*
+ * THIS FILE INCLUDES THE FOLLOWING MODIFICATIONS (c) 2022 Marius Appel:
+ * - replaced _exit() and exit() calls by raise(SIGKILL)
+ */
+
 #include <cstdlib>
 #include <fcntl.h>
 #include <poll.h>
@@ -106,7 +111,8 @@ Process::id_type Process::open(const std::function<void()> &function) noexcept {
     if(function)
       function();
 
-    _exit(EXIT_FAILURE);
+    raise(SIGKILL);
+    //_exit(EXIT_FAILURE);
   }
 
   if(stdin_fd)
@@ -130,8 +136,11 @@ Process::id_type Process::open(const std::function<void()> &function) noexcept {
 
 Process::id_type Process::open(const std::vector<string_type> &arguments, const string_type &path, const environment_type *environment) noexcept {
   return open([&arguments, &path, &environment] {
-    if(arguments.empty())
-      exit(127);
+    if(arguments.empty()) {
+        raise(SIGKILL);
+        //exit(127);
+    }
+
 
     std::vector<const char *> argv_ptrs;
     argv_ptrs.reserve(arguments.size() + 1);
@@ -141,7 +150,8 @@ Process::id_type Process::open(const std::vector<string_type> &arguments, const 
 
     if(!path.empty()) {
       if(chdir(path.c_str()) != 0)
-        exit(1);
+        raise(SIGKILL);
+        //exit(1);
     }
 
     if(!environment)

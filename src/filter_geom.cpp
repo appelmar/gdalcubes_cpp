@@ -160,12 +160,7 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
         return out;  // chunk does not intersect with polygon
     }
 
-    std::shared_ptr<chunk_data> in = _in_cube->read_chunk(id);
-    if (in->empty()) {
-        return out;
-    }
-    out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
-    out->buf(std::calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
+
 
     bounds_st chunk_bounds = bounds_from_chunk(id);
 
@@ -180,6 +175,7 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
     OGRLayer *layer;
     layer = in_ogr_dataset->GetLayer(0);
     if (layer == NULL) {
+        GDALClose(in_ogr_dataset);
         GCBS_ERROR("invalid OGR layer");
         throw std::string("invalid OGR layer");
     }
@@ -198,6 +194,7 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
 
     // iterate over all features
     bool chunk_within_polygon = false;
+    bool outside = false;
     layer->ResetReading();
     OGRFeature *cur_feature = layer->GetNextFeature();  // assumption, there is only one feature
     OGRGeometry *geom = cur_feature->GetGeometryRef();
@@ -205,15 +202,31 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
         if (geom->Contains(&pp)) {
             chunk_within_polygon = true;
         }
+        else if (!geom->Overlaps(&pp)) {
+            outside = true;
+        }
     }
     OGRFeature::DestroyFeature(cur_feature);
     layer->ResetReading();
 
+    if (outside) {
+        GDALClose(in_ogr_dataset);
+        return out;
+    }
+
+    std::shared_ptr<chunk_data> in = _in_cube->read_chunk(id);
+    if (in->empty()) {
+        GDALClose(in_ogr_dataset);
+        return out;
+    }
+
     if (chunk_within_polygon) {
         //  special case: chunk is completely within polygon -> do not rasterize but simply copy buffers
-        // TODO: possible without copy? -> out = in
-        std::memcpy(out->buf(), in->buf(), _bands.count() * in->size()[1] * in->size()[2] * in->size()[3] * sizeof(double));
+        //std::memcpy(out->buf(), in->buf(), _bands.count() * in->size()[1] * in->size()[2] * in->size()[3] * sizeof(double));
+        out = in;
     } else {
+        out->size({_bands.count(), in->size()[1], in->size()[2], in->size()[3]});
+        out->buf(std::calloc(_bands.count() * in->size()[1] * in->size()[2] * in->size()[3], sizeof(double)));
         double *begin = (double *)out->buf();
         double *end = ((double *)out->buf()) + _bands.count() * in->size()[1] * in->size()[2] * in->size()[3];
         std::fill(begin, end, NAN);
@@ -249,6 +262,7 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
 
         GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
         if (rasterize_opts == NULL) {
+            GDALClose(in_ogr_dataset);
             GDALRasterizeOptionsFree(rasterize_opts);
             throw std::string("ERROR in filter_geom_cub::read_chunk(): cannot create gdal_rasterize options.");
         }

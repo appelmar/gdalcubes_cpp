@@ -1,7 +1,7 @@
 /*
     MIT License
 
-    Copyright (c) 2020 Marius Appel <marius.appel@uni-muenster.de>
+    Copyright (c) 2022 Marius Appel <marius.appel@uni-muenster.de>
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal
@@ -202,7 +202,7 @@ std::shared_ptr<chunk_data> filter_geom_cube::read_chunk(chunkid_t id) {
         if (geom->Contains(&pp)) {
             chunk_within_polygon = true;
         }
-        else if (!geom->Overlaps(&pp)) {
+        else if (!geom->Intersects(&pp)) {
             outside = true;
         }
     }

@@ -33,8 +33,6 @@
 
 namespace gdalcubes {
 
-// TODO: use a global seed and include something like process id in seed
-// to avoid conflicts when gdalcubes runs in parallel processes
 std::string utils::generate_unique_filename(uint16_t n, std::string prefix, std::string suffix) {
     static std::random_device rd{};
     static std::mt19937 gen(rd());  //Standard mersenne_twister_engine seeded with rd()

@@ -1254,7 +1254,7 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
 
     std::shared_ptr<chunk_data> dat = this->read_chunk(id);
     if (dat->empty()) {
-        GCBS_WARN("Requested chunk is completely empty (NAN), and will not be written to a netCDF file on disk");
+        GCBS_DEBUG("Requested chunk is completely empty (NAN), and will not be written to a netCDF file on disk");
     }
 
     double *dim_x = (double *)std::calloc(dat->size()[3], sizeof(double));

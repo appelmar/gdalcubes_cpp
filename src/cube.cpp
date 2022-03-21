@@ -30,6 +30,7 @@ SOFTWARE.
 #include <algorithm>  // std::transform
 #include <fstream>
 #include <thread>
+#include <cstring>
 
 #include "build_info.h"
 #include "filesystem.h"
@@ -896,17 +897,17 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
     std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
 
-    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
-    nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", std::strlen("CF-1.6"), "CF-1.6");
+    nc_put_att_text(ncout, NC_GLOBAL, "source", std::strlen(att_source.c_str()), att_source.c_str());
 
     std::string att_t = stref->has_regular_time() ? "regular" : "labeled";
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", std::strlen(att_t.c_str()), att_t.c_str());
     att_t = stref->t0().to_string();
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", std::strlen(att_t.c_str()), att_t.c_str());
     att_t = stref->t1().to_string();
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", std::strlen(att_t.c_str()), att_t.c_str());
     att_t = stref->dt().to_string();
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", std::strlen(att_t.c_str()), att_t.c_str());
 
     // write json graph as metadata
     std::string j = make_constructible_json().dump();
@@ -917,7 +918,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
     //double geoloc_array[6] = {stref->left(), stref->dx(), 0.0, stref->top(), 0.0, stref->dy()};
     std::string geoloc_array_str = utils::dbl_to_string(stref->left()) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(stref->top()) + " 0 " + utils::dbl_to_string(-stref->dy());
-    //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
+    //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", std::strlen(wkt), wkt);
     //nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
     std::string dtunit_str;
@@ -937,11 +938,11 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     dtunit_str += " since ";
     dtunit_str += stref->t0().to_string(datetime_unit::SECOND);
 
-    nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
-    nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
-    nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
-    nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
+    nc_put_att_text(ncout, v_t, "standard_name", std::strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "long_name", std::strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "units", std::strlen(dtunit_str.c_str()), dtunit_str.c_str());
+    nc_put_att_text(ncout, v_t, "calendar", std::strlen("gregorian"), "gregorian");
+    nc_put_att_text(ncout, v_t, "axis", std::strlen("T"), "T");  // this avoids GDAL warnings
 
     if (srs.IsProjected()) {
         // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
@@ -952,43 +953,43 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 #endif
         srs.GetLinearUnits(&unit);
 
-        nc_put_att_text(ncout, v_y, "standard_name", strlen("projection_y_coordinate"), "projection_y_coordinate");
-        nc_put_att_text(ncout, v_y, "long_name", strlen("y coordinate of projection"), "y coordinate of projection");
-        nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
-        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
-        nc_put_att_text(ncout, v_x, "standard_name", strlen("projection_x_coordinate"), "projection_x_coordinate");
-        nc_put_att_text(ncout, v_x, "long_name", strlen("x coordinate of projection"), "x coordinate of projection");
-        nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
-        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+        nc_put_att_text(ncout, v_y, "standard_name", std::strlen("projection_y_coordinate"), "projection_y_coordinate");
+        nc_put_att_text(ncout, v_y, "long_name", std::strlen("y coordinate of projection"), "y coordinate of projection");
+        nc_put_att_text(ncout, v_y, "units", std::strlen(unit), unit);
+        nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
+        nc_put_att_text(ncout, v_x, "standard_name", std::strlen("projection_x_coordinate"), "projection_x_coordinate");
+        nc_put_att_text(ncout, v_x, "long_name", std::strlen("x coordinate of projection"), "x coordinate of projection");
+        nc_put_att_text(ncout, v_x, "units", std::strlen(unit), unit);
+        nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
 
         int v_crs;
         nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
-        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
         //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+        nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
 
     } else {
         // char* unit;
         // double scale = srs.GetAngularUnits(&unit);
-        nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
-        nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
-        nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
-        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+        nc_put_att_text(ncout, v_y, "units", std::strlen("degrees_north"), "degrees_north");
+        nc_put_att_text(ncout, v_y, "long_name", std::strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "standard_name", std::strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
 
-        nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
-        nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
-        nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
-        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+        nc_put_att_text(ncout, v_x, "units", std::strlen("degrees_east"), "degrees_east");
+        nc_put_att_text(ncout, v_x, "long_name", std::strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "standard_name", std::strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
 
         int v_crs;
-        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
-        //nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("latitude_longitude"), "latitude_longitude");
+        //nc_put_att_text(ncout, v_crs, "crs_wkt", std::strlen(wkt), wkt);
         nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
-        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
         //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+        nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
     }
     CPLFree(wkt);
     int d_all[] = {d_t, d_y, d_x};
@@ -1011,7 +1012,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         }
 
         if (!bands().get(i).unit.empty())
-            nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+            nc_put_att_text(ncout, v, "units", std::strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
 
         double pscale = bands().get(i).scale;
         double poff = bands().get(i).offset;
@@ -1031,11 +1032,11 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
 
         nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
         nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
-        nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
-        nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+        nc_put_att_text(ncout, v, "type", std::strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+        nc_put_att_text(ncout, v, "grid_mapping", std::strlen("crs"), "crs");
 
         // this doesn't seem to solve missing spatial reference for multitemporal nc files
-        //        nc_put_att_text(ncout, v, "spatial_ref", strlen(wkt), wkt);
+        //        nc_put_att_text(ncout, v, "spatial_ref", std::strlen(wkt), wkt);
         //        nc_put_att_double(ncout, v, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
         nc_put_att_double(ncout, v, "_FillValue", ot, 1, &pNAN);
@@ -1308,17 +1309,17 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
 
     std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
-    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
-    nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "Conventions", std::strlen("CF-1.6"), "CF-1.6");
+    nc_put_att_text(ncout, NC_GLOBAL, "source", std::strlen(att_source.c_str()), att_source.c_str());
 
     std::string att_t = stref->has_regular_time() ? "regular" : "labeled";
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", std::strlen(att_t.c_str()), att_t.c_str());
     att_t = stref->t0().to_string();
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", std::strlen(att_t.c_str()), att_t.c_str());
     att_t = stref->t1().to_string();
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", std::strlen(att_t.c_str()), att_t.c_str());
     att_t = stref->dt().to_string();
-    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", strlen(att_t.c_str()), att_t.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", std::strlen(att_t.c_str()), att_t.c_str());
 
     // write json graph as metadata
     std::string j = make_constructible_json().dump();
@@ -1330,7 +1331,7 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     //double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
     std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(bbox.s.top) + " 0 " + utils::dbl_to_string(-stref->dy());
 
-    //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
+    //nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", std::strlen(wkt), wkt);
     //nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
     std::string dtunit_str;
@@ -1350,11 +1351,11 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
     dtunit_str += " since ";
     dtunit_str += bbox.t0.to_string(datetime_unit::SECOND);
 
-    nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
-    nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
-    nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
-    nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-    nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
+    nc_put_att_text(ncout, v_t, "standard_name", std::strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "long_name", std::strlen("time"), "time");
+    nc_put_att_text(ncout, v_t, "units", std::strlen(dtunit_str.c_str()), dtunit_str.c_str());
+    nc_put_att_text(ncout, v_t, "calendar", std::strlen("gregorian"), "gregorian");
+    nc_put_att_text(ncout, v_t, "axis", std::strlen("T"), "T");  // this avoids GDAL warnings
 
     if (srs.IsProjected()) {
         // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
@@ -1365,43 +1366,43 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
 #endif
         srs.GetLinearUnits(&unit);
 
-        nc_put_att_text(ncout, v_y, "standard_name", strlen("projection_y_coordinate"), "projection_y_coordinate");
-        nc_put_att_text(ncout, v_y, "long_name", strlen("y coordinate of projection"), "y coordinate of projection");
-        nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
-        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
-        nc_put_att_text(ncout, v_x, "standard_name", strlen("projection_x_coordinate"), "projection_x_coordinate");
-        nc_put_att_text(ncout, v_x, "long_name", strlen("x coordinate of projection"), "x coordinate of projection");
-        nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
-        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+        nc_put_att_text(ncout, v_y, "standard_name", std::strlen("projection_y_coordinate"), "projection_y_coordinate");
+        nc_put_att_text(ncout, v_y, "long_name", std::strlen("y coordinate of projection"), "y coordinate of projection");
+        nc_put_att_text(ncout, v_y, "units", std::strlen(unit), unit);
+        nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
+        nc_put_att_text(ncout, v_x, "standard_name", std::strlen("projection_x_coordinate"), "projection_x_coordinate");
+        nc_put_att_text(ncout, v_x, "long_name", std::strlen("x coordinate of projection"), "x coordinate of projection");
+        nc_put_att_text(ncout, v_x, "units", std::strlen(unit), unit);
+        nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
 
         int v_crs;
         nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
-        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
         //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+        nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
 
     } else {
         // char* unit;
         // double scale = srs.GetAngularUnits(&unit);
-        nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
-        nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
-        nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
-        nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+        nc_put_att_text(ncout, v_y, "units", std::strlen("degrees_north"), "degrees_north");
+        nc_put_att_text(ncout, v_y, "long_name", std::strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "standard_name", std::strlen("latitude"), "latitude");
+        nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
 
-        nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
-        nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
-        nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
-        nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+        nc_put_att_text(ncout, v_x, "units", std::strlen("degrees_east"), "degrees_east");
+        nc_put_att_text(ncout, v_x, "long_name", std::strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "standard_name", std::strlen("longitude"), "longitude");
+        nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
 
         int v_crs;
-        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
-        //nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("latitude_longitude"), "latitude_longitude");
+        //nc_put_att_text(ncout, v_crs, "crs_wkt", std::strlen(wkt), wkt);
         nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
-        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-        nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+        //nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+        nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
         //nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-        nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+        nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
     }
     CPLFree(wkt);
     int d_all[] = {d_t, d_y, d_x};
@@ -1424,7 +1425,7 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
         }
 
         if (!bands().get(i).unit.empty())
-            nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+            nc_put_att_text(ncout, v, "units", std::strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
 
         double pscale = bands().get(i).scale;
         double poff = bands().get(i).offset;
@@ -1432,8 +1433,8 @@ void cube::write_single_chunk_netcdf(gdalcubes::chunkid_t id, std::string path, 
 
         nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
         nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
-        nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
-        nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+        nc_put_att_text(ncout, v, "type", std::strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+        nc_put_att_text(ncout, v, "grid_mapping", std::strlen("crs"), "crs");
 
         nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
 
@@ -1541,17 +1542,17 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
             nc_def_var(ncout, xname.c_str(), NC_DOUBLE, 1, &d_x, &v_x);
 
             std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
-            nc_put_att_text(ncout, NC_GLOBAL, "Conventions", strlen("CF-1.6"), "CF-1.6");
-            nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+            nc_put_att_text(ncout, NC_GLOBAL, "Conventions", std::strlen("CF-1.6"), "CF-1.6");
+            nc_put_att_text(ncout, NC_GLOBAL, "source", std::strlen(att_source.c_str()), att_source.c_str());
 
             std::string att_t = stref->has_regular_time() ? "regular" : "labeled";
-            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", strlen(att_t.c_str()), att_t.c_str());
+            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_type", std::strlen(att_t.c_str()), att_t.c_str());
             att_t = stref->t0().to_string();
-            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", strlen(att_t.c_str()), att_t.c_str());
+            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t0", std::strlen(att_t.c_str()), att_t.c_str());
             att_t = stref->t1().to_string();
-            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", strlen(att_t.c_str()), att_t.c_str());
+            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_t1", std::strlen(att_t.c_str()), att_t.c_str());
             att_t = stref->dt().to_string();
-            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", strlen(att_t.c_str()), att_t.c_str());
+            nc_put_att_text(ncout, NC_GLOBAL, "gdalcubes_datetime_dt", std::strlen(att_t.c_str()), att_t.c_str());
 
             // write json graph as metadata
             std::string j = make_constructible_json().dump();
@@ -1561,7 +1562,7 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
             srs.exportToWkt(&wkt);
             // double geoloc_array[6] = {bbox.s.left, stref->dx(), 0.0, bbox.s.top, 0.0, -stref->dy()};
             std::string geoloc_array_str = utils::dbl_to_string(bbox.s.left) + " " + utils::dbl_to_string(stref->dx()) + " 0 " + utils::dbl_to_string(bbox.s.top) + " 0 " + utils::dbl_to_string(-stref->dy());
-            //       nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", strlen(wkt), wkt);
+            //       nc_put_att_text(ncout, NC_GLOBAL, "spatial_ref", std::strlen(wkt), wkt);
             //       nc_put_att_double(ncout, NC_GLOBAL, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
 
             std::string dtunit_str;
@@ -1581,11 +1582,11 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
             dtunit_str += " since ";
             dtunit_str += bbox.t0.to_string(datetime_unit::SECOND);
 
-            nc_put_att_text(ncout, v_t, "standard_name", strlen("time"), "time");
-            nc_put_att_text(ncout, v_t, "long_name", strlen("time"), "time");
-            nc_put_att_text(ncout, v_t, "units", strlen(dtunit_str.c_str()), dtunit_str.c_str());
-            nc_put_att_text(ncout, v_t, "calendar", strlen("gregorian"), "gregorian");
-            nc_put_att_text(ncout, v_t, "axis", strlen("T"), "T");  // this avoids GDAL warnings
+            nc_put_att_text(ncout, v_t, "standard_name", std::strlen("time"), "time");
+            nc_put_att_text(ncout, v_t, "long_name", std::strlen("time"), "time");
+            nc_put_att_text(ncout, v_t, "units", std::strlen(dtunit_str.c_str()), dtunit_str.c_str());
+            nc_put_att_text(ncout, v_t, "calendar", std::strlen("gregorian"), "gregorian");
+            nc_put_att_text(ncout, v_t, "axis", std::strlen("T"), "T");  // this avoids GDAL warnings
 
             if (srs.IsProjected()) {
                 // GetLinearUnits(char **) is deprecated since GDAL 2.3.0
@@ -1596,43 +1597,43 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
 #endif
                 srs.GetLinearUnits(&unit);
 
-                nc_put_att_text(ncout, v_y, "standard_name", strlen("projection_y_coordinate"), "projection_y_coordinate");
-                nc_put_att_text(ncout, v_y, "long_name", strlen("y coordinate of projection"), "y coordinate of projection");
-                nc_put_att_text(ncout, v_y, "units", strlen(unit), unit);
-                nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
-                nc_put_att_text(ncout, v_x, "standard_name", strlen("projection_x_coordinate"), "projection_x_coordinate");
-                nc_put_att_text(ncout, v_x, "long_name", strlen("x coordinate of projection"), "x coordinate of projection");
-                nc_put_att_text(ncout, v_x, "units", strlen(unit), unit);
-                nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+                nc_put_att_text(ncout, v_y, "standard_name", std::strlen("projection_y_coordinate"), "projection_y_coordinate");
+                nc_put_att_text(ncout, v_y, "long_name", std::strlen("y coordinate of projection"), "y coordinate of projection");
+                nc_put_att_text(ncout, v_y, "units", std::strlen(unit), unit);
+                nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
+                nc_put_att_text(ncout, v_x, "standard_name", std::strlen("projection_x_coordinate"), "projection_x_coordinate");
+                nc_put_att_text(ncout, v_x, "long_name", std::strlen("x coordinate of projection"), "x coordinate of projection");
+                nc_put_att_text(ncout, v_x, "units", std::strlen(unit), unit);
+                nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
 
                 int v_crs;
                 nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
-                // nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-                nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+                // nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+                nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
                 // nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-                nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+                nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
 
             } else {
                 // char* unit;
                 // double scale = srs.GetAngularUnits(&unit);
-                nc_put_att_text(ncout, v_y, "units", strlen("degrees_north"), "degrees_north");
-                nc_put_att_text(ncout, v_y, "long_name", strlen("latitude"), "latitude");
-                nc_put_att_text(ncout, v_y, "standard_name", strlen("latitude"), "latitude");
-                nc_put_att_text(ncout, v_y, "axis", strlen("Y"), "Y");
+                nc_put_att_text(ncout, v_y, "units", std::strlen("degrees_north"), "degrees_north");
+                nc_put_att_text(ncout, v_y, "long_name", std::strlen("latitude"), "latitude");
+                nc_put_att_text(ncout, v_y, "standard_name", std::strlen("latitude"), "latitude");
+                nc_put_att_text(ncout, v_y, "axis", std::strlen("Y"), "Y");
 
-                nc_put_att_text(ncout, v_x, "units", strlen("degrees_east"), "degrees_east");
-                nc_put_att_text(ncout, v_x, "long_name", strlen("longitude"), "longitude");
-                nc_put_att_text(ncout, v_x, "standard_name", strlen("longitude"), "longitude");
-                nc_put_att_text(ncout, v_x, "axis", strlen("X"), "X");
+                nc_put_att_text(ncout, v_x, "units", std::strlen("degrees_east"), "degrees_east");
+                nc_put_att_text(ncout, v_x, "long_name", std::strlen("longitude"), "longitude");
+                nc_put_att_text(ncout, v_x, "standard_name", std::strlen("longitude"), "longitude");
+                nc_put_att_text(ncout, v_x, "axis", std::strlen("X"), "X");
 
                 int v_crs;
-                // nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("latitude_longitude"), "latitude_longitude");
-                // nc_put_att_text(ncout, v_crs, "crs_wkt", strlen(wkt), wkt);
+                // nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("latitude_longitude"), "latitude_longitude");
+                // nc_put_att_text(ncout, v_crs, "crs_wkt", std::strlen(wkt), wkt);
                 nc_def_var(ncout, "crs", NC_CHAR, 0, NULL, &v_crs);
-                // nc_put_att_text(ncout, v_crs, "grid_mapping_name", strlen("easting_northing"), "easting_northing");
-                nc_put_att_text(ncout, v_crs, "spatial_ref", strlen(wkt), wkt);
+                // nc_put_att_text(ncout, v_crs, "grid_mapping_name", std::strlen("easting_northing"), "easting_northing");
+                nc_put_att_text(ncout, v_crs, "spatial_ref", std::strlen(wkt), wkt);
                 // nc_put_att_double(ncout, v_crs, "GeoTransform", NC_DOUBLE, 6, geoloc_array);
-                nc_put_att_text(ncout, v_crs, "GeoTransform", strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
+                nc_put_att_text(ncout, v_crs, "GeoTransform", std::strlen(geoloc_array_str.c_str()), geoloc_array_str.c_str());
             }
             CPLFree(wkt);
             int d_all[] = {d_t, d_y, d_x};
@@ -1655,7 +1656,7 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
                 }
 
                 if (!bands().get(i).unit.empty())
-                    nc_put_att_text(ncout, v, "units", strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
+                    nc_put_att_text(ncout, v, "units", std::strlen(bands().get(i).unit.c_str()), bands().get(i).unit.c_str());
 
                 double pscale = bands().get(i).scale;
                 double poff = bands().get(i).offset;
@@ -1663,8 +1664,8 @@ void cube::write_chunks_netcdf(std::string dir, std::string name, uint8_t compre
 
                 nc_put_att_double(ncout, v, "scale_factor", NC_DOUBLE, 1, &pscale);
                 nc_put_att_double(ncout, v, "add_offset", NC_DOUBLE, 1, &poff);
-                nc_put_att_text(ncout, v, "type", strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
-                nc_put_att_text(ncout, v, "grid_mapping", strlen("crs"), "crs");
+                nc_put_att_text(ncout, v, "type", std::strlen(bands().get(i).type.c_str()), bands().get(i).type.c_str());
+                nc_put_att_text(ncout, v, "grid_mapping", std::strlen("crs"), "crs");
 
                 nc_put_att_double(ncout, v, "_FillValue", NC_DOUBLE, 1, &pNAN);
 
@@ -1811,7 +1812,7 @@ void chunk_data::write_ncdf(std::string path, uint8_t compression_level, bool fo
     nc_def_dim(ncout, "x", this->size()[3], &d_x);
 
     std::string att_source = "gdalcubes " + std::to_string(GDALCUBES_VERSION_MAJOR) + "." + std::to_string(GDALCUBES_VERSION_MINOR) + "." + std::to_string(GDALCUBES_VERSION_PATCH);
-    nc_put_att_text(ncout, NC_GLOBAL, "source", strlen(att_source.c_str()), att_source.c_str());
+    nc_put_att_text(ncout, NC_GLOBAL, "source", std::strlen(att_source.c_str()), att_source.c_str());
 
     int d_all[] = {d_b, d_t, d_y, d_x};
     int v;

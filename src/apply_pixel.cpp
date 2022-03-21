@@ -26,6 +26,8 @@
 
 #include "external/tinyexpr/tinyexpr.h"
 
+#include <cstring>
+
 namespace gdalcubes {
 
 std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {

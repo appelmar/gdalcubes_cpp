@@ -1,4 +1,5 @@
 #include "slice_time.h"
+#include <cstring>
 
 namespace gdalcubes {
 

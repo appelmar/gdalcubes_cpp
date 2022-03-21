@@ -1,4 +1,5 @@
 #include "select_time.h"
+#include <cstring>
 
 namespace gdalcubes {
 

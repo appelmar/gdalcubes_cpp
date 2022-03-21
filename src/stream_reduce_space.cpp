@@ -1,6 +1,7 @@
 #include "stream_reduce_space.h"
 
 #include <fstream>
+#include <cstring>
 
 #include "external/tiny-process-library/process.hpp"
 

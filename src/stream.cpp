@@ -25,8 +25,8 @@
 #include "stream.h"
 
 #include <stdlib.h>
-
 #include <fstream>
+#include <cstring>
 
 #include "external/tiny-process-library/process.hpp"
 

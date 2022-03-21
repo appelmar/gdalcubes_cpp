@@ -23,6 +23,7 @@
 */
 
 #include "join_bands.h"
+#include <cstring>
 
 namespace gdalcubes {
 

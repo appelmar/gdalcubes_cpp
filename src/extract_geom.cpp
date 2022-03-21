@@ -26,6 +26,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 
 #include <gdal_utils.h>
 #include <ogrsf_frmts.h>
+#include <cstring>
 
     namespace gdalcubes {
 

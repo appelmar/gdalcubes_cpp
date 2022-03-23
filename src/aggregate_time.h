@@ -118,10 +118,10 @@ class aggregate_time_cube : public cube {
         }
         stref->dt(_dt);
 
-        if (stref->nt() > _in_cube->st_reference()->nt()) {
-            GCBS_ERROR("ERROR in aggregate_time_cube::aggregate_time_cube(): resulting cube would have more pixels than the input cube, please change target resolution");
-            throw std::string("ERROR in aggregate_time_cube::aggregate_time_cube(): resulting cube would have more pixels than the input cube, please change target resolution");
-        }
+//        if (stref->nt() > _in_cube->st_reference()->nt()) {
+//            GCBS_ERROR("ERROR in aggregate_time_cube::aggregate_time_cube(): resulting cube would have more pixels than the input cube, please change target resolution");
+//            throw std::string("ERROR in aggregate_time_cube::aggregate_time_cube(): resulting cube would have more pixels than the input cube, please change target resolution");
+//        }
 
         _st_ref = stref;
         _chunk_size[0] = std::min(_st_ref->nt(), _in_cube->chunk_size()[0]);

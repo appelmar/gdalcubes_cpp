@@ -17,10 +17,30 @@ std::shared_ptr<chunk_data> crop_cube::read_chunk(chunkid_t id) {
     //  integer coordinates of current chunk with regard to the input cube
     int32_t abs_low_x = output_chunk_coords[2]  * _chunk_size[2] + _x_min;
     int32_t abs_high_x = abs_low_x + size_tyx[2] - 1; // TODO: check and test for different chunk sizes
+    if (abs_low_x >= (int32_t)_in_cube->size_x() ||
+        abs_high_x < 0) {
+        return out; // completely outside input cube
+    }
+    if (abs_low_x < 0) abs_low_x = 0;
+    if (abs_high_x >= (int32_t)_in_cube->size_x()) abs_high_x = _in_cube->size_x() - 1;
+
     int32_t abs_low_y = output_chunk_coords[1]  * _chunk_size[1] + _y_min;
     int32_t abs_high_y = abs_low_y + size_tyx[1] - 1; // TODO: check and test for different chunk sizes
+    if (abs_low_y >= (int32_t)_in_cube->size_y() ||
+        abs_high_y < 0) {
+        return out; // completely outside input cube
+    }
+    if (abs_low_y < 0) abs_low_y = 0;
+    if (abs_high_y >= (int32_t)_in_cube->size_y()) abs_high_y = _in_cube->size_y() - 1;
+
     int32_t abs_low_t = output_chunk_coords[0]  * _chunk_size[0] + _t_min;
     int32_t abs_high_t = abs_low_t + size_tyx[0] - 1; // TODO: check and test for different chunk sizes
+    if (abs_low_t >= (int32_t)_in_cube->size_t() ||
+        abs_high_t < 0) {
+        return out; // completely outside input cube
+    }
+    if (abs_low_t < 0) abs_low_t = 0;
+    if (abs_high_t >= (int32_t)_in_cube->size_t()) abs_high_t = _in_cube->size_t() - 1;
 
     chunk_coordinate_tyx input_chunk_coords_low = {abs_low_t /  _in_cube->chunk_size()[0],
                                                    abs_low_y /  _in_cube->chunk_size()[1],

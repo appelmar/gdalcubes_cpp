@@ -198,15 +198,24 @@ class crop_cube : public cube {
         _chunk_size[1] = _in_cube->chunk_size()[1];
         _chunk_size[2] = _in_cube->chunk_size()[2];
 
+
+
+        if (_x_max < 0 || _x_min >= (int32_t)in->size_x() ||
+            _y_max < 0 || _y_min >= (int32_t)in->size_y() ||
+            _t_max < 0 || _t_min >= (int32_t)in->size_t()) {
+            std::string msg = "Crop region is completely outside the data cube extent";
+            GCBS_ERROR(msg);
+            throw std::string(msg);
+        }
+
         if (_x_min < 0 || _x_min >= (int32_t)in->size_x() ||
             _x_max < 0 || _x_max >= (int32_t)in->size_x() ||
             _y_min < 0 || _y_min >= (int32_t)in->size_y() ||
             _y_max < 0 || _y_max >= (int32_t)in->size_y() ||
             _t_min < 0 || _t_min >= (int32_t)in->size_t() ||
             _t_max < 0 || _t_max >= (int32_t)in->size_t()) {
-            std::string msg = "Crop region reaches beyond data cube bounds";
-            GCBS_ERROR(msg);
-            throw std::string(msg);
+            std::string msg = "Crop region is partially outside the data cube extent";
+            GCBS_DEBUG(msg);
         }
 
         // assert that min < max

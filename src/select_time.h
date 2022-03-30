@@ -70,11 +70,10 @@ class select_time_cube : public cube {
         // NOTE: the following will only work as long as all cube st reference types with regular spatial dimensions inherit from  cube_stref_regular class
         std::shared_ptr<cube_stref_regular> stref_orig = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
 
-        stref->win(stref_orig->win());
-        stref->srs(stref_orig->srs());
-        stref->nx(stref_orig->nx());
-        stref->ny(stref_orig->ny());
-        stref->dt(stref_orig->dt());
+        stref->set_x_axis(stref_orig->left(), stref_orig->right(), stref_orig->nx());
+        stref->set_y_axis(stref_orig->bottom(), stref_orig->top(), stref_orig->ny());
+
+        //stref->dt(stref_orig->dt());
 
         std::vector<datetime> dt;
         for (uint32_t i = 0; i < t.size(); ++i) {

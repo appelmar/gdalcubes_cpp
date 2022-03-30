@@ -79,7 +79,7 @@ TEST_CASE("Datetime arithmetics", "[datetime]") {
     d = duration::from_string("P3M");
 
     REQUIRE((x + d).unit() == datetime_unit::MONTH);
-    REQUIRE((x + d).to_string() == "2002-06");
+    REQUIRE((x + d).to_string() == "2002-06-01");
     REQUIRE((x + d).to_double() == 200206);
 }
 
@@ -117,4 +117,12 @@ TEST_CASE("Datetime Access Functions", "[datetime]") {
 
     REQUIRE(datetime::from_string("2001-03-01").dayofyear() == 60);  // no leap year
     REQUIRE(datetime::from_string("2000-03-01").dayofyear() == 61);  // leap year
+
+
+
+    auto xxx = datetime::from_string("2021-01-31") + duration::from_string("P3M");
+    REQUIRE(xxx.year() == 2021);
+    REQUIRE(xxx.month() == 4);
+    REQUIRE(xxx.dayofmonth() == 30);
+
 }

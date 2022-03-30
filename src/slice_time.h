@@ -77,8 +77,9 @@ class slice_time_cube : public cube {
 
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
             auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-            stref->t0(_in_cube->st_reference()->datetime_at_index(_t_index));
-            stref->t1(_in_cube->st_reference()->datetime_at_index(_t_index));
+            stref->set_t_axis(_in_cube->st_reference()->datetime_at_index(_t_index),
+                              _in_cube->st_reference()->datetime_at_index(_t_index),
+                              in->st_reference()->dt());
         }
         else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
             auto stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
@@ -103,8 +104,9 @@ class slice_time_cube : public cube {
         }
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
             auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-            stref->t0(_in_cube->st_reference()->datetime_at_index(_t_index));
-            stref->t1(_in_cube->st_reference()->datetime_at_index(_t_index));
+            stref->set_t_axis(_in_cube->st_reference()->datetime_at_index(_t_index),
+                              _in_cube->st_reference()->datetime_at_index(_t_index),
+                              in->st_reference()->dt());
         }
         else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
             auto stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);

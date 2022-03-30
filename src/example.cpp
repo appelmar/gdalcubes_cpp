@@ -50,7 +50,8 @@ int main(int argc, char* argv[]) {
     config::instance()->gdalcubes_init();
     config::instance()->set_error_handler(error_handler::error_handler_debug);
     config::instance()->set_default_progress_bar(std::make_shared<progress_simple_stdout_with_time>());
-    config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(8));
+    //config::instance()->set_default_progress_bar(std::make_shared<progress_none>());
+    config::instance()->set_default_chunk_processor(std::make_shared<chunk_processor_multithread>(1));
 
     //    auto prsts = collection_format::list_presets();
     //    for (auto it = prsts.begin(); it != prsts.end(); ++it) {
@@ -62,21 +63,21 @@ int main(int argc, char* argv[]) {
 
         /**************************************************************************/
         // Test create image collection
-        {
-            //            collection_format f("Sentinel2_L2A");
-            //            auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
-            //            ic->write("test.db");
-            //            std::cout << ic->to_string() << std::endl;
-            //            std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
-        }
+        //        {
+        //                        collection_format f("Sentinel2_L2A");
+        //                        auto ic = image_collection::create(f, image_collection::unroll_archives(string_list_from_text_file("/home/marius/eodata/Sentinel2/file_list.txt")), false);
+        //                        ic->write("test.db");
+        //                        std::cout << ic->to_string() << std::endl;
+        //                        std::dynamic_pointer_cast<cube_view>(image_collection_cube::create(ic)->st_reference())->write_json("view_default.json");
+        //        }
         /**************************************************************************/
 
         /**************************************************************************/
         // Test addo
-        {
-            //            auto ic = std::make_shared<image_collection>("test.db");
-            //            image_collection_ops::create_overviews(ic);
-        }
+        //        {
+        //            //            auto ic = std::make_shared<image_collection>("test.db");
+        //            //            image_collection_ops::create_overviews(ic);
+        //        }
         /**************************************************************************/
 
         //cube_view v = cube_view::read_json("view.json");
@@ -122,27 +123,27 @@ int main(int argc, char* argv[]) {
         /**************************************************************************/
         // test masking
         //        {
-        //            cube_view w;
-        //            w.left() = 300000.000;
-        //            w.top() = 5800020.000;
-        //            w.bottom() = 5690220.000;
-        //            w.right() = 409800.000;
-        //            w.srs() = "EPSG:32632";
-        //            w.nx() = 500;
-        //            w.ny() = 500;
-        //            w.dt(duration::from_string("P1D"));
-        //            w.t0() = datetime::from_string("2018-06-14");
-        //            w.t1() = datetime::from_string("2018-06-14");
+        //                    cube_view w;
+        //                    w.left() = 300000.000;
+        //                    w.top() = 5800020.000;
+        //                    w.bottom() = 5690220.000;
+        //                    w.right() = 409800.000;
+        //                    w.srs() = "EPSG:32632";
+        //                    w.nx() = 500;
+        //                    w.ny() = 500;
+        //                    w.dt(duration::from_string("P1D"));
+        //                    w.t0() = datetime::from_string("2018-06-14");
+        //                    w.t1() = datetime::from_string("2018-06-14");
         //
-        //            auto c = image_collection_cube::create("test.db", w);
-        //            std::shared_ptr<image_mask> mask = std::make_shared<value_mask>(std::unordered_set<double>{8, 9});
-        //            c->set_mask("SCL", mask);
-        //            auto cb = select_bands_cube::create(c, std::vector<std::string>{"SCL", "B08"});
+        //                    auto c = image_collection_cube::create("test.db", w);
+        //                    std::shared_ptr<image_mask> mask = std::make_shared<value_mask>(std::unordered_set<double>{8, 9});
+        //                    c->set_mask("SCL", mask);
+        //                    auto cb = select_bands_cube::create(c, std::vector<std::string>{"SCL", "B08"});
         //
-        //            cb->write_netcdf_file("mask.nc");
-        //        }
+        //                    cb->write_netcdf_file("mask.nc");
+        //  }
 
-        // v = cube_view::read_json("view.json");
+        //auto v = cube_view::read_json("view.json");
 
         /**************************************************************************/
 
@@ -366,23 +367,222 @@ int main(int argc, char* argv[]) {
         //        setenv("CPL_LOG_ERRORS", "ON", 1);
         //        setenv("CPL_LOG", "/tmp/gdal.log", 1);
 
-        std::cout << datetime::from_string("2020-01-01T04:56:22").to_string() << std::endl;
-        std::cout << datetime::from_string("2020-01-01T04:56:22Z").to_string() << std::endl;
-        std::cout << datetime::from_string("2020-01-01T04:56:22+11").to_string() << std::endl;
-        std::cout << datetime::from_string("2020-01-01T04:56:22-11").to_string() << std::endl;
-        std::cout << datetime::from_string("2020-01-01T04:56:22+11:00").to_string() << std::endl;
-        std::cout << datetime::from_string("2020-01-01T04:56:22-11:00").to_string() << std::endl;
-        std::cout << datetime::from_string("2020-01-01T04:56:22+1100").to_string() << std::endl;
-        std::cout << datetime::from_string("2020-01-01T04:56:22-1100").to_string()  << std::endl;
+        // cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_netcdf_file("/tmp/cube.nc");
 
-        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_netcdf_file("/tmp/cube.nc");
+        //        int i=1;
+        //        filesystem::iterate_directory("/tmp/RtmpRgZMzS/gdalcubes_debug", [&i](const std::string& f)->void {
+        //            if (filesystem::extension(f) == "json") {
+        //                std::cout << i << ": " << f << "...";
+        //                cube_factory::instance()->create_from_json_file(f)->write_netcdf_file("/tmp/cube" + std::to_string(i) + ".nc");
+        //                std::cout << std::endl;
+        //                ++i;
+        //            }
+        //
+        //        });
+
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22").to_string() << std::endl;
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22Z").to_string() << std::endl;
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22+11").to_string() << std::endl;
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22-11").to_string() << std::endl;
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22+11:00").to_string() << std::endl;
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22-11:00").to_string() << std::endl;
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22+1100").to_string() << std::endl;
+        //        std::cout << datetime::from_string("2020-01-01T04:56:22-1100").to_string()  << std::endl;
+
+       // auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
+       // auto c_agg = aggregate_time_cube::create(c, "P1M", "mean");
+
+        //c_agg->write_netcdf_file("/tmp/cube.nc");
+
+
+//        cube_view r;
+//        r.srs("EPSG:3857");
+//        r.left(-6180000);
+//        r.right(-6080000);
+//        r.top(-450000);
+//        r.bottom(-550000);
+//        r.nx(100);
+//        r.ny(100);
+//        r.t0(datetime::from_string("2014-01-01"));
+//        r.t1(datetime::from_string("2014-12-31"));
+//        r.dt(duration::from_string("P1D"));
+//
+//        auto c = dummy_cube::create(r, 1, 1.0);
+//        auto ca = crop_cube::create(c, 0, 10, 0, 10, 0, 11);
+//        std::cout <<  ca->st_reference()->nx() << "," << ca->st_reference()->ny() << "," <<   ca->st_reference()->nt() <<  std::endl; // 29
+//
+//        auto ca1 = crop_cube::create(c, r.left(), r.right(), r.bottom(), r.top(), "2014-01-01", "2014-01-20", "in");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//
+//
+//        // check snapping
+//        ca1 = crop_cube::create(c, r.left() + 0.01, r.right() - 0.01, r.bottom() + 0.01, r.top() - 0.01, "2014-01-01", "2014-01-20", "in");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//        ca1 = crop_cube::create(c, r.left() + 0.01, r.right() - 0.01, r.bottom() + 0.01, r.top() - 0.01, "2014-01-01", "2014-01-20", "near");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//        ca1 = crop_cube::create(c, r.left() + 0.01, r.right() - 0.01, r.bottom() + 0.01, r.top() - 0.01, "2014-01-01", "2014-01-20", "out");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//
+//
+//
+//        auto c1 = aggregate_time_cube::create(c, 3);
+//        ca1 = crop_cube::create(c1, r.left(), r.right(), r.bottom(), r.top(), "2014-01-02", "2014-01-20", "in");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//        ca1 = crop_cube::create(c1, r.left(), r.right(), r.bottom(), r.top(), "2014-01-02", "2014-01-20", "out");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//        ca1 = crop_cube::create(c1, r.left(), r.right(), r.bottom(), r.top(), "2014-01-02", "2014-01-20", "near");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//
+//        auto c2 = select_time_cube::create(c, {"2014-01-02", "2014-01-06", "2014-01-20", "2014-01-21", "2014-01-28", "2014-02-01"});
+//        ca1 = crop_cube::create(c2, r.left(), r.right(), r.bottom(), r.top(), "2014-01-05", "2014-01-27", "near");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//        ca1 = crop_cube::create(c2, r.left(), r.right(), r.bottom(), r.top(), "2014-01-05", "2014-01-27", "out");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+//
+//        ca1 = crop_cube::create(c2, r.left(), r.right(), r.bottom(), r.top(), "2014-01-05", "2014-01-27", "in");
+//        std::cout <<  ca1->st_reference()->nx() << "," << ca1->st_reference()->ny() << "," <<   ca1->st_reference()->nt() <<  std::endl; // 29
+//        std::cout <<  std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t0().to_string()<< "," << std::dynamic_pointer_cast<cube_stref_regular>(ca1->st_reference())->t1().to_string() <<  std::endl;
+
+
+        // TODO: test for labeled time axis
+
+
+//        cube_stref_regular r;
+//        r.srs("EPSG:3857");
+//        r.left(-6180000);
+//        r.right(-6080000);
+//        r.top(-450000);
+//        r.bottom(-550000);
+//        r.dx(1000);
+//        r.dy(1000);
+//        r.t0(datetime::from_string("2014-01-01"));
+//        r.t1(datetime::from_string("2014-12-31"));
+//        r.dt(duration::from_string("P10D"));
+//
+//
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-18")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-19")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-20")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-21")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-22")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-23")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-24")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-25")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-26")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-27")) << std::endl; // 29
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-10-28")) << std::endl; // 30?
+//
+//        std::cout <<  r.index_at_datetime(datetime::from_string("2014-11-01")) - 1 << std::endl; // 30?
+
+
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng_error","ttt", {"B03","B04","B05"}, {0,0,0}, {1500, 1500, 1500},1,{},true);
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_netcdf_file("/tmp/test.nc");
+
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng_rgb_alpha","ttt", {"B04","B03","B02"}, {0,0,0}, {1500, 1500, 1500},1,{},true);
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng_rgb_nacol","ttt", {"B04","B03","B02"}, {0,0,0}, {1500, 1500, 1500},0.5,{255,0,0},false);
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng_gray_nacol","ttt", {"B04"}, {100}, {2000},0.7,{255,0,0},false);
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng_gray_nacolblack","ttt", {"B04"}, {100}, {2000},0.7,{0},false);
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng_gray_alpha","ttt", {"B04"}, {100}, {2000},0.7,{255,0,0},true);
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng_rgb_default","ttt");
+
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng","ttt", {"B03"}, {0}, {1500},1,{255},false);
+        //cube_factory::instance()->create_from_json_file("/tmp/cube.json")->write_png_collection("/tmp/testpng","ttt", {"B03"}, {0}, {1500},1,{},true);
+
         //test_multiprocess::write_chunks_netcdf(cube_factory::instance()->create_from_json_file("/tmp/cube.json"),"/tmp", "test");
         //config::instance()->set_gdal_use_overviews(false);
-//        auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
-//        c->write_netcdf_file("/tmp/xxx.nc");
+        //        auto c = cube_factory::instance()->create_from_json_file("/tmp/cube.json");
+        //        c->write_netcdf_file("/tmp/xxx.nc");
         //c->write_tif_collection("/tmp/TESTTIF", "xxx");
 
         /******************************************/
+
+//        std::vector<std::string> files{"/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150101-S000000-E235959.0000.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150101-S000000-E235959.0000.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150102-S000000-E235959.0030.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150102-S000000-E235959.0030.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150103-S000000-E235959.0060.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150103-S000000-E235959.0060.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150104-S000000-E235959.0090.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150104-S000000-E235959.0090.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150105-S000000-E235959.0120.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150105-S000000-E235959.0120.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150106-S000000-E235959.0150.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150106-S000000-E235959.0150.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150107-S000000-E235959.0180.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150107-S000000-E235959.0180.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150108-S000000-E235959.0210.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150108-S000000-E235959.0210.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150109-S000000-E235959.0240.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150109-S000000-E235959.0240.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150110-S000000-E235959.0270.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150110-S000000-E235959.0270.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150111-S000000-E235959.0300.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150111-S000000-E235959.0300.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150112-S000000-E235959.0330.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150112-S000000-E235959.0330.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150113-S000000-E235959.0360.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150113-S000000-E235959.0360.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150114-S000000-E235959.0390.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150114-S000000-E235959.0390.V06A.total.accum.tif", "/media/marius/Samsung_T5/eodata/GPM/IMERG_3B_DAY_GIS_V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150115-S000000-E235959.0420.V06A/3B-DAY-GIS.MS.MRG.3IMERG.20150115-S000000-E235959.0420.V06A.total.accum.tif"};
+//        std::vector<std::string> datetime{"2015-01-01", "2015-01-02", "2015-01-03", "2015-01-04", "2015-01-05", "2015-01-06", "2015-01-07", "2015-01-08", "2015-01-09", "2015-01-10", "2015-01-11", "2015-01-12", "2015-01-13", "2015-01-14", "2015-01-15"};
+//        std::vector<std::string> band_names{"TOTAL_ACCUM"};
+//
+//        auto c1 = simple_cube::create(files, datetime, {}, band_names, 0.5,  0.5);
+//        auto cr = reduce_time_cube::create(c1, {{"median", "TOTAL_ACCUM"}});
+//        cr->write_netcdf_file("/tmp/cube1.nc", 6);
+
+        //                    auto c2 = apply_pixel_cube::create(c1, {"left", "top"}, {"left", "top"}, false);
+
+
+
+
+
+        /* test extract_geom */
+        {
+//
+//            cube_view r;
+//            r.srs("EPSG:3857");
+//            r.left(-6180000);
+//            r.right(-6080000);
+//            r.top(-450000);
+//            r.bottom(-550000);
+//            r.nx(100);
+//            r.ny(100);
+//            r.t0(datetime::from_string("2014-01-01"));
+//            r.t1(datetime::from_string("2014-12-31"));
+//            r.dt(duration::from_string("P1D"));
+//
+//            auto d= dummy_cube::create(r, 2,1.2);
+//            d->set_chunk_size(10,100,100);
+//            //d->write_netcdf_file("/tmp/test_extract.nc");
+//
+//            auto ex1 = extract_geom::create(d, "/home/marius/Desktop/test_extract_cube/points1000_time.gpkg", "date");
+
+
+//            auto c = cube_factory::instance()->create_from_json_file("/home/marius/Desktop/cube.json");
+//            auto ex1 = extract_geom::create(c, "/home/marius/Desktop/test.gpkg", "time");
+//
+//            for (uint32_t i=0; i<ex1->count_chunks(); ++i) {
+//                std::cout <<  std::endl <<  "CHUNK ID " << i << std::endl;
+//                std::cout << "---------------------------------------------------------"<< std::endl;
+//                std::shared_ptr<chunk_data> dat = ex1->read_chunk(i);
+//                if (!dat->empty()) {
+//                    uint32_t ncol = dat->size()[0];
+//                    uint32_t nrow = dat->size()[1];
+//
+//                    for (uint32_t row = 0; row < nrow; ++row) {
+//                        for (uint32_t col = 0; col < ncol; ++col) {
+//                            std::cout << ((double*)dat->buf())[col * nrow + row] << " ";
+//                        }
+//                        std::cout << std::endl;
+//                    }
+//                }
+//            }
+
+
+        }
+
+
+        std::vector<std::string> items;
+        filesystem::iterate_directory("/home/marius/github", [&items](const std::string& f) {
+            items.push_back(f);
+        });
+        for (auto it = items.begin(); it != items.end(); ++it) {
+            std::cout << *it << std::endl;
+        }
+        std::cout << items.size() << " files" << std::endl;
+
+
+
+
 
     } catch (std::string e) {
         std::cout << e << std::endl;

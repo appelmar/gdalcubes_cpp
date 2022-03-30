@@ -102,21 +102,19 @@ class aggregate_time_cube : public cube {
         std::shared_ptr<cube_stref_regular> stref = std::make_shared<cube_stref_regular>();
 
         stref->srs(in->st_reference()->srs());
-        stref->left(in->st_reference()->left());
-        stref->right(in->st_reference()->right());
-        stref->top(in->st_reference()->top());
-        stref->bottom(in->st_reference()->bottom());
-        stref->dx(in->st_reference()->dx());
-        stref->dy(in->st_reference()->dy());
+        stref->set_x_axis(in->st_reference()->left(), in->st_reference()->right(), in->st_reference()->dx());
+        stref->set_y_axis(in->st_reference()->bottom(), in->st_reference()->top(), in->st_reference()->dy());
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
-            stref->t0(std::dynamic_pointer_cast<cube_stref_regular>(in->st_reference())->t0());
-            stref->t1(std::dynamic_pointer_cast<cube_stref_regular>(in->st_reference())->t1());
+            stref->set_t_axis(std::dynamic_pointer_cast<cube_stref_regular>(in->st_reference())->t0(),
+                              std::dynamic_pointer_cast<cube_stref_regular>(in->st_reference())->t1(),
+                              _dt);
         }
         else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
-            stref->t0(std::dynamic_pointer_cast<cube_stref_labeled_time>(in->st_reference())->t0());
-            stref->t1(std::dynamic_pointer_cast<cube_stref_labeled_time>(in->st_reference())->t1());
+            stref->set_t_axis(std::dynamic_pointer_cast<cube_stref_labeled_time>(in->st_reference())->t0(),
+                              std::dynamic_pointer_cast<cube_stref_labeled_time>(in->st_reference())->t1(),
+                              _dt);
         }
-        stref->dt(_dt);
+
 
 //        if (stref->nt() > _in_cube->st_reference()->nt()) {
 //            GCBS_ERROR("ERROR in aggregate_time_cube::aggregate_time_cube(): resulting cube would have more pixels than the input cube, please change target resolution");

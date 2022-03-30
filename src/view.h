@@ -240,6 +240,8 @@ class cube_stref {
     virtual double right() = 0;
     virtual double bottom() = 0;
     virtual double top() = 0;
+    virtual datetime t0() = 0;
+    virtual datetime t1() = 0;
     virtual std::string srs() = 0;
     virtual OGRSpatialReference srs_ogr() const = 0;
 
@@ -290,11 +292,203 @@ class cube_stref_regular : public cube_stref {
    public:
     virtual ~cube_stref_regular() {}
 
+    virtual void set_x_axis(double min, double max, double delta) {
+        _win.left = min;
+        _win.right = max;
+        _nx = (uint32_t)std::ceil((_win.right - _win.left) / delta);
+        double exp_x = _nx * delta - (_win.right - _win.left);
+        _win.right += exp_x / 2;
+        _win.left -= exp_x / 2;
+        if (std::fabs(exp_x) > std::numeric_limits<double>::epsilon()) {
+            GCBS_INFO("Size of the cube in x direction does not align with dx, extent will be enlarged by " +
+                      std::to_string(exp_x / 2) + " at both sides.");
+        }
+    }
+    virtual void set_x_axis(double min, double max, uint32_t n) {
+        _win.left = min;
+        _win.right = max;
+        _nx = n;
+    }
+    virtual void set_x_axis(double min, uint32_t n, double delta) {
+        _win.left = min;
+        _nx = n;
+        _win.right = min + n * delta;
+    }
+    virtual void set_x_axis(uint32_t n, double max, double delta) {
+        _win.right = max;
+        _nx = n;
+        _win.left = max - n * delta;
+    }
+
+
+
+
+    virtual void set_y_axis(double min, double max, double delta) {
+        _win.bottom= min;
+        _win.top = max;
+        _ny = (uint32_t)std::ceil((_win.top- _win.bottom) / delta);
+        double exp_y = _ny * delta - (_win.top - _win.bottom);
+        _win.top += exp_y / 2;
+        _win.bottom -= exp_y / 2;
+        if (std::fabs(exp_y) > std::numeric_limits<double>::epsilon()) {
+            GCBS_INFO("Size of the cube in y direction does not align with dy, extent will be enlarged by " +
+                      std::to_string(exp_y / 2) + " at both sides.");
+        }
+    }
+    virtual void set_y_axis(double min, double max, uint32_t n) {
+        _win.bottom = min;
+        _win.top = max;
+        _ny = n;
+    }
+    virtual void set_y_axis(double min, uint32_t n, double delta) {
+        _win.bottom = min;
+        _ny = n;
+        _win.top = min + n * delta;
+
+    }
+    virtual void set_y_axis(uint32_t n, double max, double delta) {
+        _win.top = max;
+        _ny = n;
+        _win.bottom = max - n * delta;
+    }
+
+    virtual void set_t_axis(datetime min, datetime max, duration delta) {
+        if (min.unit() != max.unit()) { // If different units, use coarser
+            min.unit(std::max(min.unit(), max.unit()));
+            max.unit(std::max(min.unit(), max.unit()));
+            GCBS_WARN("Different datetime units given for start / end dates, using " + datetime::unit_to_string(min.unit()) );
+        }
+        datetime_unit tu = min.unit();
+        datetime_unit u = delta.dt_unit;
+
+        if (tu > u) {
+            GCBS_ERROR("Datetime unit of t0 and t1 is not compatible with dt");
+            throw std::string("Datetime unit of t0 and t1 is not compatible with dt");
+        }
+
+        _t0 = min;
+        _t1 = max;
+        _t0.unit(u);
+        _t1.unit(u);
+
+        duration dtotal = _t1 - _t0;  // + 1 if include end date2
+        dtotal.dt_interval += 1;
+        if (dtotal % delta != 0) {
+            duration end_duration;  // end duration has one (day / month / unit) less than dt)
+            end_duration.dt_interval = delta.dt_interval - 1;
+            end_duration.dt_unit = u;
+            _t1 = (_t0 + delta * (dtotal / delta)) + end_duration;
+            GCBS_INFO(
+                "Temporal size of the cube does not align with dt, end date/time of the cube will be extended to " +
+                _t1.to_string());
+        }
+        _dt = delta;
+
+        if (tu < u) {
+            if (u == datetime_unit::YEAR) {
+                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(1) / date::day(1)} +
+                          std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                _t0 = datetime(p0, u);
+
+                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(12) / date::day(31)} +
+                          std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
+                _t1 = datetime(p1, u);
+            }
+            else if (u == datetime_unit::MONTH) {
+                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(1)} +
+                          std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                _t0 = datetime(p0, u);
+
+                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::last} +
+                          std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
+                _t1 = datetime(p1, u);
+            }
+            else if (u == datetime_unit::DAY) {
+                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                          std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                _t0 = datetime(p0, u);
+
+                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                          std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
+                _t1 = datetime(p1, u);
+            }
+            else if (u == datetime_unit::HOUR) {
+                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                          std::chrono::hours{_t0.hours()} + std::chrono::minutes{0} + std::chrono::seconds{0};
+                _t0 = datetime(p0, u);
+
+                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                          std::chrono::hours{_t1.hours()} + std::chrono::minutes{59} + std::chrono::seconds{59};
+                _t1 = datetime(p1, u);
+            }
+            else if (u == datetime_unit::MINUTE) {
+                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                          std::chrono::hours{_t0.hours()} + std::chrono::minutes{_t0.minutes()} + std::chrono::seconds{0};
+                _t0 = datetime(p0, u);
+
+                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                          std::chrono::hours{_t1.hours()} + std::chrono::minutes{_t1.minutes()} + std::chrono::seconds{59};
+                _t1 = datetime(p1, u);
+            }
+            else if (u == datetime_unit::SECOND) { // not needed because SECOND is lowest
+                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                          std::chrono::hours{_t0.hours()} + std::chrono::minutes{_t0.minutes()} + std::chrono::seconds{_t0.seconds()};
+                _t0 = datetime(p0, u);
+
+                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                          std::chrono::hours{_t1.hours()} + std::chrono::minutes{_t1.minutes()} + std::chrono::seconds{_t1.seconds()};
+                _t1 = datetime(p1, u);
+            }
+        }
+
+
+
+    }
+
+
+    virtual void set_t_axis(datetime min, datetime max, uint32_t n) {
+        if (min.unit() != max.unit()) { // If different units, use coarser
+            min.unit(std::max(min.unit(), max.unit()));
+            max.unit(std::max(min.unit(), max.unit()));
+            GCBS_WARN("Different datetime units given for start / end dates, using " + datetime::unit_to_string(min.unit()) );
+        }
+        _t0 = min;
+        _t1 = max;
+        duration d = (_t1 - _t0) + 1;
+        duration dnew = dt();
+        if (dnew.dt_interval == 0) {  // if dt has not been set
+            dnew.dt_unit = d.dt_unit;
+            // alternatively, a "reasonable" value should be derived here
+        }
+        dnew.dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
+        _dt = dnew;
+        if (d.dt_interval % n != 0) {
+            _t1 = _t0 + _dt * (n - 1);
+            GCBS_INFO("Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " +_t1.to_string() + ".");
+        }
+
+//        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
+//            _t1 = _t1 + dt();
+//            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
+//        }
+        //assert(nt() == n);
+
+    }
+    virtual void set_t_axis(double min, uint32_t n, duration delta) {
+        // NOT YET IMPLEMENTED
+    }
+    virtual void set_t_axis(uint32_t n, double max, duration delta) {
+        // NOT YET IMPLEMENTED
+    }
+
+    // TODO: remove setter functions in favor of set_*_axis methods
+
+
     virtual uint32_t nx() override { return _nx; }
-    virtual void nx(uint32_t nx) { _nx = nx; }
+    //virtual void nx(uint32_t nx) { _nx = nx; }
 
     virtual uint32_t ny() override { return _ny; }
-    virtual void ny(uint32_t ny) { _ny = ny; }
+    //virtual void ny(uint32_t ny) { _ny = ny; }
 
     virtual double dx() override { return (_win.right - _win.left) / _nx; }
 
@@ -311,40 +505,40 @@ class cube_stref_regular : public cube_stref {
     * @note if the width of the spatial window is not a multiple of the new dx, the window will be widened at both ends
     * @param x size of cells in x dimension
     */
-    virtual void dx(double dx) {
-        _nx = (uint32_t)std::ceil((_win.right - _win.left) / dx);
-        double exp_x = _nx * dx - (_win.right - _win.left);
-        _win.right += exp_x / 2;
-        _win.left -= exp_x / 2;
-        if (std::fabs(exp_x) > std::numeric_limits<double>::epsilon()) {
-            GCBS_INFO("Size of the cube in x direction does not align with dx, extent will be enlarged by " +
-                      std::to_string(exp_x / 2) + " at both sides.");
-        }
-    }
+//    virtual void dx(double dx) {
+//        _nx = (uint32_t)std::ceil((_win.right - _win.left) / dx);
+//        double exp_x = _nx * dx - (_win.right - _win.left);
+//        _win.right += exp_x / 2;
+//        _win.left -= exp_x / 2;
+//        if (std::fabs(exp_x) > std::numeric_limits<double>::epsilon()) {
+//            GCBS_INFO("Size of the cube in x direction does not align with dx, extent will be enlarged by " +
+//                      std::to_string(exp_x / 2) + " at both sides.");
+//        }
+//    }
 
     virtual double dy() override { return (_win.top - _win.bottom) / _ny; }
-    virtual void dy(double dy) {
-        _ny = (uint32_t)std::ceil((_win.top - _win.bottom) / dy);
-        double exp_y = _ny * dy - (_win.top - _win.bottom);
-        _win.top += exp_y / 2;
-        _win.bottom -= exp_y / 2;
-        if (std::fabs(exp_y) > std::numeric_limits<double>::epsilon()) {
-            GCBS_INFO("Size of the cube in y direction does not align with dy, extent will be enlarged by " +
-                      std::to_string(exp_y / 2) + " at both sides.");
-        }
-    }
+//    virtual void dy(double dy) {
+//        _ny = (uint32_t)std::ceil((_win.top - _win.bottom) / dy);
+//        double exp_y = _ny * dy - (_win.top - _win.bottom);
+//        _win.top += exp_y / 2;
+//        _win.bottom -= exp_y / 2;
+//        if (std::fabs(exp_y) > std::numeric_limits<double>::epsilon()) {
+//            GCBS_INFO("Size of the cube in y direction does not align with dy, extent will be enlarged by " +
+//                      std::to_string(exp_y / 2) + " at both sides.");
+//        }
+//    }
 
     virtual double left() override { return _win.left; }
-    virtual void left(double left) { _win.left = left; }
+    //virtual void left(double left) { _win.left = left; }
 
     virtual double right() override { return _win.right; }
-    virtual void right(double right) { _win.right = right; }
+    //virtual void right(double right) { _win.right = right; }
 
     virtual double bottom() override { return _win.bottom; }
-    virtual void bottom(double bottom) { _win.bottom = bottom; }
+    //virtual void bottom(double bottom) { _win.bottom = bottom; }
 
     virtual double top() override { return _win.top; }
-    virtual void top(double top) { _win.top = top; }
+   // virtual void top(double top) { _win.top = top; }
 
     virtual std::string srs() override { return _srs; }
     virtual void srs(std::string srs) { _srs = srs; }
@@ -363,11 +557,11 @@ class cube_stref_regular : public cube_stref {
          * Getter / setter for the lower boundary of the cube's temporal extent (start datetime)
          * @return reference to the object's t0 object
          */
-    virtual datetime t0() { return _t0; }
-    virtual void t0(datetime t0) { _t0 = t0; }
+    virtual datetime t0() override { return _t0; }
+    //virtual void t0(datetime t0) { _t0 = t0; }
 
-    virtual datetime t1() { return _t1; }
-    virtual void t1(datetime t1) { _t1 = t1; }
+    virtual datetime t1() override { return _t1; }
+    //virtual void t1(datetime t1) { _t1 = t1; }
 
     virtual uint32_t nt() override {
         if (_t1 == _t0) return 1;
@@ -375,28 +569,28 @@ class cube_stref_regular : public cube_stref {
         return (d % _dt == 0) ? d / _dt : (1 + (d / _dt));
     }
 
-    virtual void nt(uint32_t n) {
-        duration d = (_t1 - _t0) + 1;
-        duration dnew = dt();
-        if (dnew.dt_interval == 0) {  // if dt has not been set
-            dnew.dt_unit = d.dt_unit;
-            // alternatively, a "reasonable" should be derived here
-        }
-        dnew.dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
-        _dt = dnew;
-        if (d.dt_interval % n != 0) {
-            _t1 = _t0 + _dt * (n - 1);
-            GCBS_INFO(
-                "Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " +
-                _t1.to_string() + ".");
-        }
-        //
-        //        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
-        //            _t1 = _t1 + dt();
-        //            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
-        //        }
-        assert(nt() == n);
-    }
+//    virtual void nt(uint32_t n) {
+//        duration d = (_t1 - _t0) + 1;
+//        duration dnew = dt();
+//        if (dnew.dt_interval == 0) {  // if dt has not been set
+//            dnew.dt_unit = d.dt_unit;
+//            // alternatively, a "reasonable" should be derived here
+//        }
+//        dnew.dt_interval = (int32_t)std::ceil((double)d.dt_interval / (double)n);
+//        _dt = dnew;
+//        if (d.dt_interval % n != 0) {
+//            _t1 = _t0 + _dt * (n - 1);
+//            GCBS_INFO(
+//                "Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " +
+//                _t1.to_string() + ".");
+//        }
+//        //
+//        //        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
+//        //            _t1 = _t1 + dt();
+//        //            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
+//        //        }
+//        assert(nt() == n);
+//    }
 
     virtual bounds_2d<double> win() { return _win; }
     virtual void win(bounds_2d<double> win) { _win = win; }
@@ -407,64 +601,6 @@ class cube_stref_regular : public cube_stref {
     virtual int32_t dt_interval() override { return _dt.dt_interval; }
     virtual void dt_interval(int32_t interval) { _dt.dt_interval = interval; }
 
-    virtual void dt(duration dt) {
-        //if (dt.dt_unit != _dt.dt_unit) {
-        _t0.unit(dt.dt_unit);
-        _t1.unit(dt.dt_unit);
-        //}
-        duration dtotal = _t1 - _t0;  // + 1 if include end date2
-        dtotal.dt_interval += 1;
-        if (dtotal % dt != 0) {
-            duration end_duration;  // end duration has one (day / month / unit) less than dt)
-            end_duration.dt_interval = dt.dt_interval - 1;
-            end_duration.dt_unit = dt.dt_unit;
-            _t1 = (_t0 + dt * (dtotal / dt)) + end_duration;
-            GCBS_INFO(
-                "Temporal size of the cube does not align with dt, end date/time of the cube will be extended to " +
-                _t1.to_string());
-        }
-        _dt = dt;
-    }
-
-    /**
-     * Set the temporal size of cube cells as n days
-     * @param n duration / temporal size of one cell as number of days
-     */
-    void set_daily(uint16_t n = 1) {
-        _dt = duration(n, datetime_unit::DAY);
-    }
-
-    /**
-     * Set the temporal size of cube cells as n months
-     * @param n duration / temporal size of one cell as number of months
-     */
-    void set_monthly(uint16_t n = 1) {
-        _dt = duration(n, datetime_unit::MONTH);
-    }
-
-    /**
-        * Set the temporal size of cube cells as n years
-        * @param n duration / temporal size of one cell as number of years
-        */
-    void set_yearly(uint16_t n = 1) {
-        _dt = duration(n, datetime_unit::YEAR);
-    }
-
-    /**
-        * Set the temporal size of cube cells as n quarter years
-        * @param n duration / temporal size of one cell as number of quarter years
-        */
-    void set_quarterly(uint16_t n = 1) {
-        _dt = duration(3 * n, datetime_unit::MONTH);
-    }
-
-    /**
-        * Set the temporal size of cube cells as n weeks
-        * @param n duration / temporal size of one cell as number of weeks
-        */
-    void set_weekly(uint16_t n = 1) {
-        _dt = duration(n, datetime_unit::WEEK);
-    }
 
     /**
         * Convert integer cube-based coordinates to spacetime coordinates
@@ -634,35 +770,35 @@ class cube_stref_labeled_time : public cube_stref_regular {
         return false;
     }
 
-    virtual void t0(datetime t0) override {
-        // DO NOTHING, t0 is derived from labels
-    }
+//    virtual void t0(datetime t0) override {
+//        // DO NOTHING, t0 is derived from labels
+//    }
 
     virtual datetime t0() override {
         return _t_values[0];
     }
 
-    virtual void t1(datetime t1) override {
-        // DO NOTHING, t0 is derived from labels
-    }
+//    virtual void t1(datetime t1) override {
+//        // DO NOTHING, t0 is derived from labels
+//    }
 
     virtual datetime t1() override {
         return _t_values[_t_values.size() - 1];
     }
 
-    virtual void nt(uint32_t n) override {
-        // DO NOTHING, nt is derived from labels
-    }
+//    virtual void nt(uint32_t n) override {
+//        // DO NOTHING, nt is derived from labels
+//    }
 
     virtual uint32_t nt() override {
         return _t_values.size();
     }
 
-    virtual void dt(duration dt) override {
-        _t0.unit(dt.dt_unit);
-        _t1.unit(dt.dt_unit);
-        _dt = dt;
-    }
+//    virtual void dt(duration dt) override {
+//        _t0.unit(dt.dt_unit);
+//        _t1.unit(dt.dt_unit);
+//        _dt = dt;
+//    }
 
     virtual duration dt() override {
         return _dt;

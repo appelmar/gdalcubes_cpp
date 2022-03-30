@@ -230,16 +230,17 @@ class crop_cube : public cube {
         }
 
         auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);  // Notice that this works for labeled time axis too, because labeled st ref inherits from regular
-        stref->left(in->st_reference()->left() + _x_min * in->st_reference()->dx());
-        stref->right(in->st_reference()->left() + (_x_max + 1) * in->st_reference()->dx());
-        stref->bottom(in->st_reference()->bottom() + _y_min * in->st_reference()->dy());
-        stref->top(in->st_reference()->bottom() + (_y_max + 1) * in->st_reference()->dy());
-        stref->nx(_x_max - _x_min + 1);
-        stref->ny(_y_max - _y_min + 1);
+        stref->set_x_axis(in->st_reference()->left() + _x_min * in->st_reference()->dx(),
+                          in->st_reference()->left() + (_x_max + 1) * in->st_reference()->dx(),
+                          (uint32_t)(_x_max - _x_min + 1));
+        stref->set_y_axis(in->st_reference()->bottom() + _y_min * in->st_reference()->dy(),
+                          in->st_reference()->bottom() + (_y_max + 1) * in->st_reference()->dy(),
+                          (uint32_t)(_y_max - _y_min + 1));
 
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {
-            stref->t0(_in_cube->st_reference()->datetime_at_index(_t_min));
-            stref->t1(_in_cube->st_reference()->datetime_at_index(_t_max));
+            stref->set_t_axis(_in_cube->st_reference()->datetime_at_index(_t_min),
+                              _in_cube->st_reference()->datetime_at_index(_t_max),
+                              _in_cube->st_reference()->dt());
         }
         else if (cube_stref::type_string(in->st_reference()) == "cube_stref_labeled_time") {
             std::vector<datetime> time_labels = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref)->get_time_labels();

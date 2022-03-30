@@ -231,6 +231,29 @@ class datetime {
     // from standard format with variable precision
     static datetime from_string(std::string s);
 
+
+    static std::string unit_to_string(datetime_unit u) {
+        switch(u) {
+            case datetime_unit::NONE:
+                return "none";
+            case datetime_unit::YEAR:
+                return "years";
+            case datetime_unit::MONTH:
+                return "months";
+            case datetime_unit::WEEK:
+                return "weeks";
+            case datetime_unit::DAY:
+                return "days";
+            case datetime_unit::HOUR:
+                return "hours";
+            case datetime_unit::MINUTE:
+                return "minutes";
+            case datetime_unit::SECOND:
+                return "seconds";
+        }
+        return "none";
+    }
+
     /**
      * Optimistic string parser assuming
      * year is given by the first four digits and other (optional)

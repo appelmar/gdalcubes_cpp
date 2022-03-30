@@ -90,6 +90,17 @@ TEST_CASE("Create", "[view]") {
     REQUIRE(v.t1().to_string() == "2019-12-31");
 
 
+
+    v.set_t_axis(datetime::from_string("2018"), datetime::from_string("2018"), duration::from_string("P1D"));
+    REQUIRE(v.t0() == datetime::from_string("2018-01-01"));
+    REQUIRE(v.t1() == datetime::from_string("2018-12-31"));
+    REQUIRE(v.dt() == duration::from_string("P1D"));
+    REQUIRE(v.t0().to_string() == "2018-01-01");
+    REQUIRE(v.t1().to_string() == "2018-12-31");
+
+
+
+
     cube_view v1;
     v1.srs("EPSG:3857");
     v1.set_x_axis(2500790.0, 2858522.0, uint32_t(700));

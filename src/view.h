@@ -362,14 +362,41 @@ class cube_stref_regular : public cube_stref {
         datetime_unit u = delta.dt_unit;
 
         if (tu > u) {
-            GCBS_ERROR("Datetime unit of t0 and t1 is not compatible with dt");
-            throw std::string("Datetime unit of t0 and t1 is not compatible with dt");
+            // This part makes sure that if t1 and t0 have a coarser datetime unit than dt,
+            // t0 and t1 are extendec accordingly.
+            // For example, t0 = "2000", t1 = "2000", dt = "P1D" would lead to t0 = "2000-01-01", t1 = "2000-12-31"
+            date::sys_seconds min_new =
+                date::sys_days{date::year(min.year()) /
+                    ((tu <= datetime_unit::MONTH)? date::month(min.month()) : date::month(1)) /
+                    ((tu <= datetime_unit::DAY)? date::day(min.dayofmonth()) : date::day(1))} +
+                    ((tu <= datetime_unit::HOUR)? std::chrono::hours{min.hours()}  :std::chrono::hours{0}) +
+                    ((tu <= datetime_unit::MINUTE)? std::chrono::minutes{min.minutes()}  :std::chrono::minutes{0}) +
+                    ((tu <= datetime_unit::SECOND)? std::chrono::seconds{min.seconds()}  :std::chrono::seconds{0});
+
+            date::sys_seconds max_new;
+
+            if (tu > datetime_unit::DAY) {
+                max_new = date::sys_days{date::year(max.year()) /
+                               ((tu <= datetime_unit::MONTH)? date::month(max.month()) : date::month(12)) /
+                               date::last} + std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
+            }
+            else {
+                max_new =
+                    date::sys_days{date::year(max.year()) / date::month(max.month())  / date::day(max.dayofmonth())} +
+                    ((tu <= datetime_unit::HOUR)? std::chrono::hours{max.hours()}  :std::chrono::hours{23}) +
+                    ((tu <= datetime_unit::MINUTE)? std::chrono::minutes{max.minutes()}  :std::chrono::minutes{59}) +
+                    ((tu <= datetime_unit::SECOND)? std::chrono::seconds{max.seconds()}  :std::chrono::seconds{59});
+            }
+            _t0 = datetime(min_new, u);
+            _t1 = datetime(max_new, u);
+        }
+        else {
+            _t0 = min;
+            _t1 = max;
+            _t0.unit(u);
+            _t1.unit(u);
         }
 
-        _t0 = min;
-        _t1 = max;
-        _t0.unit(u);
-        _t1.unit(u);
 
         duration dtotal = _t1 - _t0;  // + 1 if include end date2
         dtotal.dt_interval += 1;

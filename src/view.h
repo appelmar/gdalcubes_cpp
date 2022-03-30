@@ -378,9 +378,6 @@ class cube_stref_regular : public cube_stref {
             end_duration.dt_interval = delta.dt_interval - 1;
             end_duration.dt_unit = u;
             _t1 = (_t0 + delta * (dtotal / delta)) + end_duration;
-            GCBS_INFO(
-                "Temporal size of the cube does not align with dt, end date/time of the cube will be extended to " +
-                _t1.to_string());
         }
         _dt = delta;
 
@@ -441,7 +438,13 @@ class cube_stref_regular : public cube_stref {
             }
         }
 
-
+        // check whether min/max have been modified (string conversion is somewhat ugly here)
+        std::string t0str = _t0.to_string();
+        std::string t1str = _t1.to_string();
+        if (t0str != min.to_string() ||
+            t1str != max.to_string()) {
+            GCBS_INFO("Temporal extent of the cube does not align with dt and has been extended to " + _t0.to_string() + "/" + _t1.to_string());
+        }
 
     }
 
@@ -464,25 +467,14 @@ class cube_stref_regular : public cube_stref {
         _dt = dnew;
         if (d.dt_interval % n != 0) {
             _t1 = _t0 + _dt * (n - 1);
-            GCBS_INFO("Temporal size of the cube does not align with nt, end date/time of the cube will be extended to " +_t1.to_string() + ".");
         }
-
-//        if (nt() == n - 1) {  // in some cases (e.g. d == 9M, n==4), we must extend the temporal extent of the view
-//            _t1 = _t1 + dt();
-//            GCBS_WARN("Extent in t direction is indivisible by nt, end date/time will be set to " + _t1.to_string());
-//        }
-        //assert(nt() == n);
-
     }
-    virtual void set_t_axis(double min, uint32_t n, duration delta) {
-        // NOT YET IMPLEMENTED
-    }
-    virtual void set_t_axis(uint32_t n, double max, duration delta) {
-        // NOT YET IMPLEMENTED
-    }
-
-    // TODO: remove setter functions in favor of set_*_axis methods
-
+//    virtual void set_t_axis(double min, uint32_t n, duration delta) {
+//        // NOT YET IMPLEMENTED
+//    }
+//    virtual void set_t_axis(uint32_t n, double max, duration delta) {
+//        // NOT YET IMPLEMENTED
+//    }
 
     virtual uint32_t nx() override { return _nx; }
     //virtual void nx(uint32_t nx) { _nx = nx; }

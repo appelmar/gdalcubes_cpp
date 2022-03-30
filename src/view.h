@@ -381,62 +381,61 @@ class cube_stref_regular : public cube_stref {
         }
         _dt = delta;
 
-        if (tu < u) {
-            if (u == datetime_unit::YEAR) {
-                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(1) / date::day(1)} +
-                          std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
-                _t0 = datetime(p0, u);
+        if (u == datetime_unit::YEAR) {
+            auto p0 = date::sys_days{date::year(_t0.year()) / date::month(1) / date::day(1)} +
+                      std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+            _t0 = datetime(p0, u);
 
-                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(12) / date::day(31)} +
-                          std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
-                _t1 = datetime(p1, u);
-            }
-            else if (u == datetime_unit::MONTH) {
-                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(1)} +
-                          std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
-                _t0 = datetime(p0, u);
-
-                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::last} +
-                          std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
-                _t1 = datetime(p1, u);
-            }
-            else if (u == datetime_unit::DAY) {
-                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
-                          std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
-                _t0 = datetime(p0, u);
-
-                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
-                          std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
-                _t1 = datetime(p1, u);
-            }
-            else if (u == datetime_unit::HOUR) {
-                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
-                          std::chrono::hours{_t0.hours()} + std::chrono::minutes{0} + std::chrono::seconds{0};
-                _t0 = datetime(p0, u);
-
-                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
-                          std::chrono::hours{_t1.hours()} + std::chrono::minutes{59} + std::chrono::seconds{59};
-                _t1 = datetime(p1, u);
-            }
-            else if (u == datetime_unit::MINUTE) {
-                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
-                          std::chrono::hours{_t0.hours()} + std::chrono::minutes{_t0.minutes()} + std::chrono::seconds{0};
-                _t0 = datetime(p0, u);
-
-                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
-                          std::chrono::hours{_t1.hours()} + std::chrono::minutes{_t1.minutes()} + std::chrono::seconds{59};
-                _t1 = datetime(p1, u);
-            }
-            else if (u == datetime_unit::SECOND) { // not needed because SECOND is lowest
-                auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
-                          std::chrono::hours{_t0.hours()} + std::chrono::minutes{_t0.minutes()} + std::chrono::seconds{_t0.seconds()};
-                _t0 = datetime(p0, u);
-
-                auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
-                          std::chrono::hours{_t1.hours()} + std::chrono::minutes{_t1.minutes()} + std::chrono::seconds{_t1.seconds()};
-                _t1 = datetime(p1, u);
-            }
+            auto p1 = date::sys_days{date::year(_t1.year()) / date::month(12) / date::day(31)} +
+                      std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
+            _t1 = datetime(p1, u);
         }
+        else if (u == datetime_unit::MONTH) {
+            auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(1)} +
+                      std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+            _t0 = datetime(p0, u);
+
+            auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::last} +
+                      std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
+            _t1 = datetime(p1, u);
+        }
+        else if (u == datetime_unit::DAY) {
+            auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                      std::chrono::hours{0} + std::chrono::minutes{0} + std::chrono::seconds{0};
+            _t0 = datetime(p0, u);
+
+            auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                      std::chrono::hours{23} + std::chrono::minutes{59} + std::chrono::seconds{59};
+            _t1 = datetime(p1, u);
+        }
+        else if (u == datetime_unit::HOUR) {
+            auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                      std::chrono::hours{_t0.hours()} + std::chrono::minutes{0} + std::chrono::seconds{0};
+            _t0 = datetime(p0, u);
+
+            auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                      std::chrono::hours{_t1.hours()} + std::chrono::minutes{59} + std::chrono::seconds{59};
+            _t1 = datetime(p1, u);
+        }
+        else if (u == datetime_unit::MINUTE) {
+            auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                      std::chrono::hours{_t0.hours()} + std::chrono::minutes{_t0.minutes()} + std::chrono::seconds{0};
+            _t0 = datetime(p0, u);
+
+            auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                      std::chrono::hours{_t1.hours()} + std::chrono::minutes{_t1.minutes()} + std::chrono::seconds{59};
+            _t1 = datetime(p1, u);
+        }
+        else if (u == datetime_unit::SECOND) { // not needed because SECOND is lowest
+            auto p0 = date::sys_days{date::year(_t0.year()) / date::month(_t0.month()) / date::day(_t0.dayofmonth())} +
+                      std::chrono::hours{_t0.hours()} + std::chrono::minutes{_t0.minutes()} + std::chrono::seconds{_t0.seconds()};
+            _t0 = datetime(p0, u);
+
+            auto p1 = date::sys_days{date::year(_t1.year()) / date::month(_t1.month()) / date::day(_t1.dayofmonth())} +
+                      std::chrono::hours{_t1.hours()} + std::chrono::minutes{_t1.minutes()} + std::chrono::seconds{_t1.seconds()};
+            _t1 = datetime(p1, u);
+        }
+
 
         // check whether min/max have been modified (string conversion is somewhat ugly here)
         std::string t0str = _t0.to_string();

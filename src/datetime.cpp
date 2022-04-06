@@ -350,17 +350,17 @@ std::string datetime::datetime_format_for_unit(gdalcubes::datetime_unit u) {
         case datetime_unit::SECOND:
             return "%Y-%m-%dT%H:%M:%S";
         case datetime_unit::MINUTE:
-            return "%Y-%m-%dT%H:%M";
+            return "%Y-%m-%dT%H:%M:%S";
         case datetime_unit::HOUR:
-            return "%Y-%m-%dT%H";
+            return "%Y-%m-%dT%H:%M:%S";
         case datetime_unit::DAY:
             return "%Y-%m-%d";
         case datetime_unit::WEEK:
-            return "%Y-%m-%dT%H:%M:%S";
+            return "%Y-%m-%d";
         case datetime_unit::MONTH:
-            return "%Y-%m";
+            return "%Y-%m-%d";
         case datetime_unit::YEAR:
-            return "%Y";
+            return "%Y-%m-%d";
     }
     return "%Y-%m-%dT%H:%M:%S";
 }

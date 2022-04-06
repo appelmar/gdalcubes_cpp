@@ -53,12 +53,12 @@ class reduce_space_cube : public cube {
     reduce_space_cube(std::shared_ptr<cube> in, std::vector<std::pair<std::string, std::string>> reducer_bands) : cube(in->st_reference()->copy()), _in_cube(in), _reducer_bands(reducer_bands) {  // it is important to duplicate st reference here, otherwise changes will affect input cube as well
         if (cube_stref::type_string(_st_ref) == "cube_stref_regular") {
             std::shared_ptr<cube_stref_regular> stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref);
-            stref->nx(1);
-            stref->ny(1);
+            stref->set_x_axis(_st_ref->left(), _st_ref->right(), (uint32_t)1);
+            stref->set_y_axis(_st_ref->bottom(), _st_ref->top(), (uint32_t)1);
         } else if (cube_stref::type_string(_st_ref) == "cube_stref_labeled_time") {
             std::shared_ptr<cube_stref_labeled_time> stref = std::dynamic_pointer_cast<cube_stref_labeled_time>(_st_ref);
-            stref->nx(1);
-            stref->ny(1);
+            stref->set_x_axis(_st_ref->left(), _st_ref->right(), (uint32_t)1);
+            stref->set_y_axis(_st_ref->bottom(), _st_ref->top(), (uint32_t)1);
         }
         assert(_st_ref->nx() == 1 && _st_ref->ny() == 1);
 

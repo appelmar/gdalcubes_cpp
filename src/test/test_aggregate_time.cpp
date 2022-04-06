@@ -33,15 +33,9 @@ TEST_CASE("aggregate_time_create", "[aggregate_time]") {
 
     cube_view r;
     r.srs("EPSG:3857");
-    r.left(-6180000);
-    r.right(-6080000);
-    r.top(-450000);
-    r.bottom(-550000);
-    r.dx(1000);
-    r.dy(1000);
-    r.t0(datetime::from_string("2014-01-01"));
-    r.t1(datetime::from_string("2014-12-31"));
-    r.dt(duration::from_string("P1D"));
+    r.set_x_axis(-6180000.0, -6080000.0, 1000.0);
+    r.set_y_axis(-550000.0, -450000.0, 1000.0);
+    r.set_t_axis(datetime::from_string("2014-01-01"), datetime::from_string("2014-12-31"), duration::from_string("P1D"));
 
     auto c = dummy_cube::create(r, 1, 1.0);
     auto ca = aggregate_time_cube::create(c, "P1M", "mean");

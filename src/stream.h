@@ -89,10 +89,14 @@ class stream_cube : public cube {
         // Make an optimistic guess
         if (_st_ref->has_regular_time()) {
             if (c0->size()[1] == 1) {
-                stref->nt(in_cube->count_chunks_t());
+                stref->set_t_axis(in_cube->st_reference()->t0(),
+                                  in_cube->st_reference()->t1(),
+                                  uint32_t(in_cube->count_chunks_t()));
             } else if (c0->size()[1] == csize_in[1]) {
                 _keep_input_nt = true;
-                stref->nt(in_cube->size()[1]);
+                stref->set_t_axis(in_cube->st_reference()->t0(),
+                                  in_cube->st_reference()->t1(),
+                                  uint32_t(in_cube->size()[1]));
             } else
                 throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
         } else {
@@ -110,18 +114,18 @@ class stream_cube : public cube {
         }
 
         if (c0->size()[2] == 1) {
-            stref->ny(in_cube->count_chunks_y());
+            stref->set_y_axis(in_cube->st_reference()->bottom(), in_cube->st_reference()->top(), uint32_t(in_cube->count_chunks_y()));
         } else if (c0->size()[2] == csize_in[2]) {
             _keep_input_ny = true;
-            stref->ny(in_cube->size()[2]);
+            stref->set_y_axis(in_cube->st_reference()->bottom(), in_cube->st_reference()->top(), uint32_t(in_cube->size()[2]));
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
 
         if (c0->size()[3] == 1) {
-            stref->nx(in_cube->count_chunks_x());
+            stref->set_x_axis(in_cube->st_reference()->left(), in_cube->st_reference()->right(), uint32_t(in_cube->count_chunks_x()));
         } else if (c0->size()[3] == csize_in[3]) {
             _keep_input_nx = true;
-            stref->nx(in_cube->size()[3]);
+            stref->set_x_axis(in_cube->st_reference()->left(), in_cube->st_reference()->right(), uint32_t(in_cube->size()[3]));
         } else
             throw std::string("ERROR in stream_cube::stream_cube(): could not derive size of result cube");
     }

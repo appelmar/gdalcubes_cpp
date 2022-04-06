@@ -239,16 +239,10 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
         !str_dt.empty()) {
         if (str_datetime_type == "regular") {
             cube_stref_regular ref;
-            ref.left(left);
-            ref.right(right);
-            ref.top(top);
-            ref.bottom(bottom);
-            ref.nx(nx);
-            ref.ny(ny);
+            ref.set_x_axis(left, right, (uint32_t)nx);
+            ref.set_y_axis(bottom, top, (uint32_t)ny);
             ref.srs(spatial_ref_str);
-            ref.t0(datetime::from_string(str_t0));
-            ref.t1(datetime::from_string(str_t1));
-            ref.dt(duration::from_string(str_dt));
+            ref.set_t_axis(datetime::from_string(str_t0), datetime::from_string(str_t1), duration::from_string(str_dt));
             _st_ref = std::make_shared<cube_stref_regular>(ref);
             finished_st_reference = true;
         }
@@ -338,30 +332,20 @@ ncdf_cube::ncdf_cube(std::string path, bool auto_unpack) : cube(), _auto_unpack(
                 GCBS_WARN("Setting dt = " + dt.to_string() + " due to missing metadata in netCDF file");
             }
             cube_stref_regular ref;
-            ref.left(left);
-            ref.right(right);
-            ref.top(top);
-            ref.bottom(bottom);
-            ref.nx(nx);
-            ref.ny(ny);
+            ref.set_x_axis(left, right, (uint32_t)nx);
+            ref.set_y_axis(bottom, top,  (uint32_t)ny);
             ref.srs(spatial_ref_str);
-            ref.t0(t0);
-            ref.t1(t1);
-            ref.dt(dt);
+            ref.set_t_axis(datetime::from_string(str_t0), datetime::from_string(str_t1), duration::from_string(str_dt));
             assert(ref.nt() == nt);
             //ref.nt(nt);
             _st_ref = std::make_shared<cube_stref_regular>(ref);
         } else {
             cube_stref_labeled_time ref;
-            ref.left(left);
-            ref.right(right);
-            ref.top(top);
-            ref.bottom(bottom);
-            ref.nx(nx);
-            ref.ny(ny);
+            ref.set_x_axis(left, right, (uint32_t)nx);
+            ref.set_y_axis(bottom, top, (uint32_t)ny);
             ref.srs(spatial_ref_str);
 
-            ref.dt(dt);
+            //ref.dt(dt);
             std::vector<datetime> labels;
             for (uint32_t i = 0; i < nt; ++i) {
                 labels.push_back(t0 + dt * tvalues[i]);

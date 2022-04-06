@@ -67,21 +67,16 @@ simple_cube::simple_cube(std::vector<std::string> files, std::vector<std::string
         bbox.top = affine_in[3];
         bbox.bottom = affine_in[3] + affine_in[4] * dataset->GetRasterXSize() + affine_in[5] * dataset->GetRasterYSize();
 
-        stref->left(bbox.left);
-        stref->right(bbox.right);
-        stref->bottom(bbox.bottom);
-        stref->top(bbox.top);
         stref->srs(dataset->GetProjectionRef());
-
         if (dx <= 0) {
-            stref->nx(dataset->GetRasterXSize());
+            stref->set_x_axis(bbox.left, bbox.right, (uint32_t)dataset->GetRasterXSize());
         } else {
-            stref->dx(dx);
+            stref->set_x_axis(bbox.left, bbox.right, dx);
         }
         if (dy <= 0) {
-            stref->ny(dataset->GetRasterYSize());
+            stref->set_y_axis(bbox.bottom, bbox.top, (uint32_t)dataset->GetRasterYSize());
         } else {
-            stref->dy(dy);
+            stref->set_y_axis(bbox.bottom, bbox.top, dy);
         }
         if (!band_names.empty() && ((int32_t)band_names.size() != dataset->GetRasterCount())) {
             GDALClose(dataset);
@@ -157,23 +152,18 @@ simple_cube::simple_cube(std::vector<std::string> files, std::vector<std::string
                 bbox.top = affine_in[3];
                 bbox.bottom = affine_in[3] + affine_in[4] * dataset->GetRasterXSize() + affine_in[5] * dataset->GetRasterYSize();
 
-                stref->left(bbox.left);
-                stref->right(bbox.right);
-                stref->bottom(bbox.bottom);
-                stref->top(bbox.top);
-                stref->srs(dataset->GetProjectionRef());
 
+                stref->srs(dataset->GetProjectionRef());
                 if (dx <= 0) {
-                    stref->nx(std::max((int32_t)stref->nx(), dataset->GetRasterXSize()));
+                    stref->set_x_axis(bbox.left, bbox.right, (uint32_t)dataset->GetRasterXSize());
                 } else {
-                    stref->dx(dx);
+                    stref->set_x_axis(bbox.left, bbox.right, dx);
                 }
                 if (dy <= 0) {
-                    stref->ny(std::max((int32_t)stref->ny(), dataset->GetRasterYSize()));
+                    stref->set_y_axis(bbox.bottom, bbox.top, (uint32_t)dataset->GetRasterYSize());
                 } else {
-                    stref->dy(dy);
+                    stref->set_y_axis(bbox.bottom, bbox.top, dy);
                 }
-
                 if (dataset->GetRasterCount() > 1) {
                     GCBS_WARN("Assuming a 1:1 relationship between files and bands but at least one file contains more than one band, which will be ignored.'");
                 }

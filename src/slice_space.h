@@ -81,12 +81,14 @@ class slice_space_cube : public cube {
 
 
         auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref); // Notice that this works for labeled time axis too, because labeled st ref inherits from regular
-        stref->left(in->st_reference()->left() + _x_index * in->st_reference()->dx());
-        stref->right(in->st_reference()->left() + (_x_index + 1) * in->st_reference()->dx());
-        stref->bottom(in->st_reference()->bottom() + _y_index * in->st_reference()->dy());
-        stref->top(in->st_reference()->bottom() + (_y_index+1) * in->st_reference()->dy());
-        stref->nx(1);
-        stref->ny(1);
+
+        stref->set_x_axis(in->st_reference()->left() + _x_index * in->st_reference()->dx(),
+                          in->st_reference()->left() + (_x_index + 1) * in->st_reference()->dx(),
+                          uint32_t(1));
+
+        stref->set_y_axis(in->st_reference()->bottom() + _y_index * in->st_reference()->dy(),
+                          in->st_reference()->bottom() + (_y_index+1) * in->st_reference()->dy(),
+                          uint32_t(1));
 
         if (_st_ref->nx() != 1) {
             std::string msg = "Data cube slice has invalid geometry: nx is not equal to 1";
@@ -120,12 +122,13 @@ class slice_space_cube : public cube {
 
 
         auto stref = std::dynamic_pointer_cast<cube_stref_regular>(_st_ref); // Notice that this works for labeled time axis too, because labeled st ref inherits from regular
-        stref->left(in->st_reference()->left() + _x_index * in->st_reference()->dx());
-        stref->right(in->st_reference()->left() + (_x_index + 1) * in->st_reference()->dx());
-        stref->bottom(in->st_reference()->bottom() + _y_index * in->st_reference()->dy());
-        stref->top(in->st_reference()->bottom() + (_y_index+1) * in->st_reference()->dy());
-        stref->nx(1);
-        stref->ny(1);
+
+        stref->set_x_axis(in->st_reference()->left() + _x_index * in->st_reference()->dx(),
+                          in->st_reference()->left() + (_x_index + 1) * in->st_reference()->dx(),
+                          (uint32_t)1);
+        stref->set_y_axis(in->st_reference()->bottom() + _y_index * in->st_reference()->dy(),
+                          in->st_reference()->bottom() + (_y_index+1) * in->st_reference()->dy(),
+                          (uint32_t)1);
 
         if (_st_ref->nx() != 1) {
             std::string msg = "Data cube slice has invalid geometry: nx is not equal to 1";

@@ -636,48 +636,41 @@ cube_view image_collection_cube::default_view(std::shared_ptr<image_collection> 
 
     // Transform WGS84 boundaries to target srs
     bounds_2d<double> ext_transformed = extent.s.transform("EPSG:4326", out.srs().c_str());
-    out.left(ext_transformed.left);
-    out.right(ext_transformed.right);
-    out.top(ext_transformed.top);
-    out.bottom(ext_transformed.bottom);
+
 
     uint32_t ncells_space = 512 * 512;
-    double asp_ratio = (out.right() - out.left()) / (out.top() - out.bottom());
-    out.nx((uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0));
-    out.ny((uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0));
+    double asp_ratio = (ext_transformed.right - ext_transformed.left) / (ext_transformed.top - ext_transformed.bottom);
 
-    out.t0(extent.t0);
-    out.t1(extent.t1);
+    out.set_x_axis(ext_transformed.left, ext_transformed.right, (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * asp_ratio), 1.0));
+    out.set_y_axis(ext_transformed.bottom, ext_transformed.top, (uint32_t)std::fmax((uint32_t)sqrt(ncells_space * 1 / asp_ratio), 1.0));
 
-    duration d = out.t1() - out.t0();
 
-    if (out.t0() == out.t1()) {
-        out.dt_unit(datetime_unit::DAY);
-        out.dt_interval(1);
+    duration d = extent.t1- extent.t0;
+
+    if (extent.t0 == extent.t1) {
+        out.set_t_axis(extent.t0, extent.t1, duration(1, datetime_unit::DAY));
     } else {
+        datetime_unit u;
         if (d.convert(datetime_unit::YEAR).dt_interval > 4) {
-            out.dt_unit(datetime_unit::YEAR);
+           u = datetime_unit::YEAR;
         } else if (d.convert(datetime_unit::MONTH).dt_interval > 4) {
-            out.dt_unit(datetime_unit::MONTH);
+            u = datetime_unit::MONTH;
         } else if (d.convert(datetime_unit::DAY).dt_interval > 4) {
-            out.dt_unit(datetime_unit::DAY);
+            u = datetime_unit::DAY;
         } else if (d.convert(datetime_unit::HOUR).dt_interval > 4) {
-            out.dt_unit(datetime_unit::HOUR);
+            u = datetime_unit::HOUR;
         } else if (d.convert(datetime_unit::MINUTE).dt_interval > 4) {
-            out.dt_unit(datetime_unit::MINUTE);
+            u = datetime_unit::MINUTE;
         } else if (d.convert(datetime_unit::SECOND).dt_interval > 4) {
-            out.dt_unit(datetime_unit::SECOND);
+            u = datetime_unit::SECOND;
         } else {
-            out.dt_unit(datetime_unit::DAY);
+            u = datetime_unit::DAY;
         }
-
-        datetime t0 = out.t0();
-        datetime t1 = out.t1();
-        t0.unit(out.dt().dt_unit);
-        t1.unit(out.dt().dt_unit);
-        out.t0(t0);
-        out.t1(t1);
-        out.nt(4);
+        datetime t0 = extent.t0;
+        t0.unit(u);
+        datetime t1 = extent.t1;
+        t1.unit(u);
+        out.set_t_axis(t0, t1, 4);
     }
 
     out.aggregation_method() = aggregation::aggregation_type::AGG_FIRST;

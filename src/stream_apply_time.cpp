@@ -103,7 +103,7 @@ std::shared_ptr<chunk_data> stream_apply_time_cube::read_chunk(chunkid_t id) {
     }
     bounds_st cextent = this->bounds_from_chunk(id);  // implemented in derived classes
     for (int iy = 0; iy < size[2]; ++iy) {
-        dims[i] = cextent.s.bottom + chunk_size(id)[1] * st_reference()->dy() - (iy + 0.5) * st_reference()->dy();  // cell center
+        dims[i] = cextent.s.top - (iy + 0.5) * st_reference()->dy();  // cell center
         ++i;
     }
     for (int ix = 0; ix < size[3]; ++ix) {

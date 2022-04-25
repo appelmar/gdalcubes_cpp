@@ -126,7 +126,8 @@ std::shared_ptr<chunk_data> apply_pixel_cube::read_chunk(chunkid_t id) {
                 values[_in_cube->bands().count() + 6] = (double)(_in_cube->chunk_limits(id).low[2] + (i % in->size()[3]));
             }
             if (_var_usage[expr_idx].count("iy") || _var_usage[expr_idx].count("top") || _var_usage[expr_idx].count("bottom")) {
-                values[_in_cube->bands().count() + 7] = (double)(_in_cube->size_y() - 1 - (_in_cube->chunk_limits(id).high[1] - ((i / in->size()[3]) % in->size()[2])));
+                // values[_in_cube->bands().count() + 7] = (double)(_in_cube->size_y() - 1 - (_in_cube->chunk_limits(id).high[1] - ((i / in->size()[3]) % in->size()[2])));
+                values[_in_cube->bands().count() + 7] = (double)(_in_cube->chunk_limits(id).low[1] + ((i / in->size()[3]) % in->size()[2]));
             }
 
             if (_in_cube->st_reference()->has_regular_space()) {

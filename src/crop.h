@@ -82,8 +82,11 @@ class crop_cube : public cube {
 
         double x_min = (left - in->st_reference()->left()) / (double)in->st_reference()->dx();
         double x_max = -1 + (right - in->st_reference()->left()) / (double)in->st_reference()->dx();
-        double y_min = (bottom - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
-        double y_max = -1 + (top - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
+        // double y_min = (bottom - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
+        // double y_max = -1 + (top - in->st_reference()->bottom()) / (double)in->st_reference()->dy();
+        double y_min = (in->st_reference()->top() - top) / (double)in->st_reference()->dy();
+        double y_max = -1 + (in->st_reference()->top() - bottom) / (double)in->st_reference()->dy();
+
 
         if (snap == "near") {
             ix_min = std::round(x_min);
@@ -233,8 +236,8 @@ class crop_cube : public cube {
         stref->set_x_axis(in->st_reference()->left() + _x_min * in->st_reference()->dx(),
                           in->st_reference()->left() + (_x_max + 1) * in->st_reference()->dx(),
                           (uint32_t)(_x_max - _x_min + 1));
-        stref->set_y_axis(in->st_reference()->bottom() + _y_min * in->st_reference()->dy(),
-                          in->st_reference()->bottom() + (_y_max + 1) * in->st_reference()->dy(),
+        stref->set_y_axis(in->st_reference()->top() - _y_min * in->st_reference()->dy(),
+                          in->st_reference()->top() - (_y_max + 1) * in->st_reference()->dy(),
                           (uint32_t)(_y_max - _y_min + 1));
 
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {

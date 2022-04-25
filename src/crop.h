@@ -236,8 +236,8 @@ class crop_cube : public cube {
         stref->set_x_axis(in->st_reference()->left() + _x_min * in->st_reference()->dx(),
                           in->st_reference()->left() + (_x_max + 1) * in->st_reference()->dx(),
                           (uint32_t)(_x_max - _x_min + 1));
-        stref->set_y_axis(in->st_reference()->top() - _y_min * in->st_reference()->dy(),
-                          in->st_reference()->top() - (_y_max + 1) * in->st_reference()->dy(),
+        stref->set_y_axis(in->st_reference()->top() - (_y_max + 1) * in->st_reference()->dy(),
+                          in->st_reference()->top() - (_y_min) * in->st_reference()->dy(),
                           (uint32_t)(_y_max - _y_min + 1));
 
         if (cube_stref::type_string(in->st_reference()) == "cube_stref_regular") {

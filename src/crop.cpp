@@ -91,10 +91,10 @@ std::shared_ptr<chunk_data> crop_cube::read_chunk(chunkid_t id) {
                         for (int32_t iy=start_y; iy <= end_y; ++iy) {
                             for (int32_t ix=start_x; ix <= end_x; ++ix) {
                                 int32_t out_t = (it - _t_min) % (int32_t)chunk_size()[0];
-                                int32_t out_y = (size_tyx[1] - 1) - (iy - _y_min) % (int32_t)chunk_size()[1];
+                                int32_t out_y = (iy - _y_min) % (int32_t)chunk_size()[1];
                                 int32_t out_x = (ix - _x_min) % (int32_t)chunk_size()[2];
                                 int32_t in_t =  it  % (int32_t)_in_cube->chunk_size()[0];
-                                int32_t in_y =  in_chunk->size()[2] - 1 - (iy  % (int32_t)_in_cube->chunk_size()[1]);
+                                int32_t in_y =  iy  % (int32_t)_in_cube->chunk_size()[1];
                                 int32_t in_x =  ix  % (int32_t)_in_cube->chunk_size()[2];
 
                                 ((double*)out->buf())[ib * size_btyx[1] * size_btyx[2] * size_btyx[3] + out_t * size_btyx[2] * size_btyx[3] + out_y * size_btyx[3] + out_x] =((double*)in_chunk->buf())[ib * in_chunk->size()[1] * in_chunk->size()[2] * in_chunk->size()[3] + in_t * in_chunk->size()[2] * in_chunk->size()[3] + in_y *  in_chunk->size()[3] + in_x];

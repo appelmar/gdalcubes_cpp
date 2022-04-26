@@ -120,6 +120,7 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
 
     // Create new OGR dataset with single feature...
     //std::string output_file = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename(8, "crop_", ".gpkg"));
+    // TODO: avoid recreating this for every worker process
     std::string output_file = "/vsimem/" + utils::generate_unique_filename(8, "crop_", ".gpkg");
     _ogr_dataset = output_file;
     GDALDriver *gpkg_driver = GetGDALDriverManager()->GetDriverByName("GPKG");

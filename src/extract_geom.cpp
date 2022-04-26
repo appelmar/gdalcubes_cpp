@@ -170,6 +170,7 @@ extract_geom::extract_geom(std::shared_ptr<cube> in, std::string ogr_dataset,
     rasterize_args.AddString("GTiff");
     rasterize_args.AddString("-init");
     rasterize_args.AddString("0");
+    rasterize_args.AddString("-at");
     rasterize_args.AddString("-tr");
     rasterize_args.AddString(utils::dbl_to_string(st_reference()->dx() * chunk_size()[2]).c_str());
     rasterize_args.AddString(utils::dbl_to_string(st_reference()->dy() * chunk_size()[1]).c_str());

@@ -236,6 +236,7 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
 
         if (gdal_rasterized_chunkmask->GetRasterBand(1)->RasterIO(GF_Read, ccoords[2], ccoords[1], 1, 1, &chunk_has_data, 1, 1, GDT_Byte, 0, 0, NULL) == CE_None) {
             if (chunk_has_data == 0) {
+                GDALClose(gdal_rasterized_chunkmask);
                 return std::make_shared<chunk_data>();
             }
         }

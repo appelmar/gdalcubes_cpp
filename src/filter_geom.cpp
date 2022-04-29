@@ -99,9 +99,8 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
     int32_t iminx = std::floor(poly_extent.MinX - _in_cube->st_reference()->left()) / _in_cube->st_reference()->dx();
     int32_t imaxx = std::floor(poly_extent.MaxX - _in_cube->st_reference()->left()) / _in_cube->st_reference()->dx();
 
-    // TODO: check whether bottom / top is correct
-    int32_t iminy = std::floor(poly_extent.MinY - _in_cube->st_reference()->bottom()) / _in_cube->st_reference()->dy();
-    int32_t imaxy = std::floor(poly_extent.MaxY - _in_cube->st_reference()->bottom()) / _in_cube->st_reference()->dy();
+    int32_t iminy = std::floor(_in_cube->st_reference()->top() - poly_extent.MaxY) / _in_cube->st_reference()->dy();
+    int32_t imaxy = std::floor(_in_cube->st_reference()->top() - poly_extent.MinY) / _in_cube->st_reference()->dy();
 
     bool within =
         iminx >= 0 && uint32_t(iminx) < _in_cube->st_reference()->nx() &&
@@ -121,6 +120,7 @@ filter_geom_cube::filter_geom_cube(std::shared_ptr<cube> in, std::string wkt, st
 
     // Create new OGR dataset with single feature...
     //std::string output_file = filesystem::join(filesystem::get_tempdir(), utils::generate_unique_filename(8, "crop_", ".gpkg"));
+    // TODO: avoid recreating this for every worker process
     std::string output_file = "/vsimem/" + utils::generate_unique_filename(8, "crop_", ".gpkg");
     _ogr_dataset = output_file;
     GDALDriver *gpkg_driver = GetGDALDriverManager()->GetDriverByName("GPKG");

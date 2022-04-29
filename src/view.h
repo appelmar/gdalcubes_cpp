@@ -326,7 +326,7 @@ class cube_stref_regular : public cube_stref {
     virtual void set_y_axis(double min, double max, double delta) {
         _win.bottom= min;
         _win.top = max;
-        _ny = (uint32_t)std::ceil((_win.top- _win.bottom) / delta);
+        _ny = (uint32_t)std::ceil((_win.top - _win.bottom) / delta);
         double exp_y = _ny * delta - (_win.top - _win.bottom);
         _win.top += exp_y / 2;
         _win.bottom -= exp_y / 2;
@@ -623,7 +623,7 @@ class cube_stref_regular : public cube_stref {
     /**
         * Convert integer cube-based coordinates to spacetime coordinates
         * @note cube-based coordinates are in the order (t,y,x), (0,0,0) corresponds to the earliest date (t0) for the
-        * lower left pixel.
+        * upper left pixel.
         * @note Output coordinates will have the projection / SRS as in cube_st_reference::proj()
         * @see cube_st_reference::view_coords()
         * @param p cube-based coordinates
@@ -632,7 +632,7 @@ class cube_stref_regular : public cube_stref {
     virtual coords_st map_coords(coords_nd<uint32_t, 3> p) override {
         coords_st s;
         s.s.x = _win.left + p[2] * dx();
-        s.s.y = _win.bottom + p[1] * dy();
+        s.s.y = _win.top - p[1] * dy();
         s.t = _t0 + _dt * p[0];
         return s;
     }
@@ -649,7 +649,7 @@ class cube_stref_regular : public cube_stref {
     virtual coords_nd<uint32_t, 3> cube_coords(coords_st p) override {
         coords_nd<uint32_t, 3> s;
         s[2] = (uint32_t)((p.s.x - _win.left) / dx());
-        s[1] = (uint32_t)((p.s.y - _win.bottom) / dy());
+        s[1] = (uint32_t)((_win.top - p.s.y) / dy());
         s[0] = (uint32_t)((p.t - _t0) / _dt);
         return s;
     }
@@ -854,7 +854,7 @@ class cube_stref_labeled_time : public cube_stref_regular {
     virtual coords_st map_coords(coords_nd<uint32_t, 3> p) override {
         coords_st s;
         s.s.x = _win.left + p[2] * dx();
-        s.s.y = _win.bottom + p[1] * dy();
+        s.s.y = _win.top - p[1] * dy();
         s.t = datetime_at_index(p[0]);
         return s;
     }
@@ -862,7 +862,7 @@ class cube_stref_labeled_time : public cube_stref_regular {
     virtual coords_nd<uint32_t, 3> cube_coords(coords_st p) override {
         coords_nd<uint32_t, 3> s;
         s[2] = (uint32_t)((p.s.x - _win.left) / dx());
-        s[1] = (uint32_t)((p.s.y - _win.bottom) / dy());
+        s[1] = (uint32_t)((_win.top - p.s.y) / dy());
         s[0] = index_at_datetime(p.t);
         return s;
     }

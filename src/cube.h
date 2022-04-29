@@ -669,7 +669,7 @@ class cube : public std::enable_shared_from_this<cube> {
     };
 
     /**
-     * @brief Derive the spatiotemporal extend / bounds of a given chunk
+     * @brief Derive the spatiotemporal extent / bounds of a given chunk
      * @param id Chunk identifier
      * @return Spatiotemporal extent
      */
@@ -677,7 +677,6 @@ class cube : public std::enable_shared_from_this<cube> {
         bounds_st out_st;
 
         bounds_nd<uint32_t, 3> vb = chunk_limits(id);
-
         coords_st low = _st_ref->map_coords(vb.low);
         vb.high[0] += 1;
         vb.high[1] += 1;
@@ -686,8 +685,8 @@ class cube : public std::enable_shared_from_this<cube> {
 
         out_st.s.left = low.s.x;
         out_st.s.right = high.s.x;
-        out_st.s.bottom = low.s.y;
-        out_st.s.top = high.s.y;
+        out_st.s.bottom = high.s.y; // Important: high has lower y coordinates (because integer cube coordinates go top -> bottom)
+        out_st.s.top = low.s.y; // Important: low has higher y coordinates (because integer cube coordinates go top -> bottom)
         out_st.t0 = low.t;
         out_st.t1 = high.t;
 

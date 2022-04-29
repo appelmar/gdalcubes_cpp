@@ -58,6 +58,11 @@ class extract_geom : public cube {
                 filesystem::remove(_ogr_dataset);
             }
         }
+        if (!_chunkmask_dataset.empty()) {
+            if (filesystem::exists(_chunkmask_dataset)) {
+                filesystem::remove(_chunkmask_dataset);
+            }
+        }
     }
 
     std::shared_ptr<chunk_data> read_chunk(chunkid_t id) override;
@@ -86,6 +91,7 @@ class extract_geom : public cube {
     std::string _fid_column;
     bool _in_ogr_was_transformed;
     bool _is_point;
+    std::string _chunkmask_dataset;
 };
 
 }  // namespace gdalcubes

@@ -36,7 +36,8 @@ extract_geom::extract_geom(std::shared_ptr<cube> in, std::string ogr_dataset,
                                                                              _in_time_column(time_column),
                                                                              _in_ogr_layer(ogr_layer), _ogr_dataset(ogr_dataset),
                                                                              _ogr_layer(ogr_layer), _fid_column(""),
-                                                                             _in_ogr_was_transformed(false), _is_point(false) {
+                                                                             _in_ogr_was_transformed(false), _is_point(false),
+                                                                             _chunkmask_dataset() {
     _chunk_size[0] = _in_cube->chunk_size()[0];
     _chunk_size[1] = _in_cube->chunk_size()[1];
     _chunk_size[2] = _in_cube->chunk_size()[2];
@@ -156,6 +157,63 @@ extract_geom::extract_geom(std::shared_ptr<cube> in, std::string ogr_dataset,
     else {
         _is_point = false;
     }
+
+
+
+
+    CPLStringList rasterize_args;
+    rasterize_args.AddString("-burn");
+    rasterize_args.AddString("1");
+    rasterize_args.AddString("-ot");
+    rasterize_args.AddString("Byte");
+    rasterize_args.AddString("-of");
+    rasterize_args.AddString("GTiff");
+    rasterize_args.AddString("-init");
+    rasterize_args.AddString("0");
+    rasterize_args.AddString("-at");
+    rasterize_args.AddString("-tr");
+    rasterize_args.AddString(utils::dbl_to_string(st_reference()->dx() * chunk_size()[2]).c_str());
+    rasterize_args.AddString(utils::dbl_to_string(st_reference()->dy() * chunk_size()[1]).c_str());
+
+    rasterize_args.AddString("-te");
+    rasterize_args.AddString(utils::dbl_to_string(st_reference()->left()).c_str());  // xmin
+    rasterize_args.AddString(utils::dbl_to_string(st_reference()->top() - chunk_size()[1] * st_reference()->dy() * count_chunks_y()).c_str());  // ymin
+    rasterize_args.AddString(utils::dbl_to_string(st_reference()->left() + chunk_size()[2] * st_reference()->dx() * count_chunks_x()).c_str());  // xmax
+    rasterize_args.AddString(utils::dbl_to_string(st_reference()->top()).c_str()); // ymax
+    rasterize_args.AddString("-l");
+    rasterize_args.AddString(_ogr_layer.c_str());
+
+    // TODO: avoid recreating this for every worker process
+    if (count_chunks_x() * count_chunks_y() < 1e6) {
+        _chunkmask_dataset = "/vsimem/" + utils::generate_unique_filename(8, "chunkmask_", ".tif");
+    }
+    else {
+        _chunkmask_dataset = filesystem::join(filesystem::get_tempdir(),utils::generate_unique_filename(8, "chunkmask_", ".tif"));
+    }
+    // log gdal_rasterize call
+    //         std::stringstream ss;
+    //         ss << "Running gdal_rasterize ";
+    //         for (uint16_t iws = 0; iws < rasterize_args.size(); ++iws) {
+    //             ss << rasterize_args[iws] << " ";
+    //         }
+    //         ss << _ogr_dataset;
+    //         GCBS_DEBUG(ss.str());
+    GDALRasterizeOptions *rasterize_opts = GDALRasterizeOptionsNew(rasterize_args.List(), NULL);
+    if (rasterize_opts == NULL) {
+        GDALRasterizeOptionsFree(rasterize_opts);
+        GDALClose(in_ogr_dataset);
+        throw std::string("ERROR in extract_geom::extract_geom(): cannot create gdal_rasterize options.");
+    }
+    int err = 0;
+    GDALDataset *gdal_rasterized = (GDALDataset *)GDALRasterize(_chunkmask_dataset.c_str(), NULL, (GDALDatasetH)in_ogr_dataset, rasterize_opts, &err);
+    if (gdal_rasterized == NULL) {
+        GDALRasterizeOptionsFree(rasterize_opts);
+        GDALClose(in_ogr_dataset);
+        GCBS_ERROR("gdal_rasterize failed (error code " + std::to_string(err) + ")");
+        throw std::string("gdal_rasterize failed");
+    }
+    GDALRasterizeOptionsFree(rasterize_opts);
+    GDALClose(gdal_rasterized);
     GDALClose(in_ogr_dataset);
 }
 
@@ -165,6 +223,27 @@ std::shared_ptr<chunk_data> extract_geom::read_chunk(chunkid_t id) {
 
     if (id >= count_chunks()) {
         return std::make_shared<chunk_data>();  // chunk is outside of the view, we don't need to read anything.
+    }
+
+
+    GDALDataset *gdal_rasterized_chunkmask = (GDALDataset *)GDALOpen(_chunkmask_dataset.c_str(), GA_ReadOnly);
+    if (!gdal_rasterized_chunkmask) {
+        GCBS_DEBUG("GDAL cannot open '" + _chunkmask_dataset + "', chunk filtering will be ignored, which can lead to significantly longer computation times in some cases");
+    }
+    else {
+        uint8_t chunk_has_data = 1;
+        auto ccoords = chunk_coords_from_id(id);
+
+        if (gdal_rasterized_chunkmask->GetRasterBand(1)->RasterIO(GF_Read, ccoords[2], ccoords[1], 1, 1, &chunk_has_data, 1, 1, GDT_Byte, 0, 0, NULL) == CE_None) {
+            if (chunk_has_data == 0) {
+                GDALClose(gdal_rasterized_chunkmask);
+                return std::make_shared<chunk_data>();
+            }
+        }
+        else {
+            GCBS_DEBUG("GDAL failed to read from '" + _chunkmask_dataset + "', chunk filtering will be ignored, which can lead to significantly longer computation times in some cases");
+        }
+        GDALClose(gdal_rasterized_chunkmask);
     }
 
     bounds_st cbounds = bounds_from_chunk(id);

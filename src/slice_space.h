@@ -86,8 +86,8 @@ class slice_space_cube : public cube {
                           in->st_reference()->left() + (_x_index + 1) * in->st_reference()->dx(),
                           uint32_t(1));
 
-        stref->set_y_axis(in->st_reference()->bottom() + _y_index * in->st_reference()->dy(),
-                          in->st_reference()->bottom() + (_y_index+1) * in->st_reference()->dy(),
+        stref->set_y_axis(in->st_reference()->top() - _y_index * in->st_reference()->dy(),
+                          in->st_reference()->top() - (_y_index+1) * in->st_reference()->dy(),
                           uint32_t(1));
 
         if (_st_ref->nx() != 1) {
@@ -107,7 +107,7 @@ class slice_space_cube : public cube {
 
     slice_space_cube(std::shared_ptr<cube> in, double x, double y) : cube(in->st_reference()->copy()), _in_cube(in), _x_index(-1), _y_index(-1) {
         _x_index = (x - in->st_reference()->left()) / in->st_reference()->dx();
-        _y_index = (y- in->st_reference()->bottom()) / in->st_reference()->dy();
+        _y_index = (in->st_reference()->top() - y) / in->st_reference()->dy();
 
         _chunk_size[0] = _in_cube->chunk_size()[0];
         _chunk_size[1] = 1;

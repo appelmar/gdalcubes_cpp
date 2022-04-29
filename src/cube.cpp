@@ -325,7 +325,7 @@ void cube::write_tif_collection(std::string dir, std::string prefix,
                 }  // if packing
 
                 for (uint16_t ib = 0; ib < size_bands(); ++ib) {
-                    CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
+                    CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], chunk_limits(id).low[1], dat->size()[3], dat->size()[2],
                                                                            ((double *)dat->buf()) + (ib * dat->size()[1] * dat->size()[2] * dat->size()[3] + it * dat->size()[2] * dat->size()[3]),
                                                                            dat->size()[3], dat->size()[2], GDT_Float64, 0, 0, NULL);
                     if (res != CE_None) {
@@ -632,7 +632,7 @@ void cube::write_png_collection(std::string dir, std::string prefix, std::vector
                             buf[i] = v;
                         }
 
-                        CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], size_y() - chunk_limits(id).high[1] - 1, dat->size()[3], dat->size()[2],
+                        CPLErr res = gdal_out->GetRasterBand(ib + 1)->RasterIO(GF_Write, chunk_limits(id).low[2], chunk_limits(id).low[1], dat->size()[3], dat->size()[2],
                                                                                buf, dat->size()[3], dat->size()[2], GDT_Byte, 0, 0, NULL);
                         if (res != CE_None) {
                             GCBS_WARN("RasterIO (write) failed for " + name);
@@ -829,7 +829,8 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
     }
 
     for (uint32_t i = 0; i < size_y(); ++i) {
-        dim_y[i] = stref->win().bottom + size_y() * stref->dy() - (i + 0.5) * stref->dy();  // cell center
+        //dim_y[i] = stref->win().bottom + size_y() * stref->dy() - (i + 0.5) * stref->dy();  // cell center
+        dim_y[i] = stref->win().top - (i + 0.5) * stref->dy();  // cell center
     }
     for (uint32_t i = 0; i < size_x(); ++i) {
         dim_x[i] = stref->win().left + (i + 0.5) * stref->dx();
@@ -849,8 +850,10 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         }
 
         for (uint32_t i = 0; i < size_y(); ++i) {
-            dim_y_bnds[2 * i] = stref->win().bottom + size_y() * stref->dy() - (i)*stref->dy();
-            dim_y_bnds[2 * i + 1] = stref->win().bottom + size_y() * stref->dy() - (i + 1) * stref->dy();
+            // dim_y_bnds[2 * i] = stref->win().bottom + size_y() * stref->dy() - (i)*stref->dy();
+            // dim_y_bnds[2 * i + 1] = stref->win().bottom + size_y() * stref->dy() - (i + 1) * stref->dy();
+            dim_y_bnds[2 * i] = stref->win().top - (i)*stref->dy();
+            dim_y_bnds[2 * i + 1] = stref->win().top - (i + 1) * stref->dy();
         }
         for (uint32_t i = 0; i < size_x(); ++i) {
             dim_x_bnds[2 * i] = stref->win().left + (i + 0) * stref->dx();
@@ -1072,7 +1075,7 @@ void cube::write_netcdf_file(std::string path, uint8_t compression_level, bool w
         if (!dat->empty()) {
             chunk_size_btyx csize = dat->size();
             bounds_nd<uint32_t, 3> climits = chunk_limits(id);
-            std::size_t startp[] = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
+            std::size_t startp[] = {climits.low[0], climits.low[1], climits.low[2]};
             std::size_t countp[] = {csize[1], csize[2], csize[3]};
 
             for (uint16_t i = 0; i < bands().count(); ++i) {

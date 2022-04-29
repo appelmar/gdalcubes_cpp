@@ -479,7 +479,7 @@ std::shared_ptr<chunk_data> ncdf_cube::read_chunk(chunkid_t id) {
     std::fill(begin, end, NAN);
 
     bounds_nd<uint32_t, 3> climits = chunk_limits(id);
-    std::size_t startp[] = {climits.low[0], size_y() - climits.high[1] - 1, climits.low[2]};
+    std::size_t startp[] = {climits.low[0], climits.low[1], climits.low[2]};
     std::size_t countp[] = {size_btyx[1], size_btyx[2], size_btyx[3]};
 
     _mutex.lock();

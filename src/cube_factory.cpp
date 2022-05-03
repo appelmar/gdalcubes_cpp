@@ -27,6 +27,7 @@
 #include <fstream>
 
 #include "aggregate_time.h"
+#include "aggregate_space.h"
 #include "apply_pixel.h"
 #include "crop.h"
 #include "dummy.h"
@@ -161,6 +162,11 @@ void cube_factory::register_default() {
     cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
         "aggregate_time", [](json11::Json& j) {
             auto x = aggregate_time_cube::create(instance()->create_from_json(j["in_cube"]), j["dt"].string_value(), j["func"].string_value());
+            return x;
+        }));
+    cube_generators.insert(std::make_pair<std::string, std::function<std::shared_ptr<cube>(json11::Json&)>>(
+        "aggregate_space", [](json11::Json& j) {
+            auto x = aggregate_space_cube::create(instance()->create_from_json(j["in_cube"]), j["dx"].number_value(), j["dy"].number_value(), j["func"].string_value());
             return x;
         }));
 

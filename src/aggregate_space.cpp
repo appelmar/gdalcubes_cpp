@@ -362,6 +362,20 @@ std::shared_ptr<chunk_data> aggregate_space_cube::read_chunk(chunkid_t id) {
 
     bool chunk_initialized = false;
 
+    double in_cube_left = _in_cube->st_reference()->left();
+    double in_cube_top = _in_cube->st_reference()->top();
+    double in_cube_dx = _in_cube->st_reference()->dx();
+    double in_cube_dy = _in_cube->st_reference()->dy();
+    int32_t in_cube_chunksize_x = _in_cube->chunk_size()[2];
+    int32_t in_cube_chunksize_y = _in_cube->chunk_size()[1];
+
+    double out_cube_left = _st_ref->left();
+    double out_cube_top = _st_ref->top();
+    double out_cube_dx = _st_ref->dx();
+    double out_cube_dy = _st_ref->dy();
+
+
+
     // iterate over these chunks
     for (uint32_t ch_y = in_ccords_from[1]; ch_y <= in_ccords_to[1]; ++ch_y) {
         for (uint32_t ch_x = in_ccords_from[2]; ch_x <= in_ccords_to[2]; ++ch_x) {
@@ -371,6 +385,8 @@ std::shared_ptr<chunk_data> aggregate_space_cube::read_chunk(chunkid_t id) {
             if (in_chunk->empty()) {
                 continue;
             }
+
+            auto in_chunk_size = in_chunk->size();
 
             // initialize chunk buffer and aggregators
             if (!chunk_initialized) {
@@ -399,29 +415,34 @@ std::shared_ptr<chunk_data> aggregate_space_cube::read_chunk(chunkid_t id) {
 
             // iterate over rectangular subset of input chunk
             // and for each pixel find out to which pixel it will contribute
+
+            double* in_buf = (double*)in_chunk->buf();
+            double* out_buf = (double*)out->buf();
+
+
             for (int32_t ib = 0; ib<(int32_t)size_btyx[0]; ++ib) {
                 for (int32_t it=0; it < (int32_t)size_btyx[1]; ++it) {
                     for (int32_t iy=start_y; iy <= end_y; ++iy) {
                         for (int32_t ix=start_x; ix <= end_x; ++ix) {
                             // find
                             // coordinates of center point from current pixel of the input chunk
-                            double in_center_x = (_in_cube->st_reference()->left() + (ix + 0.5) * _in_cube->st_reference()->dx());
-                            double in_center_y = (_in_cube->st_reference()->top() - (iy + 0.5) * _in_cube->st_reference()->dx());
+                            double in_center_x = (in_cube_left + (ix + 0.5) * in_cube_dx);
+                            double in_center_y = (in_cube_top - (iy + 0.5) * in_cube_dy);
 
                             // corresponding cube coordinates for result cube
-                            int32_t out_x_global = int32_t(std::floor((in_center_x - _st_ref->left()) / _st_ref->dx()));
-                            int32_t out_y_global = int32_t(std::floor((_st_ref->top() - in_center_y) / _st_ref->dy()));
+                            int32_t out_x_global = int32_t(std::floor((in_center_x - out_cube_left) / out_cube_dx));
+                            int32_t out_y_global = int32_t(std::floor((out_cube_top - in_center_y) / out_cube_dy));
 
                             // local coordinates within chunk
                             int32_t out_x_in_chunk = out_x_global % chunk_size()[2];
                             int32_t out_y_in_chunk = out_y_global % chunk_size()[1];
 
-                            int32_t in_x_in_chunk = ix % _in_cube->chunk_size()[2];
-                            int32_t in_y_in_chunk = iy % _in_cube->chunk_size()[1];
+                            int32_t in_x_in_chunk = ix % in_cube_chunksize_x;
+                            int32_t in_y_in_chunk = iy % in_cube_chunksize_y;
 
-                            double v = ((double*)in_chunk->buf())[ib * in_chunk->size()[1] * in_chunk->size()[2] * in_chunk->size()[3] + it * in_chunk->size()[2] * in_chunk->size()[3] + in_y_in_chunk *  in_chunk->size()[3] + in_x_in_chunk];
-                            agg[ib]->combine(&(((double*)(out->buf()))[ib * size_btyx[1] * size_btyx[2] * size_btyx[3]]),
-                                             &v, it, out_y_in_chunk, out_x_in_chunk, size_btyx[1], size_btyx[2], size_btyx[3]);
+                            double* v = &in_buf[ib * in_chunk_size[1] * in_chunk_size[2] * in_chunk_size[3] + it * in_chunk_size[2] * in_chunk_size[3] + in_y_in_chunk *  in_chunk_size[3] + in_x_in_chunk];
+                            agg[ib]->combine(&(out_buf[ib * size_btyx[1] * size_btyx[2] * size_btyx[3]]),
+                                             v, it, out_y_in_chunk, out_x_in_chunk, size_btyx[1], size_btyx[2], size_btyx[3]);
                         }
                     }
                 }

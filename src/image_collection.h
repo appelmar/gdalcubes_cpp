@@ -99,7 +99,8 @@ class image_collection {
     image_collection(image_collection&& A) : _format(A._format), _filename(A._filename), _db(A._db) {}
 
     static std::shared_ptr<image_collection> create(collection_format format, std::vector<std::string> descriptors, bool strict = true);
-    static std::shared_ptr<image_collection> create(std::vector<std::string> descriptors, std::vector<std::string> date_time, std::vector<std::string> band_names = {}, bool use_subdatasets = false);
+    static std::shared_ptr<image_collection> create(std::vector<std::string> descriptors, std::vector<std::string> date_time,
+                                                    std::vector<std::string> band_names = {}, bool use_subdatasets = false, bool one_band_per_file = false);
     static std::shared_ptr<image_collection> create();
 
     std::string to_string();
@@ -108,6 +109,8 @@ class image_collection {
     void add_with_collection_format(std::string descriptor, bool strict = true);
 
     void add_with_datetime(std::vector<std::string> descriptors, std::vector<std::string> date_time, std::vector<std::string> band_names = {}, bool use_subdatasets = false);
+    void add_with_datetime_bands(std::vector<std::string> descriptors, std::vector<std::string> date_time,
+                                                   std::vector<std::string> band_names, bool use_subdatasets = false);
 
     void write(const std::string filename);
 

@@ -175,9 +175,15 @@ std::shared_ptr<image_collection> image_collection::create(collection_format for
 std::shared_ptr<image_collection> image_collection::create(std::vector<std::string> descriptors,
                                                            std::vector<std::string> date_time,
                                                            std::vector<std::string> band_names,
-                                                           bool use_subdatasets) {
+                                                           bool use_subdatasets, bool one_band_per_file) {
     std::shared_ptr<image_collection> o = std::make_shared<image_collection>();
-    o->add_with_datetime(descriptors, date_time, band_names, use_subdatasets);
+    if (one_band_per_file) {
+        o->add_with_datetime_bands(descriptors, date_time, band_names, use_subdatasets);
+    }
+    else {
+        o->add_with_datetime(descriptors, date_time, band_names, use_subdatasets);
+    }
+
     return o;
 }
 
@@ -406,6 +412,194 @@ void image_collection::add_with_datetime(std::vector<std::string> descriptors, s
             }
         }
         sqlite3_exec(_db, "COMMIT TRANSACTION;", NULL, NULL, NULL);  // what if this fails?!
+        GDALClose(dataset);
+        p->increment(double(1) / double(descriptors.size()));
+    }
+
+    p->set(1);
+    p->finalize();
+}
+
+
+void image_collection::add_with_datetime_bands(std::vector<std::string> descriptors, std::vector<std::string> date_time,
+                                         std::vector<std::string> band_names, bool use_subdatasets) {
+    if (!_format.is_null()) {
+        GCBS_WARN("Image collection has nonempty format; trying to apply the format to provided datasets");
+        add_with_collection_format(descriptors);
+        return;
+    }
+
+    if (descriptors.size() != date_time.size()) {
+        GCBS_ERROR("The number of provided datasets must be identical to the number of provided date/time strings");
+        throw std::string("The number of provided datasets must be identical to the number of provided date/time strings");
+    }
+    if (descriptors.size() != band_names.size()) {
+        GCBS_ERROR("The number of provided datasets must be identical to the number of provided band names");
+        throw std::string("The number of provided datasets must be identical to the number of provided band names");
+    }
+
+    if (use_subdatasets) {
+        std::vector<std::string> subdatasets;
+        for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
+            GDALDataset* dataset = (GDALDataset*)GDALOpen((*it).c_str(), GA_ReadOnly);
+            if (!dataset) {
+                GCBS_WARN("GDAL failed to open " + *it);
+                continue;
+            }
+
+            // Is there a SUBDATASETS metadata domain?
+            char** md_domains = dataset->GetMetadataDomainList();
+            if (md_domains != NULL) {
+                if (CSLFindString(md_domains, "SUBDATASETS") != -1) {
+                    // if yes, list all metadata keys ending with _NAME
+                    char** md_sd = dataset->GetMetadata("SUBDATASETS");
+                    if (md_sd != NULL) {
+                        for (uint16_t imd = 0; imd < CSLCount(md_sd); ++imd) {
+                            std::string s(md_sd[imd]);
+                            size_t ii = s.find("_NAME=");
+                            if (ii != std::string::npos) {
+                                // found
+                                subdatasets.push_back(s.substr(ii + 6));
+                            }
+                        }
+                        // Don't call CSLDestroy(md_sd);
+                    }
+                }
+                CSLDestroy(md_domains);
+            }
+            GDALClose((GDALDatasetH)dataset);
+        }
+        descriptors = subdatasets;  // TODO: how to handle input datasets if they do not have any subdatasets?
+    }
+
+    std::string sql_select_bands = "SELECT id, name, type, offset, scale, unit FROM bands";
+
+    std::map<std::string, image_band> bands;
+    std::map<std::string, uint32_t> band_ids;
+
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(_db, sql_select_bands.c_str(), -1, &stmt, NULL);
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        image_band b;
+        b.type = utils::gdal_type_from_string(sqlite_as_string(stmt, 2));
+        b.offset = sqlite3_column_double(stmt, 3);
+        b.scale = sqlite3_column_double(stmt, 4);
+        b.unit = sqlite_as_string(stmt, 5);
+        std::string name = sqlite_as_string(stmt, 1);
+        uint32_t id = sqlite3_column_int(stmt, 0);
+        bands.insert(std::make_pair(name, b));
+        band_ids.insert(std::make_pair(name, id));
+    }
+    sqlite3_finalize(stmt);
+
+    std::shared_ptr<progress> p = config::instance()->get_default_progress_bar()->get();
+    p->set(0);  // explicitly set to zero to show progress bar immediately
+    for (uint32_t i = 0; i < descriptors.size(); ++i) {
+        GDALDataset* dataset = (GDALDataset*)GDALOpen(descriptors[i].c_str(), GA_ReadOnly);
+        if (!dataset) {
+            GCBS_WARN("GDAL failed to open '" + descriptors[i] + "'; dataset will be skipped");
+            continue;
+        }
+
+        double affine_in[6] = {0, 0, 1, 0, 0, 1};
+        bounds_2d<double> bbox;
+        std::string srs_str;
+        if (dataset->GetGeoTransform(affine_in) != CE_None) {
+            GCBS_WARN("GDAL failed to fetch geotransform parameters for '" + descriptors[i] + "'; dataset will be skipped");
+            GDALClose(dataset);
+            continue;
+        }
+
+        bbox.left = affine_in[0];
+        bbox.right = affine_in[0] + affine_in[1] * dataset->GetRasterXSize() + affine_in[2] * dataset->GetRasterYSize();
+        bbox.top = affine_in[3];
+        bbox.bottom = affine_in[3] + affine_in[4] * dataset->GetRasterXSize() + affine_in[5] * dataset->GetRasterYSize();
+        OGRSpatialReference srs_in;
+
+        srs_in.SetFromUserInput(dataset->GetProjectionRef());
+        if ( srs_in.GetAuthorityName(NULL) != NULL &&  srs_in.GetAuthorityCode(NULL) != NULL) {
+            srs_str = std::string( srs_in.GetAuthorityName(NULL)) + ":" + std::string(srs_in.GetAuthorityCode(NULL));
+        }
+        else {
+            char *tmp;
+            srs_in.exportToWkt(&tmp);
+            srs_str = std::string(tmp);
+            CPLFree(tmp);
+        }
+
+        bbox.transform(srs_str, "EPSG:4326");
+
+        if (bands.find(band_names[i]) == bands.end()) {
+            if (dataset->GetRasterCount() > 1) {
+                GCBS_WARN("Dataset '" + descriptors[i] + " has > 1 bands, only band 1 will be considered");
+            }
+            image_band b;
+            b.type = dataset->GetRasterBand(1)->GetRasterDataType();
+            b.offset = dataset->GetRasterBand(1)->GetOffset();
+            b.scale = dataset->GetRasterBand(1)->GetScale();
+            b.unit = dataset->GetRasterBand(1)->GetUnitType();
+            b.nodata = "";
+            int hasnodata = 0;
+            double nd = dataset->GetRasterBand(1)->GetNoDataValue(&hasnodata);
+            if (hasnodata)
+                b.nodata = std::to_string(nd);
+            std::string name = band_names[i];
+            bands.insert(std::make_pair(name, b));
+            std::string sql_band_insert = "INSERT INTO bands(name, type, offset, scale, unit, nodata) VALUES ('" +
+                                          name + "', '" + utils::string_from_gdal_type(b.type) + "'," + std::to_string(b.offset) + "," +
+                                          std::to_string(b.scale) + ",'" + b.unit + "','" + b.nodata + "')";
+            if (sqlite3_exec(_db, sql_band_insert.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+                GCBS_ERROR("Failed to insert band into image collection database");
+                GDALClose(dataset);
+                throw std::string("Failed to insert band into image collection database");
+            }
+            band_ids.insert(std::make_pair(name, sqlite3_last_insert_rowid(_db)));
+        }
+        else { // band already exists
+            bool is_compatible = true;
+            if (dataset->GetRasterCount() > 1) {
+                GCBS_WARN("Dataset '" + descriptors[i] + " has > 1 bands, only band 1 will be considered");
+            }
+            std::string name = band_names[i];
+            is_compatible = (bands[name].type == dataset->GetRasterBand(1)->GetRasterDataType()) &&
+                            (bands[name].offset == dataset->GetRasterBand(1)->GetOffset()) &&
+                            (bands[name].scale == dataset->GetRasterBand(1)->GetScale()) &&
+                            (bands[name].unit == dataset->GetRasterBand(1)->GetUnitType());
+
+            if (!is_compatible) {
+                GCBS_WARN("Band " + name + " of image '" + descriptors[i] + "' is not identical to the same band of other images in the collection; dataset will be skipped");
+                GDALClose(dataset);
+                continue;
+            }
+        }
+
+        datetime d = datetime::from_string(date_time[i]);
+
+        sqlite3_exec(_db, "BEGIN TRANSACTION;", NULL, NULL, NULL);
+
+        // TODO: change from srs_str to WKT
+        // Note: This results in a separate rows in the images table even if the files contain different bands of the same image
+        std::string image_name = filesystem::stem(descriptors[i]);
+        std::string sql_insert_image = "INSERT INTO images(name, datetime, left, top, bottom, right, proj) VALUES('" + image_name + "','" +
+                                       d.to_string() + "'," +
+                                       std::to_string(bbox.left) + "," + std::to_string(bbox.top) + "," + std::to_string(bbox.bottom) + "," + std::to_string(bbox.right) + ",'" + srs_str + "')";
+        if (sqlite3_exec(_db, sql_insert_image.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+            GCBS_WARN("Failed to add image '" + descriptors[i] + "'; dataset will be skipped");
+            GDALClose(dataset);
+            sqlite3_exec(_db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);  // what if this fails?!
+            continue;
+        }
+        uint32_t image_id = sqlite3_last_insert_rowid(_db);
+
+        // add to gdalrefs table
+        std::string sql_insert_gdalref = "INSERT INTO gdalrefs(descriptor, image_id, band_id, band_num) VALUES('" + descriptors[i] + "'," + std::to_string(image_id) + "," + std::to_string(band_ids[band_names[i]]) + "," + std::to_string(1) + ");";
+        if (sqlite3_exec(_db, sql_insert_gdalref.c_str(), NULL, NULL, NULL) != SQLITE_OK) {
+            GCBS_WARN("Failed to add '" + descriptors[i] + "'; dataset will be skipped");
+            sqlite3_exec(_db, "ROLLBACK TRANSACTION;", NULL, NULL, NULL);
+            continue;
+        }
+        sqlite3_exec(_db, "COMMIT TRANSACTION;", NULL, NULL, NULL);
+
         GDALClose(dataset);
         p->increment(double(1) / double(descriptors.size()));
     }

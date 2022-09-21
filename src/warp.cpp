@@ -84,6 +84,10 @@ GDALDataset *gdalwarp_client::warp(GDALDataset *in, std::string s_srs, std::stri
 
     // Setup warp options.
     GDALWarpOptions *psWarpOptions = GDALCreateWarpOptions();
+    if (s_srs.empty()) {
+        // try reading from dataset
+        s_srs = std::string(in->GetProjectionRef());
+    }
     //    if (std::string(in->GetProjectionRef()).empty()) {
     //        if (in->SetProjection(s_srs.c_str()) != CE_None) {
     //            GCBS_DEBUG("Failed to overwrite projection for dataset.");

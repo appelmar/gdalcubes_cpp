@@ -34,10 +34,10 @@
 namespace gdalcubes {
 
 /**
-     * Minimal interface to the GDAL Warp API to reduce computational overhead of repeated / parallel gdalwarp calls
-     */
+ * Minimal interface to the GDAL Warp API to reduce computational overhead of repeated / parallel gdalwarp calls
+ */
 class gdalwarp_client {
-    typedef struct {  // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALGenImgProjTransformInfo
+    struct gdalcubes_transform_info{  // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALGenImgProjTransformInfo
         double adfSrcGeoTransform[6];
         double adfSrcInvGeoTransform[6];
 
@@ -46,18 +46,17 @@ class gdalwarp_client {
 
         double adfDstGeoTransform[6];
         double adfDstInvGeoTransform[6];
+    };
 
-    } gdalcubes_transform_info;
-
-    typedef struct {  // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALReprojectionTransformInfo
+    struct gdalcubes_reprojection_info {  // adapted from https://github.com/OSGeo/gdal/blob/master/gdal/alg/gdaltransformer.cpp, struct GDALReprojectionTransformInfo
         OGRCoordinateTransformation *poForwardTransform = nullptr;
         OGRCoordinateTransformation *poReverseTransform = nullptr;
-    } gdalcubes_reprojection_info;
+    } ;
 
    public:
     /**
-         * Cache for reprojection transformations given a pair of source and destination coordinate reference systems
-         */
+     * Cache for reprojection transformations given a pair of source and destination coordinate reference systems
+     */
     class gdal_transformation_cache {
        public:
         static gdal_transformation_cache *instance() {
@@ -81,20 +80,20 @@ class gdalwarp_client {
 
    public:
     /**
-         * Warp source GDAL dataset to a target grid
-         * @param in source GDAL dataset, will be closed at the end of this function
-         * @param s_srs spatial reference system of source image, given as string understandable for OGRSpatialReference::SetFromUserInput()
-         * @param t_srs target spatial reference system, given as string understandable for OGRSpatialReference::SetFromUserInput()
-         * @param te_left left (minimum x) coordinate of the target grid, given in the target SRS
-         * @param te_right right (maximum x) coordinate of the target grid, given in the target SRS
-         * @param te_top left (maximum y) coordinate of the target grid, given in the target SRS
-         * @param te_bottom left (minimum y) coordinate of the target grid, given in the target SRS
-         * @param ts_x number of pixels of the target grid in x direction
-         * @param ts_y number of pixels of the target grid in y direction
-         * @param resampling  resampling method, given as a string (see https://gdal.org/programs/gdalwarp.html#cmdoption-gdalwarp-r for possible options)
-         * @param srcnodata vector with no data values of the source dataset per band
-         * @return A new in-memory GDALDataset object
-         */
+     * Warp source GDAL dataset to a target grid
+     * @param in source GDAL dataset, will be closed at the end of this function
+     * @param s_srs spatial reference system of source image, given as string understandable for OGRSpatialReference::SetFromUserInput()
+     * @param t_srs target spatial reference system, given as string understandable for OGRSpatialReference::SetFromUserInput()
+     * @param te_left left (minimum x) coordinate of the target grid, given in the target SRS
+     * @param te_right right (maximum x) coordinate of the target grid, given in the target SRS
+     * @param te_top left (maximum y) coordinate of the target grid, given in the target SRS
+     * @param te_bottom left (minimum y) coordinate of the target grid, given in the target SRS
+     * @param ts_x number of pixels of the target grid in x direction
+     * @param ts_y number of pixels of the target grid in y direction
+     * @param resampling  resampling method, given as a string (see https://gdal.org/programs/gdalwarp.html#cmdoption-gdalwarp-r for possible options)
+     * @param srcnodata vector with no data values of the source dataset per band
+     * @return A new in-memory GDALDataset object
+     */
     static GDALDataset *warp(GDALDataset *in, std::string s_srs, std::string t_srs, double te_left, double te_right, double te_top, double te_bottom, uint32_t ts_x, uint32_t ts_y, std::string resampling, std::vector<double> srcnodata);
 
     static gdalcubes_transform_info *create_transform(GDALDataset *in, GDALDataset *out, std::string srs_in_str, std::string srs_out_str);

@@ -456,10 +456,8 @@ std::shared_ptr<chunk_data> image_collection_cube::read_chunk(chunkid_t id) {
 
             std::vector<double> nodata_value_list;
             //std::string nodata_value_list = "";
-            uint16_t hasnodata_count = 0;
             for (uint16_t b = 0; b < it->second.size(); ++b) {
                 if (!_input_bands.get(std::get<0>(it->second[b])).no_data_value.empty()) {
-                    ++hasnodata_count;
                     //nodata_value_list += _input_bands.get(std::get<0>(it->second[b])).no_data_value;
                     nodata_value_list.push_back(std::stod(_input_bands.get(std::get<0>(it->second[b])).no_data_value));
                     //if (b < it->second.size() - 1) nodata_value_list += " ";

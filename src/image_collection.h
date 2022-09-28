@@ -298,12 +298,18 @@ class image_collection {
      */
     sqlite3* get_db_handle();
 
+
+
+
    protected:
     collection_format _format;
     std::string _filename;
     sqlite3* _db;
 
     static std::string sqlite_as_string(sqlite3_stmt* stmt, uint16_t col);
+
+
+    static std::string sqlite_escape_singlequotes(std::string s);
 
     /**
      * Add a single image to the collection, where one GDAL dataset has spatial dimensions and variables / spectral bands

@@ -1805,7 +1805,7 @@ void chunk_data::write_ncdf(std::string path, uint8_t compression_level, bool fo
 #if USE_NCDF4 == 1
     nc_create(path.c_str(), NC_NETCDF4, &ncout);
 #else
-    nc_create(fname.c_str(), NC_CLASSIC_MODEL, &ncout);
+    nc_create(path.c_str(), NC_CLASSIC_MODEL, &ncout);
 #endif
 
     int d_b, d_t, d_y, d_x;

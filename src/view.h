@@ -26,7 +26,7 @@
 #define VIEW_H
 
 #include <algorithm>
-
+#include <cstdint> // 2023-01-12: GCC 13 compatibility
 #include "coord_types.h"
 #include "datetime.h"
 #include "external/json11/json11.hpp"

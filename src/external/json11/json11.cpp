@@ -24,6 +24,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
+#include <cstdint> // 2023-01-12: GCC 13 compatibility, modified by Marius Appel
 #include <limits>
 
 namespace json11 {

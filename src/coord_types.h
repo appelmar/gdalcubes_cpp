@@ -29,7 +29,7 @@
 
 #include <array>
 #include <limits>
-
+#include <cstdint>
 #include "datetime.h"
 
 namespace gdalcubes {

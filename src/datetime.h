@@ -39,7 +39,7 @@
 #include <chrono>
 #include <iomanip>
 #include <regex>
-
+#include <cstdint> // 2023-01-12: GCC 13 compatibility
 #include "error.h"
 #include "external/date.h"
 

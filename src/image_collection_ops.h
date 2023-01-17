@@ -17,6 +17,7 @@
 #ifndef IMAGE_COLLECTION_OPS_H
 #define IMAGE_COLLECTION_OPS_H
 
+#include <cstdint> // 2023-01-12: GCC 13 compatibility
 #include "image_collection.h"
 
 namespace gdalcubes {

@@ -27,6 +27,7 @@
 #include <gdal_priv.h>
 #include <set>
 #include <map>
+#include <cstdint> // 2023-01-12: GCC 13 compatibility
 
 namespace gdalcubes {
 

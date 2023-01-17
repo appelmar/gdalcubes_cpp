@@ -26,6 +26,7 @@
 
 #include <cmath>
 #include <mutex>
+#include <cstdint> // 2023-01-12: GCC 13 compatibility
 
 #include "timer.h"
 #include "utils.h"

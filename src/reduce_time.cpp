@@ -405,7 +405,7 @@ struct quantile_reducer_singleband : public reducer_singleband {
         _band_idx_out = band_idx_out;
         //_m_buckets = std::vector< std::vector<double> > (a->size()[2] * a->size()[3],std::vector<double>(0));
         _m_buckets.resize(a->size()[2] * a->size()[3], std::vector<double>());
-        _p = 0.5;
+        //_p = 0.5; // DO NOT SET HERE!!!
     }
 
     void combine(std::shared_ptr<chunk_data> a, std::shared_ptr<chunk_data> b, chunkid_t chunk_id) override {
@@ -438,8 +438,8 @@ struct quantile_reducer_singleband : public reducer_singleband {
             }
             else {
                 uint32_t n = list.size();
-                double h = (n-1)*_p + 1;
-                double Qp = list[std::floor(h-1)] + (h - floor(h))*(list[std::ceil(h-1)]-list[std::floor(h-1)]);
+                double h = (double(n)-1.0)*_p;
+                double Qp = list[std::floor(h)] + (h - std::floor(h))*(list[std::ceil(h)]-list[std::floor(h)]);
                 ((double *)a->buf())[_band_idx_out * a->size()[2] * a->size()[3] + ixy] = Qp;
             }
         }

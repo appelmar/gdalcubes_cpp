@@ -84,7 +84,9 @@ class reduce_time_cube : public cube {
                   reducerstr == "prod" ||
                   reducerstr == "sum" ||
                   reducerstr == "which_min" ||
-                  reducerstr == "which_max"))
+                  reducerstr == "which_max" ||
+                  reducerstr == "Q1" ||
+                  reducerstr == "Q3"))
                 throw std::string("ERROR in reduce_time_cube::reduce_time_cube(): Unknown reducer '" + reducerstr + "'");
 
             if (!(in->bands().has(bandstr))) {

@@ -42,60 +42,75 @@ simple_cube::simple_cube(std::vector<std::string> files, std::vector<std::string
         // All files have the same band(s)
 
         // TODO: open first file and extract metadata (st_reference, bands)
-        GDALDataset *dataset = (GDALDataset *)GDALOpen(files[0].c_str(), GA_ReadOnly);
-        if (!dataset) {
-            GCBS_ERROR("GDAL failed to open '" + files[0] + "'");
-            throw std::string("GDAL failed to open '" + files[0] + "'");
-        }
-        double affine_in[6] = {0, 0, 1, 0, 0, 1};
-        if (dataset->GetGeoTransform(affine_in) != CE_None) {
-            GDALClose(dataset);
-            GCBS_ERROR("GDAL failed to fetch geotransform parameters for '" + files[0] + "'");
-            throw std::string("GDAL failed to fetch geotransform parameters for '" + files[0] + "'");
-        }
+        GDALDataset *dataset;
 
-        // Make sure that grid axes are aligned with south/ north and west/east direction of cooordinate reference system
-        if (std::abs(affine_in[2]) > std::nextafter(0.0, 1.0) ||
-            std::abs(affine_in[4]) > std::nextafter(0.0, 1.0)) {
-            GCBS_ERROR("Simple cubes do not support rotated rasters, please use an image collection instead'" + files[0] + "'");
-            throw std::string("Simple cubes do not support rotated rasters, please use an image collection instead");
-        }
+        bool success = false;
+        for (uint16_t i=0; i<files.size() && !success; ++i) {
+            dataset = (GDALDataset *)GDALOpen(files[i].c_str(), GA_ReadOnly);
+            if (!dataset) {
+                GCBS_DEBUG("GDAL failed to open '" + files[i] + "'");
+                continue;
+            }
 
-        bounds_2d<double> bbox;
-        bbox.left = affine_in[0];
-        bbox.right = affine_in[0] + affine_in[1] * dataset->GetRasterXSize() + affine_in[2] * dataset->GetRasterYSize();
-        bbox.top = affine_in[3];
-        bbox.bottom = affine_in[3] + affine_in[4] * dataset->GetRasterXSize() + affine_in[5] * dataset->GetRasterYSize();
+            double affine_in[6] = {0, 0, 1, 0, 0, 1};
+            if (dataset->GetGeoTransform(affine_in) != CE_None) {
+                GDALClose(dataset);
+                GCBS_DEBUG("GDAL failed to fetch geotransform parameters for '" + files[i] + "'");
+                continue;
+            }
 
-        stref->srs(dataset->GetProjectionRef());
-        if (dx <= 0) {
-            stref->set_x_axis(bbox.left, bbox.right, (uint32_t)dataset->GetRasterXSize());
-        } else {
-            stref->set_x_axis(bbox.left, bbox.right, dx);
+            // Make sure that grid axes are aligned with south/ north and west/east direction of cooordinate reference system
+            if (std::abs(affine_in[2]) > std::nextafter(0.0, 1.0) ||
+                std::abs(affine_in[4]) > std::nextafter(0.0, 1.0)) {
+                GCBS_ERROR("Simple cubes do not support rotated rasters, please use an image collection instead'" + files[0] + "'");
+                throw std::string("Simple cubes do not support rotated rasters, please use an image collection instead");
+            }
+
+            bounds_2d<double> bbox;
+            bbox.left = affine_in[0];
+            bbox.right = affine_in[0] + affine_in[1] * dataset->GetRasterXSize() + affine_in[2] * dataset->GetRasterYSize();
+            bbox.top = affine_in[3];
+            bbox.bottom = affine_in[3] + affine_in[4] * dataset->GetRasterXSize() + affine_in[5] * dataset->GetRasterYSize();
+
+            stref->srs(dataset->GetProjectionRef());
+            if (dx <= 0) {
+                stref->set_x_axis(bbox.left, bbox.right, (uint32_t)dataset->GetRasterXSize());
+            } else {
+                stref->set_x_axis(bbox.left, bbox.right, dx);
+            }
+            if (dy <= 0) {
+                stref->set_y_axis(bbox.bottom, bbox.top, (uint32_t)dataset->GetRasterYSize());
+            } else {
+                stref->set_y_axis(bbox.bottom, bbox.top, dy);
+            }
+            if (!band_names.empty() && ((int32_t)band_names.size() != dataset->GetRasterCount())) {
+                GDALClose(dataset);
+                GCBS_ERROR("Number of provided band names does not match the number of bands in files");
+                throw std::string("Number of provided band names does not match the number of bands in files");
+            }
+            for (uint16_t ib = 0; ib < dataset->GetRasterCount(); ++ib) {
+                std::string bname = band_names.empty() ? "x" + std::to_string(ib + 1) : band_names[ib];
+                band b(bname);
+                int success = 0;
+                b.no_data_value = std::to_string(dataset->GetRasterBand(ib + 1)->GetNoDataValue(&success));  // TODO: check for success
+                b.offset = dataset->GetRasterBand(ib + 1)->GetOffset(&success);
+                b.scale = dataset->GetRasterBand(ib + 1)->GetScale(&success);
+                b.unit = dataset->GetRasterBand(ib + 1)->GetUnitType();
+                b.type = utils::string_from_gdal_type(dataset->GetRasterBand(ib + 1)->GetRasterDataType());
+                _bands.add(b);
+                _orig_bands.add(b);
+            } 
+            success = true; // -> break
         }
-        if (dy <= 0) {
-            stref->set_y_axis(bbox.bottom, bbox.top, (uint32_t)dataset->GetRasterYSize());
-        } else {
-            stref->set_y_axis(bbox.bottom, bbox.top, dy);
-        }
-        if (!band_names.empty() && ((int32_t)band_names.size() != dataset->GetRasterCount())) {
-            GDALClose(dataset);
-            GCBS_ERROR("Number of provided band names does not match the number of bands in files");
-            throw std::string("Number of provided band names does not match the number of bands in files");
-        }
-        for (uint16_t ib = 0; ib < dataset->GetRasterCount(); ++ib) {
-            std::string bname = band_names.empty() ? "x" + std::to_string(ib + 1) : band_names[ib];
-            band b(bname);
-            int success = 0;
-            b.no_data_value = std::to_string(dataset->GetRasterBand(ib + 1)->GetNoDataValue(&success));  // TODO: check for success
-            b.offset = dataset->GetRasterBand(ib + 1)->GetOffset(&success);
-            b.scale = dataset->GetRasterBand(ib + 1)->GetScale(&success);
-            b.unit = dataset->GetRasterBand(ib + 1)->GetUnitType();
-            b.type = utils::string_from_gdal_type(dataset->GetRasterBand(ib + 1)->GetRasterDataType());
-            _bands.add(b);
-            _orig_bands.add(b);
+        
+        if (!success) {
+            GCBS_ERROR("GDAL failed to open any dataset, all provided filenames / URLs seem to be invalid or inaccessible");
+            throw std::string("GDAL failed to open any dataset, all provided filenames / URLs seem to be invalid or inaccessible");
         }
         GDALClose(dataset);
+        
+        
+        
 
         // Create ordered time labels and index
         std::set<datetime> dtset;
@@ -128,15 +143,15 @@ simple_cube::simple_cube(std::vector<std::string> files, std::vector<std::string
             if (bands_processed.count(bands[i]) == 0) {
                 GDALDataset *dataset = (GDALDataset *)GDALOpen(files[i].c_str(), GA_ReadOnly);
                 if (!dataset) {
-                    GCBS_ERROR("GDAL failed to open '" + files[i] + "'");
-                    throw std::string("GDAL failed to open '" + files[i] + "'");
+                    GCBS_DEBUG("GDAL failed to open '" + files[i] + "'");
+                    continue;
                 }
 
                 double affine_in[6] = {0, 0, 1, 0, 0, 1};
                 if (dataset->GetGeoTransform(affine_in) != CE_None) {
                     GDALClose(dataset);
-                    GCBS_ERROR("GDAL failed to fetch geotransform parameters for '" + files[0] + "'");
-                    throw std::string("GDAL failed to fetch geotransform parameters for '" + files[0] + "'");
+                    GCBS_DEBUG("GDAL failed to fetch geotransform parameters for '" + files[0] + "'");
+                    continue;
                 }
 
                 // Make sure that grid axes are aligned with south/ north and west/east direction of cooordinate reference system
@@ -165,7 +180,7 @@ simple_cube::simple_cube(std::vector<std::string> files, std::vector<std::string
                     stref->set_y_axis(bbox.bottom, bbox.top, dy);
                 }
                 if (dataset->GetRasterCount() > 1) {
-                    GCBS_WARN("Assuming a 1:1 relationship between files and bands but at least one file contains more than one band, which will be ignored.'");
+                    GCBS_WARN("Assuming a 1:1 relationship between files and bands but at least one file contains > 1 band that will be ignored.'");
                 }
 
                 band b(bands[i]);
@@ -213,7 +228,6 @@ std::string simple_cube::to_string() {
 }
 
 std::shared_ptr<chunk_data> simple_cube::read_chunk(chunkid_t id) {
-    GCBS_TRACE("simple_cube::read_chunk(" + std::to_string(id) + ")");
     std::shared_ptr<chunk_data> out = std::make_shared<chunk_data>();
     if (id >= count_chunks()) {
         // chunk is outside of the cube, we don't need to read anything.
@@ -264,15 +278,15 @@ std::shared_ptr<chunk_data> simple_cube::read_chunk(chunkid_t id) {
 
             GDALDataset *dataset = (GDALDataset *)GDALOpen(gdal_file.c_str(), GA_ReadOnly);
             if (!dataset) {
-                GCBS_ERROR("GDAL failed to open '" + gdal_file + "'");
-                throw std::string("GDAL failed to open '" + gdal_file + "'");
+                GCBS_DEBUG("GDAL failed to open '" + gdal_file + "'");
+                continue;
             }
 
             double affine_in[6] = {0, 0, 1, 0, 0, 1};
             if (dataset->GetGeoTransform(affine_in) != CE_None) {
                 GDALClose(dataset);
-                GCBS_ERROR("GDAL failed to fetch geotransform parameters for '" + gdal_file + "'");
-                throw std::string("GDAL failed to fetch geotransform parameters for '" + gdal_file + "'");
+                GCBS_DEBUG("GDAL failed to fetch geotransform parameters for '" + gdal_file + "'");
+                continue;
             }
 
             bounds_2d<double> bbox;

@@ -72,7 +72,7 @@ The library is still in an early development version. Major changes are possible
 The documentation is also preliminary and not yet complete.
 
 # Credits
-gdalcubes uses the following open source libraries. Detailed licensing and copyright information can be found at https://gdalcubes.github.io/docs/credits.html and in LICENSE_THIRDPARTY.
+gdalcubes uses the following open source libraries. Detailed licensing and copyright information can be found at https://gdalcubes.github.io/source/introduction/credits.html and in LICENSE_THIRDPARTY.
 
 
 **[GDAL](https://www.gdal.org/):  A translator library for raster and vector geospatial data formats**

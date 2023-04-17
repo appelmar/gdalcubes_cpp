@@ -1,6 +1,6 @@
 # gdalcubes - Earth observation data cubes from GDAL image collections 
 
-**AS OF 2023-04-04, THIS REPOSITORY IS NO LONGER MAINTAINED. INSTEAD, THE C++ SOURCES OF GDALCUBES HAVE BEEN INTEGRARED INTO THE [R PACKAGE REPOSITORY](https://github.com/appelmar/gdalcubes).**
+**AS OF 2023-04-04, THIS REPOSITORY IS NO LONGER MAINTAINED. FROM NOW, THE C++ SOURCES OF GDALCUBES WILL BE FURTHER DEVELOPED AS PART OF THE [R PACKAGE REPOSITORY](https://github.com/appelmar/gdalcubes).**
 
 [![Build Status](https://travis-ci.org/appelmar/gdalcubes.svg?branch=master)](https://travis-ci.org/appelmar/gdalcubes)
 
